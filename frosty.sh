@@ -98,18 +98,26 @@ apply_system_props() {
   if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
     if [ -f "$SYSPROP_OLD" ]; then
       mv "$SYSPROP_OLD" "$SYSPROP"
+      echo '{"status":"ok","action":"enabled"}'
+    elif [ -f "$SYSPROP" ]; then
+      echo '{"status":"ok","action":"enabled"}'
+    else
+      echo '{"status":"error","message":"system.prop and system.prop.old both missing"}'
     fi
   else
     if [ -f "$SYSPROP" ]; then
       mv "$SYSPROP" "$SYSPROP_OLD"
+      echo '{"status":"ok","action":"disabled"}'
+    elif [ -f "$SYSPROP_OLD" ]; then
+      echo '{"status":"ok","action":"disabled"}'
+    else
+      echo '{"status":"error","message":"system.prop and system.prop.old both missing"}'
     fi
   fi
 }
 
 freeze_services() {
   echo "Frosty Services - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
-  log_service "Device: $(getprop ro.product.model) Android $(getprop ro.build.version.release)"
-  log_service ""
 
   if [ ! -f "$GMS_LIST" ]; then
       echo "ERROR: Service list not found! Reinstall"
@@ -119,7 +127,9 @@ freeze_services() {
   local current_category="" count_ok=0 count_fail=0 count_skip=0 count_enabled=0
 
   while IFS='|' read -r service category || [ -n "$service" ]; do
-    case "$service" in \#*|"") continue ;; esac
+    case "$service" in
+      ''|'#'*) continue ;;
+    esac
     service=$(echo "$service" | tr -d ' ')
     category=$(echo "$category" | tr -d ' ')
     [ -z "$category" ] && continue
@@ -127,7 +137,9 @@ freeze_services() {
     if [ "$category" != "$current_category" ]; then
       current_category="$category"
       log_service ""
-      log_service "--- $category ---"
+      _cap_f=$(printf '%s' "$current_category" | cut -c1 | tr 'a-z' 'A-Z')
+      _cap_r=$(printf '%s' "$current_category" | cut -c2-)
+      log_service "# ${_cap_f}${_cap_r}"
     fi
 
     if should_disable_category "$category"; then
@@ -149,53 +161,16 @@ freeze_services() {
     fi
   done < "$GMS_LIST"
 
+  log_service ""
+  log_service "Summary: $count_ok disabled, $count_enabled re-enabled, $count_fail failed, $count_skip skipped"
   echo ""
   echo "  🧊 GMS FROZEN"
   echo "  Disabled: $count_ok  Re-enabled: $count_enabled  Failed: $count_fail"
   echo ""
-
-  # Apply GMS Doze
-  if [ "$ENABLE_GMS_DOZE" = "1" ]; then
-    chmod +x "$MODDIR/gms_doze.sh"
-    "$MODDIR/gms_doze.sh" apply
-  fi
-
-  # Apply Deep Doze
-  if [ "$ENABLE_DEEP_DOZE" = "1" ]; then
-    chmod +x "$MODDIR/deep_doze.sh"
-    "$MODDIR/deep_doze.sh" freeze
-  fi
-
-  # Kill log processes
-  if [ "$ENABLE_LOG_KILLING" = "1" ]; then
-    for svc in logcat logcatd logd tcpdump cnss_diag statsd traced traced_perf traced_probes; do
-      pid=$(pidof "$svc" 2>/dev/null)
-      [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null
-    done
-    logcat -c 2>/dev/null
-
-    # Disable DropBox diagnostic categories
-    for tag in dumpsys:procstats dumpsys:usagestats procstats usagestats \
-               data_app_wtf keymaster system_server_wtf system_app_strictmode \
-               system_app_wtf system_server_strictmode data_app_strictmode \
-               netstats data_app_anr data_app_crash system_server_anr \
-               system_server_watchdog system_server_crash system_server_native_crash \
-               system_server_lowmem system_app_crash system_app_anr storage_trim \
-               SYSTEM_AUDIT SYSTEM_BOOT SYSTEM_LAST_KMSG system_app_native_crash \
-               SYSTEM_TOMBSTONE SYSTEM_TOMBSTONE_PROTO data_app_native_crash \
-               SYSTEM_RESTART; do
-      content call --uri content://settings/global --method PUT_value \
-        --arg "dropbox:$tag" --extra value:s:disabled 2>/dev/null >/dev/null
-    done
-
-    echo "  📝 Logs killed"
-  fi
 }
 
 stock_services() {
   echo "Frosty Services - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
-  log_service "Device: $(getprop ro.product.model) Android $(getprop ro.build.version.release)"
-  log_service ""
 
   if [ ! -f "$GMS_LIST" ]; then
       echo "ERROR: Service list not found! Reinstall"
@@ -205,7 +180,9 @@ stock_services() {
   local current_category="" count_ok=0 count_fail=0
 
   while IFS='|' read -r service category || [ -n "$service" ]; do
-    case "$service" in \#*|"") continue ;; esac
+    case "$service" in
+      ''|'#'*) continue ;;
+    esac
     service=$(echo "$service" | tr -d ' ')
     category=$(echo "$category" | tr -d ' ')
     [ -z "$category" ] && continue
@@ -213,7 +190,9 @@ stock_services() {
     if [ "$category" != "$current_category" ]; then
       current_category="$category"
       log_service ""
-      log_service "--- $category ---"
+      _cap_f=$(printf '%s' "$current_category" | cut -c1 | tr 'a-z' 'A-Z')
+      _cap_r=$(printf '%s' "$current_category" | cut -c2-)
+      log_service "# ${_cap_f}${_cap_r}"
     fi
 
     if pm enable "$service" >/dev/null 2>&1; then
@@ -225,30 +204,18 @@ stock_services() {
     fi
   done < "$GMS_LIST"
 
+  log_service ""
+  log_service "Summary: $count_ok re-enabled, $count_fail failed"
   echo ""
   echo "  🔥 GMS REVERTED TO STOCK"
   echo "  Re-enabled: $count_ok  Failed: $count_fail"
   echo ""
 
-  # Restore kernel values from backup
-  if [ -f "$KERNEL_BACKUP" ]; then
-    echo "  Restoring kernel values..."
-    local kcount=0
-    while IFS= read -r line; do
-      case "$line" in \#*|"") continue ;; esac
-      name=$(echo "$line" | cut -d= -f1)
-      val=$(echo "$line"  | cut -d= -f2)
-      path=$(echo "$line" | cut -d= -f3-)
-      [ -z "$path" ] && continue
-      if [ -f "$path" ]; then
-        chmod +w "$path" 2>/dev/null
-        echo "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
-      fi
-    done < "$KERNEL_BACKUP"
-    echo "  ✓ Kernel values restored ($kcount)"
-  else
-    echo "  Kernel tweaks: revert takes effect on next reboot"
-  fi
+  # Revert kernel values
+  revert_kernel >/dev/null
+
+  # Revert RAM optimizer
+  revert_ram_optimizer >/dev/null
 
   # Revert GMS Doze
   chmod +x "$MODDIR/gms_doze.sh"
@@ -378,9 +345,10 @@ apply_ram_optimizer() {
   if [ ! -f "$RAM_BACKUP" ] && [ -f "$RAM_TWEAKS" ]; then
     printf "# RAM Backup - $(date)\n" > "$RAM_BACKUP"
     while IFS= read -r _line; do
-      case "$_line" in \#*|"") continue ;; esac
-      _path="${_line%%|*}"
-      _path=$(echo "$_path" | tr -d ' ')
+      case "$_line" in
+      ''|'#'*) continue ;;
+    esac
+      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
       [ -z "$_path" ] || [ ! -f "$_path" ] && continue
       _name=$(basename "$_path")
       _val=$(cat "$_path" 2>/dev/null)
@@ -393,15 +361,15 @@ apply_ram_optimizer() {
   if [ -f "$RAM_TWEAKS" ]; then
     local kcount=0 kfail=0
     while IFS= read -r _line; do
-      case "$_line" in \#*|"") continue ;; esac
-      _path="${_line%%|*}"
-      _val="${_line#*|}"
-      _path=$(echo "$_path" | tr -d ' ')
-      _val=$(echo "$_val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      case "$_line" in
+      ''|'#'*) continue ;;
+    esac
+      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
+      _val=$(printf '%s' "$_line" | cut -d'|' -f2-)
       [ -z "$_path" ] || [ -z "$_val" ] && continue
       [ ! -f "$_path" ] && continue
       chmod +w "$_path" 2>/dev/null
-      if echo "$_val" > "$_path" 2>/dev/null; then
+      if printf '%s\n' "$_val" > "$_path" 2>/dev/null; then
         kcount=$((kcount + 1))
       else
         kfail=$((kfail + 1))
@@ -413,25 +381,38 @@ apply_ram_optimizer() {
 
   # Android-layer tweaks (revert by deletion - no stock value needed)
   local sdk; sdk=$(getprop ro.build.version.sdk 2>/dev/null)
+
+  # Process limits based on total RAM
+  local total_kb; total_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
+  local max_cached max_empty
+  if [ "${total_kb:-0}" -ge 6291456 ]; then
+    max_cached=30; max_empty=15   # >6GB
+  elif [ "${total_kb:-0}" -ge 3670016 ]; then
+    max_cached=20; max_empty=10   # 4–6GB
+  else
+    max_cached=10; max_empty=5    # <4GB
+  fi
+  log_ram "[RAM][OK] RAM detected: $((${total_kb:-0} / 1024))MB — using cached=$max_cached empty=$max_empty"
+
   if [ "${sdk:-0}" -gt 28 ] 2>/dev/null; then
     content call --uri content://settings/config --method PUT_value \
-      --arg activity_manager/max_cached_processes --extra value:s:10 2>/dev/null >/dev/null && \
-      log_ram "[RAM][OK] max_cached_processes = 10" || log_ram "[RAM][FAIL] max_cached_processes"
+      --arg activity_manager/max_cached_processes --extra value:s:$max_cached 2>/dev/null >/dev/null && \
+      log_ram "[RAM][OK] max_cached_processes = $max_cached" || log_ram "[RAM][FAIL] max_cached_processes"
     content call --uri content://settings/config --method PUT_value \
-      --arg activity_manager/max_empty_processes --extra value:s:5 2>/dev/null >/dev/null && \
-      log_ram "[RAM][OK] max_empty_processes = 5" || log_ram "[RAM][FAIL] max_empty_processes"
+      --arg activity_manager/max_empty_processes --extra value:s:$max_empty 2>/dev/null >/dev/null && \
+      log_ram "[RAM][OK] max_empty_processes = $max_empty" || log_ram "[RAM][FAIL] max_empty_processes"
     content call --uri content://settings/config --method PUT_value \
       --arg activity_manager/max_empty_time --extra value:s:30000 2>/dev/null >/dev/null && \
       log_ram "[RAM][OK] max_empty_time = 30000" || log_ram "[RAM][FAIL] max_empty_time"
   fi
   content call --uri content://settings/global --method PUT_value \
     --arg activity_manager_constants \
-    --extra value:s:max_cached_processes=10,max_empty_processes=5 2>/dev/null >/dev/null && \
+    --extra value:s:max_cached_processes=$max_cached,max_empty_processes=$max_empty 2>/dev/null >/dev/null && \
     log_ram "[RAM][OK] activity_manager_constants set" || log_ram "[RAM][FAIL] activity_manager_constants"
   content call --uri content://settings/config --method PUT_value \
     --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null && \
     log_ram "[RAM][OK] usap_pool_enabled = true" || log_ram "[RAM][FAIL] usap_pool_enabled"
-  echo "[RAM] Applied RAM optimizer"
+  echo '{"status":"ok"}'
 }
 
 revert_ram_optimizer() {
@@ -441,12 +422,14 @@ revert_ram_optimizer() {
   if [ -f "$RAM_BACKUP" ]; then
     local kcount=0
     while IFS= read -r line; do
-      case "$line" in \#*|"") continue ;; esac
+      case "$line" in
+      ''|'#'*) continue ;;
+    esac
       val=$(echo "$line"  | cut -d= -f2)
       path=$(echo "$line" | cut -d= -f3-)
       [ -z "$path" ] || [ ! -f "$path" ] && continue
       chmod +w "$path" 2>/dev/null
-      echo "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
+      printf '%s\n' "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
     done < "$RAM_BACKUP"
     rm -f "$RAM_BACKUP"
     log_ram "[RAM][OK] RAM values restored ($kcount)"
@@ -469,17 +452,158 @@ revert_ram_optimizer() {
   echo "{\"status\":\"ok\"}"
 }
 
+apply_kernel() {
+  local tweaks="$MODDIR/config/kernel_tweaks.txt"
+
+  if [ ! -f "$tweaks" ]; then
+    echo '{"status":"error","message":"kernel_tweaks.txt not found"}'
+    return
+  fi
+
+  # Backup current values if no backup exists yet
+  if [ ! -f "$KERNEL_BACKUP" ]; then
+    mkdir -p "$MODDIR/backup"
+    printf "# Kernel Backup - $(date)\n" > "$KERNEL_BACKUP"
+    while IFS= read -r _line; do
+      [ -z "$_line" ] && continue
+      case "$_line" in '#'*) continue ;; esac
+      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
+      [ -z "$_path" ] || [ ! -e "$_path" ] && continue
+      _name=$(basename "$_path")
+      _val=$(cat "$_path" 2>/dev/null)
+      printf "%s=%s=%s\n" "$_name" "$_val" "$_path" >> "$KERNEL_BACKUP"
+    done < "$tweaks"
+  fi
+
+  local count=0 fail=0 skip=0
+  while IFS= read -r _line; do
+    [ -z "$_line" ] && continue
+    case "$_line" in '#'*) continue ;; esac
+    _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
+    _val=$(printf '%s' "$_line" | cut -d'|' -f2-)
+    [ -z "$_path" ] || [ -z "$_val" ] && continue
+    if [ ! -e "$_path" ]; then
+      skip=$((skip + 1))
+      continue
+    fi
+    chmod +w "$_path" 2>/dev/null
+    if printf '%s\n' "$_val" > "$_path" 2>/dev/null; then
+      count=$((count + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done < "$tweaks"
+  echo "{\"status\":\"ok\",\"applied\":$count,\"failed\":$fail,\"skipped\":$skip}"
+}
+
+revert_kernel() {
+  local count=0
+  if [ -f "$KERNEL_BACKUP" ]; then
+    while IFS= read -r line; do
+      case "$line" in
+        ''|'#'*) continue ;;
+      esac
+      val=$(echo "$line"  | cut -d= -f2)
+      path=$(echo "$line" | cut -d= -f3-)
+      [ -z "$path" ] || [ ! -e "$path" ] && continue
+      chmod +w "$path" 2>/dev/null
+      echo "$val" > "$path" 2>/dev/null && count=$((count + 1))
+    done < "$KERNEL_BACKUP"
+    echo "{\"status\":\"ok\",\"restored\":$count}"
+  else
+    echo '{"status":"ok","restored":0}'
+  fi
+}
+
+freeze_category() {
+  local target="$1" count=0 fail=0
+  if [ ! -f "$GMS_LIST" ]; then
+    echo '{"status":"error","message":"gms_services.txt not found"}'; return
+  fi
+  while IFS='|' read -r svc cat || [ -n "$svc" ]; do
+    case "$svc" in
+      ''|'#'*) continue ;;
+    esac
+    svc=$(echo "$svc" | tr -d " ")
+    cat=$(echo "$cat" | tr -d " ")
+    [ "$cat" = "$target" ] || continue
+    if pm disable "$svc" >/dev/null 2>&1; then
+      count=$((count + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done < "$GMS_LIST"
+  echo "{\"status\":\"ok\",\"disabled\":$count,\"failed\":$fail}"
+}
+
+unfreeze_category() {
+  local target="$1" count=0 fail=0
+  if [ ! -f "$GMS_LIST" ]; then
+    echo '{"status":"error","message":"gms_services.txt not found"}'; return
+  fi
+  while IFS='|' read -r svc cat || [ -n "$svc" ]; do
+    case "$svc" in
+      ''|'#'*) continue ;;
+    esac
+    svc=$(echo "$svc" | tr -d " ")
+    cat=$(echo "$cat" | tr -d " ")
+    [ "$cat" = "$target" ] || continue
+    if pm enable "$svc" >/dev/null 2>&1; then
+      count=$((count + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done < "$GMS_LIST"
+  echo "{\"status\":\"ok\",\"enabled\":$count,\"failed\":$fail}"
+}
+
+kill_logs() {
+  local k=0
+  for svc in logcat logcatd logd tcpdump cnss_diag statsd traced traced_perf traced_probes \
+             idd-logreader idd-logreadermain dumpstate aplogd vendor.tcpdump vendor_tcpdump vendor.cnss_diag; do
+    pid=$(pidof "$svc" 2>/dev/null)
+    if [ -n "$pid" ]; then
+      kill -9 "$pid" 2>/dev/null
+      k=$((k + 1))
+    fi
+  done
+  logcat -c 2>/dev/null
+  dmesg -c >/dev/null 2>&1
+
+  # Disable DropBox diagnostic categories
+  for tag in dumpsys:procstats dumpsys:usagestats procstats usagestats \
+             data_app_wtf keymaster system_server_wtf system_app_strictmode \
+             system_app_wtf system_server_strictmode data_app_strictmode \
+             netstats data_app_anr data_app_crash system_server_anr \
+             system_server_watchdog system_server_crash system_server_native_crash \
+             system_server_lowmem system_app_crash system_app_anr storage_trim \
+             SYSTEM_AUDIT SYSTEM_BOOT SYSTEM_LAST_KMSG system_app_native_crash \
+             SYSTEM_TOMBSTONE SYSTEM_TOMBSTONE_PROTO data_app_native_crash \
+             SYSTEM_RESTART; do
+    content call --uri content://settings/global --method PUT_value \
+      --arg "dropbox:$tag" --extra value:s:disabled 2>/dev/null >/dev/null &
+  done
+  wait
+
+  echo "{\"status\":\"ok\",\"killed\":$k}"
+}
+
 case "$1" in
-  freeze)           freeze_services ;;
-  stock)            stock_services ;;
-  apply_sysprops)   apply_system_props ;;
-  ram_optimizer)    apply_ram_optimizer ;;
-  ram_restore)      revert_ram_optimizer ;;
-  export)           backup_settings ;;
-  import)           restore_settings "$2" ;;
-  list_backups)     list_backups ;;
-  share)            share_backup "$2" ;;
-  *)                echo "Usage: frosty.sh [freeze|stock|apply_sysprops|ram_optimizer|ram_restore|export|import|list_backups|share]" ;;
+  freeze)             freeze_services ;;
+  stock)              stock_services ;;
+  apply_sysprops)     apply_system_props ;;
+  apply_kernel)       apply_kernel ;;
+  revert_kernel)      revert_kernel ;;
+  freeze_category)    freeze_category "$2" ;;
+  unfreeze_category)  unfreeze_category "$2" ;;
+  ram_optimizer)      apply_ram_optimizer ;;
+  ram_restore)        revert_ram_optimizer ;;
+  kill_logs)          kill_logs ;;
+  export)             backup_settings ;;
+  import)             restore_settings "$2" ;;
+  list_backups)       list_backups ;;
+  share)              share_backup "$2" ;;
+  *)                  echo "Usage: frosty.sh [freeze|stock|apply_sysprops|apply_kernel|revert_kernel|freeze_category|unfreeze_category|ram_optimizer|ram_restore|kill_logs|export|import|list_backups|share]" ;;
 esac
 
 exit 0

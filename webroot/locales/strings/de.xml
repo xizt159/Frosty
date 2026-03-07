@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <string name="hdr_sub">GMS Freezer &amp; Akkusparer</string>
   <string name="menu_io">Import / Export</string>
   <string name="menu_lang">Sprache</string>
   <string name="menu_about">Über das Modul</string>
-  <string name="state_label">Aktueller Status</string>
-  <string name="state_frozen">Eingefroren</string>
-  <string name="state_stock">Standard</string>
   <string name="btn_freeze">Alles aktivieren</string>
   <string name="btn_revert">Alles zurücksetzen</string>
   <string name="btn_reapply">Einstellungen erneut anwenden</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">eingefroren</string>
   <string name="toast_cat_restored">wiederhergestellt</string>
   <string name="toast_rename_failed">Umbenennen fehlgeschlagen</string>
-  <string name="log_kernel_applied">Kernel: {0} erfolgreich angewendet, {1} fehlgeschlagen</string>
-  <string name="log_kernel_single">Kernel: {0} erfolgreich angewendet</string>
+  <string name="log_kernel_applied">Kernel: {0} angewendet, {1} fehlgeschlagen/nicht gefunden, {2} übersprungen</string>
   <string name="log_kernel_restored">Kernel: {0} Werte wiederhergestellt</string>
   <string name="log_kernel_vals_restored">Kernel: {0} Werte erfolgreich wiederhergestellt</string>
   <string name="log_killed_logs">{0} Log-Prozesse wurden beendet</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Fehler beim Anwenden der System Props: {0}</string>
   <string name="log_blur_state">Blur: {0}</string>
   <string name="log_blur_restored">Blur wurde auf Standard zurückgesetzt</string>

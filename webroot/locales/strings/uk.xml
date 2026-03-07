@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">Менеджер GMS та економія батареї</string>
   <string name="menu_io">Імпорт / Експорт</string>
   <string name="menu_lang">Мова</string>
   <string name="menu_about">Про модуль</string>
-  <string name="state_label">Поточний стан</string>
-  <string name="state_frozen">Заморожено</string>
-  <string name="state_stock">За замовчуванням</string>
   <string name="btn_freeze">Активувати все</string>
   <string name="btn_revert">Повернути все за замовчуванням</string>
   <string name="btn_reapply">Примусово застосувати</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">заморожено</string>
   <string name="toast_cat_restored">відновлено</string>
   <string name="toast_rename_failed">Помилка при перейменуванні</string>
-  <string name="log_kernel_applied">Ядро: {0} успішно застосовано, {1} помилок</string>
-  <string name="log_kernel_single">Ядро: {0} успішно застосовано</string>
+  <string name="log_kernel_applied">Ядро: {0} застосовано, {1} помилок/не знайдено, {2} пропущено</string>
   <string name="log_kernel_restored">Ядро: {0} значень відновлено</string>
   <string name="log_kernel_vals_restored">Ядро: {0} значень успішно відновлено</string>
   <string name="log_killed_logs">Зупинено {0} процесів логування</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Помилка при застосуванні System Props: {0}</string>
   <string name="log_blur_state">Розмиття (Blur): {0}</string>
   <string name="log_blur_restored">Ефект розмиття відновлено за замовчуванням</string>

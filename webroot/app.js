@@ -295,7 +295,7 @@
         if (nv) {
           updateLoading(t('loading_applying_kernel'));
           var r = await API.applyTweaks();
-          if (r.status === 'ok') logAction(tf('log_kernel_applied', r.applied, r.failed), r.failed > 0 ? 'warn' : 'ok');
+          if (r.status === 'ok') logAction(tf('log_kernel_applied', r.applied, r.failed, r.skipped || 0), r.failed > 0 ? 'warn' : 'ok');
         } else {
           updateLoading(t('loading_reverting_kernel'));
           var r2 = await API.revertTweaks();
@@ -318,7 +318,9 @@
       } else if (key === 'system_props') {
         updateLoading((nv ? t('loading_applying_sysprops') : t('loading_disabling_sysprops')));
         var rsp = await API.toggleSystemProps(nv);
-        if (rsp.status !== 'ok') {
+        if (rsp.status === 'ok') {
+          logAction(t(nv ? 'log_sysprops_enabled' : 'log_sysprops_disabled'), 'ok');
+        } else {
           logAction(tf('log_sysprops_failed', rsp.message || ''), 'err');
         }
         log(t('log_reboot_effect'), 'warn');
@@ -413,6 +415,7 @@
 
   async function setDozeLevel(level) {
     if (busy) return;
+    if (level === state.prefs.deep_doze_level) return;
     busy = true;
     showLoading(t('loading_setting_level'));
     try {
@@ -436,6 +439,12 @@
     busy = false;
   }
 
+  // ── Progress yield helper ──
+  function yieldFrame(msg) {
+    updateLoading(msg);
+    return new Promise(function(r) { requestAnimationFrame(function() { setTimeout(r, 0); }); });
+  }
+
   // ── Freeze All ──
 
   async function applyFreeze() {
@@ -446,7 +455,7 @@
 
     try {
       // Step 1: Turn ON all prefs
-      updateLoading(t('loading_enabling_toggles'));
+      await yieldFrame(t('loading_enabling_toggles'));
       var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'ram_optimizer', 'gms_doze', 'deep_doze'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 1);
@@ -454,7 +463,7 @@
       logAction(t('log_toggles_enabled'), 'ok');
 
       // Step 2: Turn ON all categories
-      updateLoading(t('loading_freezing_cats'));
+      await yieldFrame(t('loading_freezing_cats'));
       var allCats = ['telemetry', 'background', 'location', 'connectivity', 'cloud', 'payments', 'wearables', 'games'];
       for (var j = 0; j < allCats.length; j++) {
         await API.setPref(allCats[j], 1);
@@ -462,7 +471,7 @@
       logAction(t('log_cats_enabled'), 'ok');
 
       // Step 3: Freeze GMS services
-      updateLoading(t('loading_freezing_services'));
+      await yieldFrame(t('loading_freezing_services'));
       var res = await API.applyFreeze();
       if (res.status === 'ok') {
         logAction(tf('log_gms_frozen', res.disabled, res.enabled, res.failed),
@@ -470,33 +479,38 @@
       }
 
       // Step 4: Apply kernel tweaks
-      updateLoading(t('loading_applying_kernel'));
+      await yieldFrame(t('loading_applying_kernel'));
       var rk = await API.applyTweaks();
-      if (rk.status === 'ok') logAction(tf('log_kernel_single', rk.applied), rk.failed > 0 ? 'warn' : 'ok');
+      if (rk.status === 'ok') logAction(tf('log_kernel_applied', rk.applied, rk.failed, rk.skipped || 0), rk.failed > 0 ? 'warn' : 'ok');
 
       // Step 5: Enable system props (rename .old → system.prop if needed)
-      updateLoading(t('loading_applying_sysprops'));
+      await yieldFrame(t('loading_applying_sysprops'));
       var rsp = await API.toggleSystemProps(1);
       if (rsp.status === 'ok') logAction(t('log_sysprops_enabled'), 'ok');
       else logAction(tf('log_sysprops_failed', rsp.action || rsp.message || ''), 'err');
 
       // Step 6: Disable blur
-      updateLoading(t('loading_applying_blur'));
+      await yieldFrame(t('loading_applying_blur'));
       var rb = await API.applyBlur();
       if (rb.status === 'ok') logAction(tf('log_blur_state', t(rb.blur === 'enabled' ? 'word_enabled' : 'word_disabled')), 'ok');
 
       // Step 7: Kill logs (RC/bin changes take effect on next reboot via post-fs-data.sh)
-      updateLoading(t('loading_killing_logs'));
+      await yieldFrame(t('loading_killing_logs'));
       var rl = await API.killLogs();
       if (rl.status === 'ok') logAction(tf('log_killed_logs', rl.killed), 'ok');
 
-      // Step 8: Apply GMS Doze
-      updateLoading(t('loading_applying_gms_doze'));
+      // Step 8: Apply RAM optimizer
+      await yieldFrame(t('loading_applying_ram'));
+      var rram = await API.applyRamOptimizer();
+      if (rram.status === 'ok') logAction(t('log_ram_applied'), 'ok');
+
+      // Step 9: Apply GMS Doze
+      await yieldFrame(t('loading_applying_gms_doze'));
       await API.applyGmsDoze();
       logAction(t('log_gms_doze_applied'), 'ok');
 
-      // Step 9: Apply Deep Doze
-      updateLoading(t('loading_applying_deep_doze'));
+      // Step 10: Apply Deep Doze
+      await yieldFrame(t('loading_applying_deep_doze'));
       await API.applyDeepDoze();
       logAction(t('log_deep_doze_applied'), 'ok');
 
@@ -521,7 +535,7 @@
 
     try {
       // Step 1: Turn OFF all prefs
-      updateLoading(t('loading_disabling_toggles'));
+      await yieldFrame(t('loading_disabling_toggles'));
       var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'ram_optimizer', 'gms_doze', 'deep_doze'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 0);
@@ -529,7 +543,7 @@
       logAction(t('log_toggles_disabled'), 'ok');
 
       // Step 2: Turn OFF all categories
-      updateLoading(t('loading_disabling_cats'));
+      await yieldFrame(t('loading_disabling_cats'));
       var allCats = ['telemetry', 'background', 'location', 'connectivity', 'cloud', 'payments', 'wearables', 'games'];
       for (var j = 0; j < allCats.length; j++) {
         await API.setPref(allCats[j], 0);
@@ -537,18 +551,18 @@
       logAction(t('log_cats_disabled'), 'ok');
 
       // Step 3: Revert kernel FIRST (before frosty.sh stock backup)
-      updateLoading(t('loading_restoring_kernel'));
+      await yieldFrame(t('loading_restoring_kernel'));
       var rk = await API.revertTweaks();
       if (rk.status === 'ok') logAction(tf('log_kernel_vals_restored', rk.restored), rk.restored > 0 ? 'ok' : 'warn');
 
       // Step 4: Disable system props (rename system.prop → .old)
-      updateLoading(t('loading_disabling_sysprops'));
+      await yieldFrame(t('loading_disabling_sysprops'));
       var rsp2 = await API.toggleSystemProps(0);
       if (rsp2.status === 'ok') logAction(t('log_sysprops_disabled'), 'ok');
       else logAction(tf('log_sysprops_failed', rsp2.action || rsp2.message || ''), 'err');
 
       // Step 5: Re-enable all GMS services
-      updateLoading(t('loading_re_enabling_gms'));
+      await yieldFrame(t('loading_re_enabling_gms'));
       var res = await API.applyStock();
       if (res.status === 'ok') {
         logAction(tf('log_gms_restored', res.enabled, res.failed),
@@ -556,17 +570,22 @@
       }
 
       // Step 6: Revert blur
-      updateLoading(t('loading_restoring_blur'));
+      await yieldFrame(t('loading_restoring_blur'));
       await API.applyBlur();
       logAction(t('log_blur_restored'), 'ok');
 
-      // Step 7: Revert GMS Doze
-      updateLoading(t('loading_reverting_gms_doze'));
+      // Step 7: Revert RAM optimizer
+      await yieldFrame(t('loading_reverting_ram'));
+      var rram2 = await API.revertRamOptimizer();
+      if (rram2.status === 'ok') logAction(t('log_ram_reverted'), 'ok');
+
+      // Step 8: Revert GMS Doze
+      await yieldFrame(t('loading_reverting_gms_doze'));
       await API.revertGmsDoze();
       logAction(t('log_gms_doze_reverted'), 'ok');
 
-      // Step 8: Revert Deep Doze
-      updateLoading(t('loading_reverting_deep_doze'));
+      // Step 9: Revert Deep Doze
+      await yieldFrame(t('loading_reverting_deep_doze'));
       await API.revertDeepDoze();
       logAction(t('log_deep_doze_reverted'), 'ok');
 
@@ -830,6 +849,7 @@
   }
 
   async function toggleWlApp(pkg) {
+    var list = $('wl-list');
     var isWl = wlPkgs.indexOf(pkg) !== -1;
     try {
       if (isWl) {
@@ -841,9 +861,96 @@
       }
       updateWlCount();
       wlFiltered = getSortedFiltered();
-      renderWl();
-      var list = $('wl-list');
-      if (list) list.scrollTop = 0;
+
+      // ── In-place update: toggle every rendered row for this pkg ──
+      if (list) {
+        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
+        for (var i = 0; i < rows.length; i++) {
+          if (isWl) {
+            rows[i].classList.remove('active');
+            rows[i].querySelector('.wl-chk').textContent = '';
+          } else {
+            rows[i].classList.add('active');
+            rows[i].querySelector('.wl-chk').textContent = '✓';
+          }
+        }
+      }
+
+      // ── Update top selected section without touching scroll position ──
+      if (list) {
+        var sep = list.querySelector('.wl-sep');
+        if (isWl) {
+          // Removing: delete duplicate row from top section if present
+          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
+          // If there's a separator, the first match above it is the top copy
+          if (sep && topRows.length > 1) {
+            for (var j = 0; j < topRows.length; j++) {
+              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                topRows[j].remove();
+                break;
+              }
+            }
+          }
+          // If no more selected apps, remove separator
+          var remaining = list.querySelectorAll('.wl-item.active');
+          if (sep && remaining.length === 0) sep.remove();
+        } else {
+          // Adding: insert a copy at the top (before separator or at start)
+          var appData = null;
+          for (var k = 0; k < wlFiltered.length; k++) {
+            if (wlFiltered[k].pkg === pkg) { appData = wlFiltered[k]; break; }
+          }
+          if (appData) {
+            var newRow = document.createElement('div');
+            newRow.className = 'wl-item active';
+            newRow.dataset.pkg = pkg;
+
+            var img = document.createElement('img');
+            img.className = 'wl-ico';
+            img.decoding = 'async';
+            img.dataset.pkg = pkg;
+            if (wlIconCache && wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
+              img.src = wlIconCache.get(pkg);
+            } else {
+              img.dataset.src = 'ksu://icon/' + pkg;
+              img.onerror = function () { this.style.visibility = 'hidden'; };
+              if (wlIconObserver) wlIconObserver.observe(img);
+            }
+
+            var infoDiv = document.createElement('div');
+            infoDiv.className = 'wl-app';
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'wl-name';
+            nameSpan.textContent = appData.label;
+            infoDiv.appendChild(nameSpan);
+            if (appData.label !== appData.pkg) {
+              var pkgSpan = document.createElement('span');
+              pkgSpan.className = 'wl-pkg';
+              pkgSpan.textContent = appData.pkg;
+              infoDiv.appendChild(pkgSpan);
+            }
+
+            var chk = document.createElement('span');
+            chk.className = 'wl-chk';
+            chk.textContent = '✓';
+
+            newRow.appendChild(img);
+            newRow.appendChild(infoDiv);
+            newRow.appendChild(chk);
+
+            // Ensure separator exists
+            if (!sep) {
+              sep = document.createElement('div');
+              sep.className = 'wl-sep';
+              sep.setAttribute('data-i18n', 'wl_sep_other');
+              sep.textContent = t('wl_sep_other') || 'Other apps';
+              list.insertBefore(sep, list.firstChild);
+            }
+            list.insertBefore(newRow, sep);
+          }
+        }
+      }
+
     } catch (e) {
       toast(tf('log_load_failed', e.message), 'err');
     }
@@ -1038,6 +1145,7 @@
       if (e.target === this) closeWhitelist();
     });
 
+
     $('wl-search').addEventListener('input', function () {
       debouncedSearch(this.value);
     });
@@ -1161,6 +1269,7 @@
       // Build step list based on what's enabled
       var _steps = [];
       if (rp.kernel_tweaks) _steps.push('loading_applying_kernel');
+      if (rp.ram_optimizer)  _steps.push('loading_applying_ram');
       if (rp.system_props)  _steps.push('loading_applying_sysprops');
       if (rp.blur_disable)  _steps.push('loading_applying_blur');
       if (rp.log_killing)   _steps.push('loading_killing_logs');
@@ -1172,6 +1281,12 @@
       function stepLoad(key) {
         _cur++;
         updateLoading('[' + _cur + '/' + _total + '] ' + t(key));
+        return new Promise(function(r) { requestAnimationFrame(function() { setTimeout(r, 0); }); });
+      }
+
+      function yieldFrame(msg) {
+        updateLoading(msg);
+        return new Promise(function(r) { requestAnimationFrame(function() { setTimeout(r, 0); }); });
       }
 
       showLoading(t('loading_reapplying'));
@@ -1179,33 +1294,39 @@
 
       try {
         if (rp.kernel_tweaks) {
-          stepLoad('loading_applying_kernel');
+          await stepLoad('loading_applying_kernel');
           var rk = await API.applyTweaks();
-          if (rk.status === 'ok') logAction(tf('log_kernel_applied', rk.applied, rk.failed), rk.failed > 0 ? 'warn' : 'ok');
+          if (rk.status === 'ok') logAction(tf('log_kernel_applied', rk.applied, rk.failed, rk.skipped || 0), rk.failed > 0 ? 'warn' : 'ok');
           else logAction(rk.message || 'Kernel: error', 'err');
         }
 
+        if (rp.ram_optimizer) {
+          await stepLoad('loading_applying_ram');
+          await API.applyRamOptimizer();
+          logAction(t('log_ram_applied'), 'ok');
+        }
+
         if (rp.system_props) {
-          stepLoad('loading_applying_sysprops');
+          await stepLoad('loading_applying_sysprops');
           var rsp = await API.toggleSystemProps(1);
           if (rsp.status === 'ok') logAction(t('log_sysprops_enabled'), 'ok');
           else logAction(tf('log_sysprops_failed', rsp.message || ''), 'err');
         }
 
         if (rp.blur_disable) {
-          stepLoad('loading_applying_blur');
+          await stepLoad('loading_applying_blur');
           var rb = await API.applyBlur();
           if (rb.status === 'ok') logAction(tf('log_blur_state', t('word_disabled')), 'ok');
         }
 
         if (rp.log_killing) {
-          stepLoad('loading_killing_logs');
+          await stepLoad('loading_killing_logs');
           var rl = await API.killLogs();
           if (rl.status === 'ok') logAction(tf('log_killed_logs', rl.killed), 'ok');
         }
 
         if (hasAnyCat) {
-          stepLoad('loading_freezing_services');
+          await stepLoad('loading_freezing_services');
           var res = await API.applyFreeze();
           if (res.status === 'ok') {
             logAction(tf('log_gms_frozen', res.disabled, res.enabled, res.failed),
@@ -1214,13 +1335,13 @@
         }
 
         if (rp.gms_doze) {
-          stepLoad('loading_applying_gms_doze');
+          await stepLoad('loading_applying_gms_doze');
           await API.applyGmsDoze();
           logAction(t('log_gms_doze_applied'), 'ok');
         }
 
         if (rp.deep_doze) {
-          stepLoad('loading_applying_deep_doze');
+          await stepLoad('loading_applying_deep_doze');
           await API.applyDeepDoze();
           logAction(t('log_deep_doze_applied'), 'ok');
         }

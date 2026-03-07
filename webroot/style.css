@@ -339,21 +339,31 @@ input[type=text] { font: inherit; color: inherit; }
 }
 .dd-extras.on { max-height: 150px; opacity: 1; margin-top: 12px; overflow: visible; }
 .level-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.level-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .lvl-btn {
-  flex: 1; padding: 12px; border-radius: var(--radius-xs);
-  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.2px;
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 16px; border-radius: 99px;
   background: var(--surface-2);
   border: 1px solid var(--stroke-var);
   color: var(--on-surface-var);
   transition: all 0.25s var(--spring);
 }
-.lvl-btn.on {
-  background: #ffffff;
-  color: #0072FF; 
-  border-color: #ffffff;
-  box-shadow: 0 0 16px rgba(0, 114, 255, 0.3);
+.lvl-ico  { font-size: 1.1rem; line-height: 1; }
+.lvl-name { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.2px; }
+.lvl-sub  { display: none; }
+#lvl-mod.on {
+  background: linear-gradient(135deg, rgba(45,212,160,0.18), rgba(45,212,160,0.06));
+  border-color: rgba(45,212,160,0.45);
+  color: var(--green);
+  box-shadow: 0 1px 12px rgba(45,212,160,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
 }
-.lvl-btn:active { transform: scale(0.95); }
+#lvl-max.on {
+  background: linear-gradient(135deg, rgba(229,169,64,0.18), rgba(229,169,64,0.06));
+  border-color: rgba(229,169,64,0.45);
+  color: var(--orange);
+  box-shadow: 0 1px 12px rgba(229,169,64,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.lvl-btn:active { transform: scale(0.94); }
 
 /* ── Whitelist Button ── */
 .wl-btn {

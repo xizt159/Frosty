@@ -18,14 +18,11 @@ ENABLE_DEEP_DOZE=0
 DEEP_DOZE_LEVEL="moderate"
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
 
-generate_whitelist() {
-  [ -f "$WHITELIST_FILE" ] && return
-  cat > "$WHITELIST_FILE" << 'HEADER'
-# Frosty Deep Doze Whitelist
-# One package per line, # for comments
-# Add apps you want to exclude from Deep Doze restrictions here.
-HEADER
-  log_deep "Created empty whitelist"
+ensure_whitelist() {
+  if [ ! -f "$WHITELIST_FILE" ]; then
+    printf '# Frosty Deep Doze Whitelist\n# One package per line, # for comments\n' > "$WHITELIST_FILE"
+    log_deep "Created empty whitelist"
+  fi
 }
 
 is_whitelisted() {
@@ -76,14 +73,16 @@ apply_doze_constants() {
 
   dumpsys deviceidle enable all 2>/dev/null
   settings put global app_standby_enabled 1 2>/dev/null
-  settings put global forced_app_standby_enabled 1 2>/dev/null
-  settings put global app_auto_restriction_enabled true 2>/dev/null
   settings put global adaptive_battery_management_enabled 1 2>/dev/null
   log_deep "[OK] App standby enabled"
 }
 
 revert_doze_constants() {
   settings delete global device_idle_constants 2>/dev/null
+  settings put global forced_app_standby_enabled 0 2>/dev/null
+  settings put global app_auto_restriction_enabled false 2>/dev/null
+  settings delete global app_standby_enabled 2>/dev/null
+  settings delete global adaptive_battery_management_enabled 2>/dev/null
   log_deep "[OK] Doze constants reverted"
 }
 
@@ -189,11 +188,6 @@ stop_screen_monitor() {
   if [ -f "$MONITOR_PID_FILE" ]; then
     local pid=$(cat "$MONITOR_PID_FILE")
     kill "$pid" 2>/dev/null
-    local i=0
-    while kill -0 "$pid" 2>/dev/null && [ $i -lt 6 ]; do
-      sleep 0.5; i=$((i+1))
-    done
-    kill -9 "$pid" 2>/dev/null
     rm -f "$MONITOR_PID_FILE"
     log_deep "[OK] Screen monitor stopped (PID $pid)"
   fi
@@ -274,7 +268,7 @@ freeze_deep_doze() {
   fi
 
   log_deep "Enabling Deep Doze ($DEEP_DOZE_LEVEL)..."
-  generate_whitelist
+  ensure_whitelist
   apply_doze_constants
 
   case "$DEEP_DOZE_LEVEL" in
@@ -320,7 +314,10 @@ status() {
     appops get "$pkg" RUN_IN_BACKGROUND 2>/dev/null | grep -q "deny" && restricted=$((restricted + 1))
   done
   local monitor_running="NO"
-  [ -f "$MONITOR_PID_FILE" ] && kill -0 $(cat "$MONITOR_PID_FILE") 2>/dev/null && monitor_running="YES"
+  if [ -f "$MONITOR_PID_FILE" ]; then
+    local _pid; _pid=$(cat "$MONITOR_PID_FILE" 2>/dev/null)
+    [ -n "$_pid" ] && kill -0 "$_pid" 2>/dev/null && monitor_running="YES"
+  fi
 
   echo ""
   echo "  🔋 Deep Doze Status"

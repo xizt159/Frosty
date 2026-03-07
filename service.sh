@@ -57,9 +57,6 @@ mkdir -p "$MODDIR/config"
 SYSPROP="$MODDIR/system.prop"
 SYSPROP_OLD="$MODDIR/system.prop.old"
 
-log_props "Device: $(getprop ro.product.model) Android $(getprop ro.build.version.release)"
-log_props ""
-
 if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
   if [ -f "$SYSPROP" ]; then
     PROP_COUNT=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
@@ -85,7 +82,7 @@ write_val() {
   local file="$1" value="$2" name="$3"
   [ ! -f "$file" ] && { log_tweak "[SKIP] $name"; return 1; }
   chmod +w "$file" 2>/dev/null
-  if echo "$value" > "$file" 2>/dev/null; then
+  if printf '%s\n' "$value" > "$file" 2>/dev/null; then
     log_tweak "[OK] $name = $value"
     return 0
   else
@@ -106,8 +103,7 @@ backup_kernel() {
 
   while IFS= read -r line; do
     case "$line" in '#'*|'') continue ;; esac
-    path="${line%%|*}"
-    path=$(echo "$path" | tr -d ' ')
+    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
     [ -z "$path" ] || [ ! -f "$path" ] && continue
     name=$(basename "$path")
     val=$(cat "$path" 2>/dev/null)
@@ -129,8 +125,7 @@ backup_ram() {
 
   while IFS= read -r line; do
     case "$line" in '#'*|'') continue ;; esac
-    path="${line%%|*}"
-    path=$(echo "$path" | tr -d ' ')
+    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
     [ -z "$path" ] || [ ! -f "$path" ] && continue
     name=$(basename "$path")
     val=$(cat "$path" 2>/dev/null)
@@ -164,9 +159,8 @@ apply_kernel_tweaks() {
       '#'*|'') continue ;;
     esac
 
-    path="${line%%|*}"
-    value="${line#*|}"
-    path=$(echo "$path" | tr -d ' ')
+    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
+    value=$(printf '%s' "$line" | cut -d'|' -f2-)
     [ -z "$path" ] || [ -z "$value" ] && continue
     name=$(basename "$path")
 
@@ -206,7 +200,7 @@ fi
 if [ "$ENABLE_RAM_OPTIMIZER" = "1" ]; then
   log_boot "Applying RAM optimizer..."
   backup_ram
-  sh "$MODDIR/frosty.sh" ram_optimizer >> "$RAM_LOG" 2>/dev/null
+  sh "$MODDIR/frosty.sh" ram_optimizer 2>/dev/null | grep -v '^{' >> "$RAM_LOG"
 else
   log_boot "RAM optimizer SKIPPED"
 fi
@@ -214,16 +208,7 @@ fi
 # Kill log processes
 if [ "$ENABLE_LOG_KILLING" = "1" ]; then
   log_boot "Killing log processes..."
-  for svc in logcat logcatd logd tcpdump cnss_diag statsd traced idd-logreader idd-logreadermain dumpstate aplogd vendor.tcpdump vendor_tcpdump vendor.cnss_diag; do
-    pid=$(pidof "$svc" 2>/dev/null)
-    if [ -n "$pid" ]; then
-      kill -15 "$pid" 2>/dev/null
-      sleep 0.5
-      kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
-    fi
-  done
-  logcat -c 2>/dev/null
-  dmesg -c >/dev/null 2>&1
+  sh "$MODDIR/frosty.sh" kill_logs >/dev/null 2>/dev/null
   log_boot "Log processes killed"
 else
   log_boot "Log killing SKIPPED"

@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS Freezer &amp; Battery Saver</string>
   <string name="menu_io">Impor / Ekspor</string>
   <string name="menu_lang">Bahasa</string>
   <string name="menu_about">Tentang</string>
-  <string name="state_label">Status saat ini</string>
-  <string name="state_frozen">Dibekukan</string>
-  <string name="state_stock">Default</string>
   <string name="btn_freeze">Aktifkan Semua</string>
   <string name="btn_revert">Kembalikan Semua</string>
   <string name="btn_reapply">Paksa Terapkan Ulang</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">dibekukan</string>
   <string name="toast_cat_restored">dipulihkan</string>
   <string name="toast_rename_failed">Gagal mengganti nama</string>
-  <string name="log_kernel_applied">Kernel: {0} berhasil diterapkan, {1} gagal</string>
-  <string name="log_kernel_single">Kernel: {0} berhasil diterapkan</string>
+  <string name="log_kernel_applied">Kernel: {0} diterapkan, {1} gagal/tidak ditemukan, {2} dilewati</string>
   <string name="log_kernel_restored">Kernel: {0} nilai dipulihkan</string>
   <string name="log_kernel_vals_restored">Kernel: {0} nilai berhasil dipulihkan</string>
   <string name="log_killed_logs">{0} proses log telah dihentikan</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Gagal menerapkan System Props: {0}</string>
   <string name="log_blur_state">Blur: {0}</string>
   <string name="log_blur_restored">Blur telah dikembalikan ke default</string>

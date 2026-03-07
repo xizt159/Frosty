@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS Freezer &amp; Battery Saver</string>
   <string name="menu_io">Importar / Exportar</string>
   <string name="menu_lang">Idioma</string>
   <string name="menu_about">Sobre</string>
-  <string name="state_label">Estado atual</string>
-  <string name="state_frozen">Congelado</string>
-  <string name="state_stock">Padrão</string>
   <string name="btn_freeze">Ativar Tudo</string>
   <string name="btn_revert">Restaurar Tudo</string>
   <string name="btn_reapply">Forçar Reaplicação</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">congelado</string>
   <string name="toast_cat_restored">restaurado</string>
   <string name="toast_rename_failed">Erro ao tentar renomear</string>
-  <string name="log_kernel_applied">Kernel: {0} aplicados corretamente, {1} falhas</string>
-  <string name="log_kernel_single">Kernel: {0} aplicado corretamente</string>
+  <string name="log_kernel_applied">Kernel: {0} aplicados, {1} falhas/não encontrados, {2} ignorados</string>
   <string name="log_kernel_restored">Kernel: {0} valores restaurados</string>
   <string name="log_kernel_vals_restored">Kernel: {0} valores restaurados com sucesso</string>
   <string name="log_killed_logs">{0} processos de log foram encerrados</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Erro ao aplicar System Props: {0}</string>
   <string name="log_blur_state">Desfoque (Blur): {0}</string>
   <string name="log_blur_restored">O desfoque foi restaurado para o padrão</string>

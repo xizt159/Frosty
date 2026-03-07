@@ -62,6 +62,20 @@ ENABLE_GMS_DOZE=0
 ENABLE_DEEP_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
 
+# Revert RAM optimizer Android-layer tweaks
+log "Reverting RAM optimizer..."
+content call --uri content://settings/config --method DELETE_value \
+  --arg activity_manager/max_cached_processes >/dev/null 2>&1
+content call --uri content://settings/config --method DELETE_value \
+  --arg activity_manager/max_empty_processes >/dev/null 2>&1
+content call --uri content://settings/config --method DELETE_value \
+  --arg activity_manager/max_empty_time >/dev/null 2>&1
+content call --uri content://settings/global --method DELETE_value \
+  --arg activity_manager_constants >/dev/null 2>&1
+content call --uri content://settings/config --method DELETE_value \
+  --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
+log "RAM optimizer reverted"
+
 # Revert GMS Doze
 log "Reverting GMS Doze..."
 GMS_PKG="com.google.android.gms"
@@ -114,8 +128,7 @@ if [ -f "$GMS_LIST" ]; then
   log "Re-enabling GMS services..."
   count=0
   while IFS='|' read -r service category || [ -n "$service" ]; do
-    case "$service" in \#*|"") continue ;; esac
-    service=$(echo "$service" | tr -d ' ')
+    case "$service" in '#'*|'') continue ;; esac   service=$(echo "$service" | tr -d ' ')
     pm enable "$service" >/dev/null 2>&1 && count=$((count + 1))
   done < "$GMS_LIST"
   log "Re-enabled $count services"

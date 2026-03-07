@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS 凍結＆バッテリー節約マネージャー</string>
   <string name="menu_io">インポート / エクスポート</string>
   <string name="menu_lang">言語</string>
   <string name="menu_about">アプリについて</string>
-  <string name="state_label">現在の状態</string>
-  <string name="state_frozen">凍結済み</string>
-  <string name="state_stock">デフォルト</string>
   <string name="btn_freeze">すべて有効化</string>
   <string name="btn_revert">すべてデフォルトに戻す</string>
   <string name="btn_reapply">設定を強制再適用</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">凍結済み</string>
   <string name="toast_cat_restored">復元済み</string>
   <string name="toast_rename_failed">名前の変更に失敗しました</string>
-  <string name="log_kernel_applied">カーネル: {0} 個を正常に適用、{1} 個失敗</string>
-  <string name="log_kernel_single">カーネル: {0} を正常に適用</string>
+  <string name="log_kernel_applied">カーネル: {0} 適用、{1} 失敗/未検出、{2} スキップ</string>
   <string name="log_kernel_restored">カーネル: {0} 個の値を復元</string>
   <string name="log_kernel_vals_restored">カーネル: {0} 個の値が正常に復元されました</string>
   <string name="log_killed_logs">{0} 個のログプロセスが終了しました</string>
-  <string name="log_sysprops_state">システムプロパティ: {0}</string>
   <string name="log_sysprops_failed">システムプロパティの適用に失敗: {0}</string>
   <string name="log_blur_state">ブラー効果: {0}</string>
   <string name="log_blur_restored">ブラー効果がデフォルトに復元されました</string>

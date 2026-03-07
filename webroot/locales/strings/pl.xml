@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS Freezer &amp; Battery Saver</string>
   <string name="menu_io">Importuj / Eksportuj</string>
   <string name="menu_lang">Język</string>
   <string name="menu_about">O module</string>
-  <string name="state_label">Aktualny stan</string>
-  <string name="state_frozen">Zamrożono</string>
-  <string name="state_stock">Domyślny</string>
   <string name="btn_freeze">Włącz wszystko</string>
   <string name="btn_revert">Przywróć domyślne</string>
   <string name="btn_reapply">Wymuś ponowne zastosowanie</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">zamrożono</string>
   <string name="toast_cat_restored">przywrócono</string>
   <string name="toast_rename_failed">Zmiana nazwy nie powiodła się</string>
-  <string name="log_kernel_applied">Jądro: {0} pomyślnie zastosowano, {1} niepowodzeń</string>
-  <string name="log_kernel_single">Jądro: {0} pomyślnie zastosowano</string>
+  <string name="log_kernel_applied">Jądro: {0} zastosowano, {1} błędów/nie znaleziono, {2} pominięto</string>
   <string name="log_kernel_restored">Jądro: {0} wartości przywróconych</string>
   <string name="log_kernel_vals_restored">Jądro: {0} wartości przywrócono pomyślnie</string>
   <string name="log_killed_logs">Zatrzymano {0} procesów logowania</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Błąd System Props: {0}</string>
   <string name="log_blur_state">Rozmycie (Blur): {0}</string>
   <string name="log_blur_restored">Rozmycie (Blur) zostało przywrócone</string>

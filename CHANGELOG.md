@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3] - 2026-03-07
+### WebUI
+- Restyled Deep Doze level buttons.
+- Progress display fixed for Enable All / Revert All / Reapply Settings.
+- Fixed Enable All / Revert all ignoring RAM Optimizer.
+- Improved whitelist selection menu.
+### Shell / Backend
+- **Kernel Tweaks**: `%%|*` parsing fixed, which was causing every kernel tweak path and value to parse as empty, hence the 0/0 applied counter that appeared in the activity log.
+- Fixed hardcoded functions both in WebUI and shell files, causing some operations to unnecessarily apply twice. Made `frosty.sh` the main backend.
+- Removed some old dead variables from WebUI.
+- Fixed Deep Doze always enabling data saver.
+- **General improvements to logs**: Better headers and separators format, added summary to GMS services log.
+- And many more code cleanup and fixes.
+
 ## [3.2] - 2026-03-05
 ### Improved RAM Optimizer
 - **Android process management**: Caps cached background processes at 10 and empty (dead-weight) processes at 5 via `device_config`. Empty processes are now evicted after 30 seconds instead of the default 30 minutes.

@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">أداة تجميد GMS وتوفير البطارية</string>
   <string name="menu_io">استيراد / تصدير</string>
   <string name="menu_lang">اللغة</string>
   <string name="menu_about">حول الإضافة</string>
-  <string name="state_label">الحالة الحالية</string>
-  <string name="state_frozen">مُجمّد</string>
-  <string name="state_stock">الوضع الافتراضي</string>
   <string name="btn_freeze">تفعيل الكل</string>
   <string name="btn_revert">إعادة الكل للافتراضي</string>
   <string name="btn_reapply">فرض إعادة تطبيق الإعدادات</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">تم التجميد</string>
   <string name="toast_cat_restored">تمت الاستعادة</string>
   <string name="toast_rename_failed">فشل إعادة التسمية</string>
-  <string name="log_kernel_applied">الكيرنل: تم تطبيق {0}، و {1} فشل</string>
-  <string name="log_kernel_single">الكيرنل: تم تطبيق {0}</string>
+  <string name="log_kernel_applied">الكيرنل: تم تطبيق {0}، {1} فشل/غير موجود، {2} تم تخطيه</string>
   <string name="log_kernel_restored">الكيرنل: تمت استعادة {0}</string>
   <string name="log_kernel_vals_restored">الكيرنل: تمت استعادة {0} قيم</string>
   <string name="log_killed_logs">تم إيقاف {0} من عمليات السجلات</string>
-  <string name="log_sysprops_state">خصائص النظام: {0}</string>
   <string name="log_sysprops_failed">فشل في خصائص النظام: {0}</string>
   <string name="log_blur_state">الضبابية (Blur): {0}</string>
   <string name="log_blur_restored">تمت استعادة إعدادات الضبابية</string>

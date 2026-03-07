@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <string name="hdr_sub">GMS Freezer &amp; Économie de batterie</string>
   <string name="menu_io">Importer / Exporter</string>
   <string name="menu_lang">Langue</string>
   <string name="menu_about">À propos</string>
-  <string name="state_label">État actuel</string>
-  <string name="state_frozen">Gelé</string>
-  <string name="state_stock">Par défaut</string>
   <string name="btn_freeze">Tout activer</string>
   <string name="btn_revert">Tout restaurer</string>
   <string name="btn_reapply">Forcer la réapplication</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">gelée</string>
   <string name="toast_cat_restored">restaurée</string>
   <string name="toast_rename_failed">Impossible de renommer</string>
-  <string name="log_kernel_applied">Kernel : {0} appliqués, {1} échecs</string>
-  <string name="log_kernel_single">Kernel : {0} appliqués</string>
+  <string name="log_kernel_applied">Kernel : {0} appliqués, {1} échoués/introuvables, {2} ignorés</string>
   <string name="log_kernel_restored">Kernel : {0} restaurés</string>
   <string name="log_kernel_vals_restored">Kernel : {0} valeurs restaurées avec succès</string>
   <string name="log_killed_logs">{0} processus de logs arrêtés</string>
-  <string name="log_sysprops_state">System Props : {0}</string>
   <string name="log_sysprops_failed">Échec de l'application System Props : {0}</string>
   <string name="log_blur_state">Flou (Blur) : {0}</string>
   <string name="log_blur_restored">Effet de flou restauré par défaut</string>

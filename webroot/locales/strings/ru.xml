@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">Менеджер GMS и экономия батареи</string>
   <string name="menu_io">Импорт / Экспорт</string>
   <string name="menu_lang">Язык</string>
   <string name="menu_about">О модуле</string>
-  <string name="state_label">Текущее состояние</string>
-  <string name="state_frozen">Заморожено</string>
-  <string name="state_stock">По умолчанию</string>
   <string name="btn_freeze">Активировать всё</string>
   <string name="btn_revert">Вернуть всё по умолчанию</string>
   <string name="btn_reapply">Принудительно применить</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">заморожено</string>
   <string name="toast_cat_restored">восстановлено</string>
   <string name="toast_rename_failed">Ошибка при переименовании</string>
-  <string name="log_kernel_applied">Ядро: {0} успешно применено, {1} ошибок</string>
-  <string name="log_kernel_single">Ядро: {0} успешно применено</string>
+  <string name="log_kernel_applied">Ядро: {0} применено, {1} ошибок/не найдено, {2} пропущено</string>
   <string name="log_kernel_restored">Ядро: {0} значений восстановлено</string>
   <string name="log_kernel_vals_restored">Ядро: {0} значений успешно восстановлено</string>
   <string name="log_killed_logs">Остановлено {0} процессов логирования</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Ошибка при применении System Props: {0}</string>
   <string name="log_blur_state">Размытие (Blur): {0}</string>
   <string name="log_blur_restored">Эффект размытия восстановлен по умолчанию</string>

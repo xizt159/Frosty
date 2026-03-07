@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS Freezer &amp; Pil Tasarrufu</string>
   <string name="menu_io">İçe / Dışa Aktar</string>
   <string name="menu_lang">Dil</string>
   <string name="menu_about">Hakkında</string>
-  <string name="state_label">Mevcut Durum</string>
-  <string name="state_frozen">Dondurulmuş</string>
-  <string name="state_stock">Varsayılan (Stok)</string>
   <string name="btn_freeze">Tümünü Aktifleştir</string>
   <string name="btn_revert">Tümünü Eski Haline Getir</string>
   <string name="btn_reapply">Ayarları Zorla Uygula</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">dondurulmuş</string>
   <string name="toast_cat_restored">geri yüklenmiş</string>
   <string name="toast_rename_failed">Yeniden adlandırma başarısız oldu</string>
-  <string name="log_kernel_applied">Kernel: {0} ayar başarıyla uygulandı, {1} hatalı işlem</string>
-  <string name="log_kernel_single">Kernel: {0} başarıyla uygulandı</string>
+  <string name="log_kernel_applied">Kernel: {0} uygulandı, {1} başarısız/bulunamadı, {2} atlandı</string>
   <string name="log_kernel_restored">Kernel: {0} değer geri yüklendi</string>
   <string name="log_kernel_vals_restored">Kernel: {0} değer başarıyla geri yüklendi</string>
   <string name="log_killed_logs">{0} gereksiz log işlemi başarıyla sonlandırıldı</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">System Props uygulanamadı: {0}</string>
   <string name="log_blur_state">Blur (Bulanıklık): {0}</string>
   <string name="log_blur_restored">Blur efekti orijinal haline döndürüldü</string>

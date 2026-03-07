@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <string name="hdr_sub">GMS Freezer and Battery Saver</string>
   <string name="menu_io">Import / Export</string>
   <string name="menu_lang">Language</string>
   <string name="menu_about">About</string>
-  <string name="state_label">Current state</string>
-  <string name="state_frozen">Frozen</string>
-  <string name="state_stock">Stock</string>
   <string name="btn_freeze">Enable All</string>
   <string name="btn_revert">Revert All</string>
   <string name="btn_reapply">Force Reapply Settings</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">frozen</string>
   <string name="toast_cat_restored">restored</string>
   <string name="toast_rename_failed">Rename failed</string>
-  <string name="log_kernel_applied">Kernel: {0} applied, {1} failed/not found</string>
-  <string name="log_kernel_single">Kernel: {0} applied</string>
+  <string name="log_kernel_applied">Kernel: {0} applied, {1} failed/not found, {2} skipped</string>
   <string name="log_kernel_restored">Kernel: {0} restored</string>
   <string name="log_kernel_vals_restored">Kernel: {0} values restored</string>
   <string name="log_killed_logs">Killed {0} log processes</string>
-  <string name="log_sysprops_state">System props: {0}</string>
   <string name="log_sysprops_failed">System props failed: {0}</string>
   <string name="log_blur_state">Blur: {0}</string>
   <string name="log_blur_restored">Blur restored</string>

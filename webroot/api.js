@@ -8,8 +8,6 @@ var API = (function () {
   var GMS_LIST    = MODDIR + '/config/gms_services.txt';
   var WHITELIST   = MODDIR + '/config/doze_whitelist.txt';
   var LOG_DIR     = MODDIR + '/logs';
-  var SYSPROP     = MODDIR + '/system.prop';
-  var SYSPROP_OLD = MODDIR + '/system.prop.old';
 
   var cbCounter = 0;
 
@@ -158,27 +156,10 @@ var API = (function () {
   // ── Category immediate apply/revert ──
 
   async function freezeCategory(category) {
-    var cmd = 'count=0; fail=0; ' +
-      'while IFS="|" read -r svc cat || [ -n "$svc" ]; do ' +
-      'case "$svc" in \\#*|"") continue;; esac; ' +
-      'svc=$(echo "$svc" | tr -d " "); cat=$(echo "$cat" | tr -d " "); ' +
-      '[ "$cat" = "' + esc(category) + '" ] || continue; ' +
-      'if pm disable "$svc" >/dev/null 2>&1; then count=$((count+1)); else fail=$((fail+1)); fi; ' +
-      'done < ' + GMS_LIST + '; ' +
-      'echo "{\\"status\\":\\"ok\\",\\"disabled\\":$count,\\"failed\\":$fail}"';
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh freeze_category \'' + esc(category) + '\' 2>/dev/null');
   }
-
   async function unfreezeCategory(category) {
-    var cmd = 'count=0; fail=0; ' +
-      'while IFS="|" read -r svc cat || [ -n "$svc" ]; do ' +
-      'case "$svc" in \\#*|"") continue;; esac; ' +
-      'svc=$(echo "$svc" | tr -d " "); cat=$(echo "$cat" | tr -d " "); ' +
-      '[ "$cat" = "' + esc(category) + '" ] || continue; ' +
-      'if pm enable "$svc" >/dev/null 2>&1; then count=$((count+1)); else fail=$((fail+1)); fi; ' +
-      'done < ' + GMS_LIST + '; ' +
-      'echo "{\\"status\\":\\"ok\\",\\"enabled\\":$count,\\"failed\\":$fail}"';
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh unfreeze_category \'' + esc(category) + '\' 2>/dev/null');
   }
 
   // ── GMS Doze ──
@@ -208,70 +189,21 @@ var API = (function () {
   // ── RAM Optimizer ──
 
   async function applyRamOptimizer() {
-    await runStrict('sh ' + MODDIR + '/frosty.sh ram_optimizer 2>&1');
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh ram_optimizer 2>/dev/null');
   }
 
   async function revertRamOptimizer() {
-    await runStrict('sh ' + MODDIR + '/frosty.sh ram_restore 2>&1');
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh ram_restore 2>/dev/null');
   }
 
   // ── Kernel Tweaks ──
 
   async function applyTweaks() {
-    var backup    = MODDIR + '/backup/kernel_values.txt';
-    var tweaksFile = MODDIR + '/config/kernel_tweaks.txt';
-
-    // Backup current values (only once; skip if backup already exists)
-    await run(
-      'mkdir -p "' + MODDIR + '/backup"; ' +
-      'if [ ! -f "' + backup + '" ] && [ -f "' + tweaksFile + '" ]; then ' +
-      'printf "# Kernel Backup - $(date)\\n" > "' + backup + '"; ' +
-      'while IFS= read -r _line; do ' +
-      'case "$_line" in \\#*|"") continue;; esac; ' +
-      '_path="${_line%%|*}"; _path=$(echo "$_path" | tr -d " "); ' +
-      '[ -z "$_path" ] || [ ! -f "$_path" ] && continue; ' +
-      '_name=$(basename "$_path"); _val=$(cat "$_path" 2>/dev/null); ' +
-      'printf "%s=%s=%s\\n" "$_name" "$_val" "$_path" >> "' + backup + '"; ' +
-      'done < "' + tweaksFile + '"; fi'
-    );
-
-    // Apply tweaks from kernel_tweaks.txt
-    var cmd =
-      'count=0; fail=0; ' +
-      'if [ ! -f "' + tweaksFile + '" ]; then ' +
-      'echo "{\\"status\\":\\"error\\",\\"message\\":\\"kernel_tweaks.txt not found\\"}"; ' +
-      'exit 0; fi; ' +
-      'w() { [ ! -f "$1" ] && return; chmod +w "$1" 2>/dev/null; echo "$2" > "$1" 2>/dev/null && count=$((count+1)) || fail=$((fail+1)); }; ' +
-      'while IFS= read -r _line; do ' +
-      'case "$_line" in \\#*|"") continue;; esac; ' +
-      '_path="${_line%%|*}"; _val="${_line#*|}"; ' +
-      '_path=$(echo "$_path" | tr -d " "); _val=$(echo "$_val" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//"); ' +
-      '[ -z "$_path" ] || [ -z "$_val" ] && continue; ' +
-      'w "$_path" "$_val"; ' +
-      'done < "' + tweaksFile + '"; ' +
-      'echo "{\\"status\\":\\"ok\\",\\"applied\\":$count,\\"failed\\":$fail}"';
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh apply_kernel 2>/dev/null');
   }
 
   async function revertTweaks() {
-    var backup = MODDIR + '/backup/kernel_values.txt';
-    var cmd = 'count=0; ' +
-      'if [ -f "' + backup + '" ]; then ' +
-      'while IFS= read -r line; do ' +
-      'case "$line" in \\#*|"") continue;; esac; ' +
-      'name=$(echo "$line" | cut -d= -f1); ' +
-      'val=$(echo "$line" | cut -d= -f2); ' +
-      'path=$(echo "$line" | cut -d= -f3-); ' +
-      '[ -z "$path" ] && continue; ' +
-      '[ -f "$path" ] || continue; ' +
-      'chmod +w "$path" 2>/dev/null; ' +
-      'echo "$val" > "$path" 2>/dev/null && count=$((count+1)); ' +
-      'done < "' + backup + '"; ' +
-      'echo "{\\"status\\":\\"ok\\",\\"restored\\":$count}"; ' +
-      'else echo "{\\"status\\":\\"ok\\",\\"restored\\":0}"; fi';
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_kernel 2>/dev/null');
   }
 
   // ── Blur ──
@@ -294,39 +226,13 @@ var API = (function () {
   // ── Log Killing ──
 
   async function killLogs() {
-    var cmd = 'k=0; for s in logcat logcatd logd tcpdump cnss_diag statsd traced; do ' +
-      'pid=$(pidof "$s" 2>/dev/null); [ -n "$pid" ] && kill -9 $pid 2>/dev/null && k=$((k+1)); done; ' +
-      'logcat -c 2>/dev/null; ' +
-      'echo "{\\"status\\":\\"ok\\",\\"killed\\":$k}"';
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh kill_logs 2>/dev/null');
   }
 
   // ── System Props toggle ──
 
   async function toggleSystemProps(enable) {
-    var cmd;
-    if (enable) {
-      cmd =
-        'if [ -f "' + SYSPROP_OLD + '" ]; then ' +
-        '  mv "' + SYSPROP_OLD + '" "' + SYSPROP + '"; ' +
-        '  echo "{\\"status\\":\\"ok\\",\\"action\\":\\"enabled\\"}"; ' +
-        'elif [ -f "' + SYSPROP + '" ]; then ' +
-        '  echo "{\\"status\\":\\"ok\\",\\"action\\":\\"enabled\\"}"; ' +
-        'else ' +
-        '  echo "{\\"status\\":\\"error\\",\\"message\\":\\"system.prop and system.prop.old both missing\\"}" ; ' +
-        'fi';
-    } else {
-      cmd =
-        'if [ -f "' + SYSPROP + '" ]; then ' +
-        '  mv "' + SYSPROP + '" "' + SYSPROP_OLD + '"; ' +
-        '  echo "{\\"status\\":\\"ok\\",\\"action\\":\\"disabled\\"}"; ' +
-        'elif [ -f "' + SYSPROP_OLD + '" ]; then ' +
-        '  echo "{\\"status\\":\\"ok\\",\\"action\\":\\"disabled\\"}"; ' +
-        'else ' +
-        '  echo "{\\"status\\":\\"error\\",\\"message\\":\\"system.prop and system.prop.old both missing\\"}" ; ' +
-        'fi';
-    }
-    return await runJSON(cmd);
+    return await runJSON('sh ' + MODDIR + '/frosty.sh apply_sysprops 2>/dev/null');
   }
 
   // ── Whitelist ──
@@ -432,6 +338,7 @@ var API = (function () {
     nativeGetPackagesInfo: nativeGetPackagesInfo,
     listBackups:           listBackups,
     exportSettings:        exportSettings,
-    importSettings:        importSettings
+    importSettings:        importSettings,
+    shareBackup:           shareBackup
   };
 })();

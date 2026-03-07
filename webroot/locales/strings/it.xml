@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS Freezer &amp; Battery Saver</string>
   <string name="menu_io">Importa / Esporta</string>
   <string name="menu_lang">Lingua</string>
   <string name="menu_about">Informazioni</string>
-  <string name="state_label">Stato attuale</string>
-  <string name="state_frozen">Congelato</string>
-  <string name="state_stock">Predefinito</string>
   <string name="btn_freeze">Attiva tutto</string>
   <string name="btn_revert">Ripristina tutto</string>
   <string name="btn_reapply">Forza riapplicazione</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">congelato</string>
   <string name="toast_cat_restored">ripristinato</string>
   <string name="toast_rename_failed">Rinomina fallita</string>
-  <string name="log_kernel_applied">Kernel: {0} applicati, {1} falliti</string>
-  <string name="log_kernel_single">Kernel: {0} applicati correttamente</string>
+  <string name="log_kernel_applied">Kernel: {0} applicati, {1} falliti/non trovati, {2} ignorati</string>
   <string name="log_kernel_restored">Kernel: {0} valori ripristinati</string>
   <string name="log_kernel_vals_restored">Kernel: {0} valori ripristinati con successo</string>
   <string name="log_killed_logs">{0} processi di log sono stati terminati</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Errore System Props: {0}</string>
   <string name="log_blur_state">Blur (Sfocatura): {0}</string>
   <string name="log_blur_restored">Sfocatura ripristinata ai valori predefiniti</string>

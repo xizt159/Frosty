@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   
-  <string name="hdr_sub">GMS 冻结与省电管理</string>
   <string name="menu_io">导入 / 导出</string>
   <string name="menu_lang">语言</string>
   <string name="menu_about">关于</string>
-  <string name="state_label">当前状态</string>
-  <string name="state_frozen">已冻结</string>
-  <string name="state_stock">默认</string>
   <string name="btn_freeze">全部启用</string>
   <string name="btn_revert">全部恢复默认</string>
   <string name="btn_reapply">强制重新应用</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">已冻结</string>
   <string name="toast_cat_restored">已恢复</string>
   <string name="toast_rename_failed">重命名失败</string>
-  <string name="log_kernel_applied">内核：成功应用 {0} 项，失败 {1} 项</string>
-  <string name="log_kernel_single">内核：成功应用 {0}</string>
+  <string name="log_kernel_applied">内核：成功应用 {0} 项，失败/未找到 {1} 项，跳过 {2} 项</string>
   <string name="log_kernel_restored">内核：成功恢复 {0} 项值</string>
   <string name="log_kernel_vals_restored">内核：成功恢复 {0} 项值</string>
   <string name="log_killed_logs">已终止 {0} 个日志记录进程</string>
-  <string name="log_sysprops_state">系统属性：{0}</string>
   <string name="log_sysprops_failed">应用系统属性失败：{0}</string>
   <string name="log_blur_state">模糊效果：{0}</string>
   <string name="log_blur_restored">模糊效果已恢复为默认值</string>

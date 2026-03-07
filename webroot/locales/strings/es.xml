@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <string name="hdr_sub">Congelador de GMS y Ahorrador de Batería</string>
   <string name="menu_io">Importar / Exportar</string>
   <string name="menu_lang">Idioma</string>
   <string name="menu_about">Acerca de</string>
-  <string name="state_label">Estado actual</string>
-  <string name="state_frozen">Congelado</string>
-  <string name="state_stock">Predeterminado</string>
   <string name="btn_freeze">Activar Todo</string>
   <string name="btn_revert">Restaurar Todo</string>
   <string name="btn_reapply">Forzar Reaplicación</string>
@@ -108,12 +104,10 @@
   <string name="toast_cat_frozen">congelado</string>
   <string name="toast_cat_restored">restaurado</string>
   <string name="toast_rename_failed">Error al intentar renombrar</string>
-  <string name="log_kernel_applied">Kernel: {0} aplicados correctamente, {1} fallidos</string>
-  <string name="log_kernel_single">Kernel: {0} aplicado correctamente</string>
+  <string name="log_kernel_applied">Kernel: {0} aplicados, {1} fallidos/no encontrados, {2} omitidos</string>
   <string name="log_kernel_restored">Kernel: {0} valores restaurados</string>
   <string name="log_kernel_vals_restored">Kernel: {0} valores restaurados con éxito</string>
   <string name="log_killed_logs">{0} procesos de log han sido detenidos</string>
-  <string name="log_sysprops_state">System Props: {0}</string>
   <string name="log_sysprops_failed">Error al aplicar System Props: {0}</string>
   <string name="log_blur_state">Desenfoque (Blur): {0}</string>
   <string name="log_blur_restored">El desenfoque ha sido restaurado por defecto</string>
