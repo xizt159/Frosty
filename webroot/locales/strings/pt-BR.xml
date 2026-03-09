@@ -42,10 +42,6 @@
   <string name="cat_wearables_tag">Desativa Wear OS e Google Fit</string>
   <string name="cat_games">Jogos (Games)</string>
   <string name="cat_games_tag">Desativa Play Games e o salvamento em nuvem</string>
-  <string name="sec_misc">Diversos</string>
-  <string name="cat_dexopt">Otimização DEX</string>
-  <string name="cat_dexopt_desc">Optimiza os arquivos DEX (Dalvik Executable) para melhorar o desempenho</string>
-  <string name="btn_optimize">Otimizar</string>
   <string name="sec_log">Registro de Atividades</string>
   <string name="wl_title">Lista Branca (Whitelist) do Doze</string>
   <string name="wl_notice">Aplicativos adicionados aqui irão ignorar as restrições do Deep Doze. Adicione seus apps de mensagens, bancos e alarmes aqui.</string>

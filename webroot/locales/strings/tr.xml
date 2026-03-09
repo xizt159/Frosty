@@ -42,10 +42,6 @@
   <string name="cat_wearables_tag">Wear OS ve Google Fit çalışmaz</string>
   <string name="cat_games">Oyunlar (Games)</string>
   <string name="cat_games_tag">Google Play Oyunlar ve bulut senkronizasyonu çalışmaz</string>
-  <string name="sec_misc">Çeşitli</string>
-  <string name="cat_dexopt">DEX Optimizasyonu</string>
-  <string name="cat_dexopt_desc">DEX (Dalvik Executable) dosyalarını daha iyi performans için optimize eder</string>
-  <string name="btn_optimize">Optimize Et</string>
   <string name="sec_log">Aktivite Günlüğü</string>
   <string name="wl_title">Doze Beyaz Listesi (Whitelist)</string>
   <string name="wl_notice">Buraya eklenen uygulamalar Deep Doze kısıtlamalarını görmezden gelecektir. Mesajlaşma, bankacılık ve alarm uygulamalarınızı buraya ekleyin.</string>

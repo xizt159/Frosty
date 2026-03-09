@@ -42,10 +42,6 @@
   <string name="cat_wearables_tag">يوقف Wear OS و Google Fit</string>
   <string name="cat_games">الألعاب (Games)</string>
   <string name="cat_games_tag">يوقف إنجازات Play Games</string>
-  <string name="sec_misc">متفرقات (Miscellaneous)</string>
-  <string name="cat_dexopt">ديكسوبت (DEX Optimization)</string>
-  <string name="cat_dexopt_desc">يحسن ملفات DEX (Dalvik Executable) لتحسين الأداء</string>
-  <string name="btn_optimize">تحسين</string>
   <string name="sec_log">سجل النشاط (Activity Log)</string>
   <string name="wl_title">قائمة Doze البيضاء</string>
   <string name="wl_notice">التطبيقات المضافة هنا تتخطى قيود وضع Deep Doze. أضف تطبيقات المراسلة، البنوك، والمنبهات لتجنب توقفها.</string>
