@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Frosty
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and this has not been requested before
+          required: true
+        - label: This feature is within the scope of a battery/performance optimization module
+          required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Category
+      options:
+        - Battery life improvement
+        - Performance improvement
+        - RAM / memory improvement
+        - Privacy improvement
+        - Usability / UX improvement
+        - Compatibility improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this solve? Why is this needed?
+      placeholder: e.g. There is currently no way to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you want to happen. Be as specific as possible.
+    validations:
+      required: true

@@ -556,6 +556,7 @@ input[type=text] { font: inherit; color: inherit; }
 .modal-overlay.open .modal { transform: translateY(0); }
 #wl-modal .modal, #bss-modal .modal { transition: none; }
 #wl-modal, #bss-modal { transition: none; }
+#wl-modal .modal { height: 85vh; }
 
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 10px; }
 .modal-head h3 { font-size: 1rem; font-weight: 700; }

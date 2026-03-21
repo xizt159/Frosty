@@ -1,0 +1,61 @@
+name: Question
+description: Ask a question about Frosty's behavior, compatibility, or usage
+title: "[Question]: "
+labels: ["question"]
+body:
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have read the README
+          required: true
+        - label: I have checked existing issues and discussions for an answer
+          required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Compatibility (device / ROM / root)
+        - Feature behavior or expected results
+        - Install or setup
+        - Logs or diagnostics
+        - Conflict with another module
+        - Settings or configuration
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and ROM
+      placeholder: e.g. Pixel 9 / GrapheneOS 15
+    validations:
+      required: true
+
+  - type: input
+    id: frosty_version
+    attributes:
+      label: Frosty version
+      placeholder: e.g. 3.5
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: Be as specific as possible. Include what you tried and what you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs (if applicable)
+      description: Logs from `/data/adb/modules/Frosty/logs/` if they help illustrate your question.
+      render: shell

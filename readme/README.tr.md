@@ -129,3 +129,8 @@ Bildirimleri kaçırmamak için kritik banka, alarm ve mesajlaşma uygulamaları
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 Lisans ve Yasal Uyarı
+
+**GPL v3** altında lisanslanmıştır, bkz. [LICENSE](LICENSE).  
+**Frosty** adı yalnızca resmi sürümler için ayrılmıştır. Forklar ve modifikasyonlar farklı bir ad kullanmalı ve resmi olmadıklarını açıkça belirtmelidir. Orijinal yazar, resmi olmayan veya değiştirilmiş sürümlerin neden olduğu hasarlardan hiçbir sorumluluk kabul etmez.

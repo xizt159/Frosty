@@ -343,54 +343,57 @@ apply_ram_optimizer() {
     log_ram "[RAM][OK] RAM tweaks applied ($kcount ok, $kfail failed)"
   fi
 
-  # Android-layer tweaks (revert by deletion - no stock value needed)
+  # Android-layer tweaks
   local sdk; sdk=$(getprop ro.build.version.sdk 2>/dev/null)
 
-  # Process limits and memory tuning based on total RAM
+  # swappiness and extra_free_kbytes tuning
   local total_kb; total_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
-  local max_cached max_empty swappiness extra_free
-  if [ "${total_kb:-0}" -ge 8388608 ]; then
-    max_cached=48; max_empty=24; swappiness=40; extra_free=32768  # ≥8GB
-  elif [ "${total_kb:-0}" -ge 6291456 ]; then
-    max_cached=32; max_empty=16; swappiness=50; extra_free=24576  # 6–8GB
-  elif [ "${total_kb:-0}" -ge 3670016 ]; then
-    max_cached=24; max_empty=12; swappiness=65; extra_free=16384  # 4–6GB
+  local swappiness extra_free
+  if [ "${total_kb:-0}" -ge 7340032 ]; then
+    swappiness=40; extra_free=24576  # 8GB+
+  elif [ "${total_kb:-0}" -ge 5242880 ]; then
+    swappiness=50; extra_free=16384  # 6GB
+  elif [ "${total_kb:-0}" -ge 3145728 ]; then
+    swappiness=65; extra_free=12288  # 4GB
   else
-    max_cached=20; max_empty=10; swappiness=80; extra_free=8192   # <4GB
+    swappiness=80; extra_free=8192   # <4GB
   fi
-  log_ram "[RAM][OK] RAM detected: $((${total_kb:-0} / 1024))MB — cached=$max_cached empty=$max_empty swappiness=$swappiness extra_free=${extra_free}KB"
+  log_ram "[RAM][OK] RAM detected: $((${total_kb:-0} / 1024))MB — swappiness=$swappiness extra_free=${extra_free}KB"
 
   # Backup and apply tiered swappiness
   if [ -f /proc/sys/vm/swappiness ]; then
-    _orig_swap=$(cat /proc/sys/vm/swappiness 2>/dev/null)
-    printf 'swappiness=%s=/proc/sys/vm/swappiness\n' "$_orig_swap" >> "$RAM_BACKUP"
+    if ! grep -q "^swappiness=" "$RAM_BACKUP" 2>/dev/null; then
+      _orig_swap=$(cat /proc/sys/vm/swappiness 2>/dev/null)
+      printf 'swappiness=%s=/proc/sys/vm/swappiness\n' "$_orig_swap" >> "$RAM_BACKUP"
+    fi
     printf '%s\n' "$swappiness" > /proc/sys/vm/swappiness 2>/dev/null && \
-      log_ram "[RAM][OK] swappiness = $swappiness (was $_orig_swap)" || log_ram "[RAM][FAIL] swappiness"
+      log_ram "[RAM][OK] swappiness = $swappiness" || log_ram "[RAM][FAIL] swappiness"
   fi
 
   # Backup and apply tiered extra_free_kbytes
   if [ -f /proc/sys/vm/extra_free_kbytes ]; then
-    _orig_efk=$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)
-    printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$_orig_efk" >> "$RAM_BACKUP"
+    if ! grep -q "^extra_free_kbytes=" "$RAM_BACKUP" 2>/dev/null; then
+      _orig_efk=$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)
+      printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$_orig_efk" >> "$RAM_BACKUP"
+    fi
     printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null && \
-      log_ram "[RAM][OK] extra_free_kbytes = $extra_free (was $_orig_efk)" || log_ram "[RAM][FAIL] extra_free_kbytes"
+      log_ram "[RAM][OK] extra_free_kbytes = $extra_free" || log_ram "[RAM][FAIL] extra_free_kbytes"
   fi
 
-  if [ "${sdk:-0}" -gt 28 ] 2>/dev/null; then
+  # Clean up stale process limit overrides
+  content call --uri content://settings/config --method DELETE_value \
+    --arg activity_manager/max_cached_processes >/dev/null 2>&1
+  content call --uri content://settings/config --method DELETE_value \
+    --arg activity_manager/max_empty_processes >/dev/null 2>&1
+  content call --uri content://settings/global --method DELETE_value \
+    --arg activity_manager_constants >/dev/null 2>&1
+
+  # USAP pool pre-forks Zygote processes for faster cold app launches (Android 11+)
+  if [ "${sdk:-0}" -ge 30 ] 2>/dev/null; then
     content call --uri content://settings/config --method PUT_value \
-      --arg activity_manager/max_cached_processes --extra value:s:$max_cached 2>/dev/null >/dev/null && \
-      log_ram "[RAM][OK] max_cached_processes = $max_cached" || log_ram "[RAM][FAIL] max_cached_processes"
-    content call --uri content://settings/config --method PUT_value \
-      --arg activity_manager/max_empty_processes --extra value:s:$max_empty 2>/dev/null >/dev/null && \
-      log_ram "[RAM][OK] max_empty_processes = $max_empty" || log_ram "[RAM][FAIL] max_empty_processes"
+      --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null && \
+      log_ram "[RAM][OK] usap_pool_enabled = true" || log_ram "[RAM][FAIL] usap_pool_enabled"
   fi
-  content call --uri content://settings/global --method PUT_value \
-    --arg activity_manager_constants \
-    --extra value:s:max_cached_processes=$max_cached,max_empty_processes=$max_empty 2>/dev/null >/dev/null && \
-    log_ram "[RAM][OK] activity_manager_constants set" || log_ram "[RAM][FAIL] activity_manager_constants"
-  content call --uri content://settings/config --method PUT_value \
-    --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null && \
-    log_ram "[RAM][OK] usap_pool_enabled = true" || log_ram "[RAM][FAIL] usap_pool_enabled"
   echo '{"status":"ok"}'
 }
 
@@ -582,8 +585,8 @@ apply_battery_saver() {
   fi
   settings put global battery_saver_constants "$constants" 2>/dev/null
   settings put global low_power 1 2>/dev/null
-  settings put global low_power_sticky 1 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
+  settings put global low_power_sticky 1 2>/dev/null
   {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [OK] Applied:"
     echo "$constants" | tr ',' '\n' | while IFS= read -r _entry; do
@@ -645,7 +648,6 @@ kill_logs() {
     content call --uri content://settings/global --method PUT_value \
       --arg "dropbox:$tag" --extra value:s:disabled 2>/dev/null >/dev/null &
   done
-  wait
 
   # Reduce NetworkStats polling overhead
   settings put global netstats_poll_interval 60000 >/dev/null 2>&1

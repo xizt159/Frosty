@@ -1,0 +1,135 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Frosty
+title: "[Bug]: "
+labels: ["bug"]
+body:
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am using the official Frosty release from the GitHub releases page
+          required: true
+        - label: I have searched existing issues and this has not been reported before
+          required: true
+        - label: I have rebooted after enabling the relevant feature
+          required: true
+
+  - type: dropdown
+    id: root
+    attributes:
+      label: Root implementation
+      options:
+        - Magisk
+        - KernelSU
+        - APatch
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **Root variant** — select the one that applies:
+        - Magisk: Official / Alpha / Kitsune
+        - KernelSU: KernelSU / KSU Next / WildKSU / SukiSU
+        - APatch: APatch / FolkPatch
+
+  - type: input
+    id: root_variant
+    attributes:
+      label: Root variant
+      placeholder: e.g. KSU Next
+    validations:
+      required: true
+
+  - type: input
+    id: root_version
+    attributes:
+      label: Root version
+      placeholder: e.g. 12187
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: e.g. OnePlus 13
+    validations:
+      required: true
+
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware
+      description: ROM name and version
+      placeholder: e.g. crDroid 11.0 / OxygenOS 16
+    validations:
+      required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: e.g. Android 15
+    validations:
+      required: true
+
+  - type: input
+    id: frosty_version
+    attributes:
+      label: Frosty version
+      placeholder: e.g. 3.5
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Affected feature
+      options:
+        - Kernel Tweaks
+        - System Props
+        - RAM Optimizer
+        - Kill Logs
+        - Kill Google Tracking
+        - GMS Doze
+        - Deep Doze
+        - Battery Saver Tuner
+        - Doze Whitelist
+        - WebUI / Interface
+        - Install / Uninstall
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Attach logs from `/data/adb/modules/Frosty/logs/`. Remove any personal info before posting.
+      render: shell
+
+  - type: markdown
+    attributes:
+      value: |
+        **Other installed modules**
+        Run the following command in Termux or any terminal app, then copy the output and paste it in the field below.
+        ```sh
+        result=$(su -c "ls /data/adb/modules" | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g'); echo "$result"
+        ```
+  - type: input
+    id: modules
+    attributes:
+      label: Other installed modules
+      description: Paste the output of the command above (optional but helpful for conflict diagnosis)
+      placeholder: e.g. Frosty, LSPosed, PlayIntegrityFix

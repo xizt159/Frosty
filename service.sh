@@ -28,7 +28,7 @@ log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
 log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
 
-echo "Frosty Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
+echo "Frosty v$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2) Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
 echo "Frosty Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
 echo "Frosty Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
 echo "Frosty RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
@@ -140,7 +140,6 @@ apply_kernel_tweaks() {
   while IFS= read -r line; do
     case "$line" in
       '# '*)
-        # Section header comment — print to tweaks log
         section=$(echo "$line" | sed 's/^# ── *//;s/ *─*$//')
         if [ "$section" != "$last_section" ]; then
           last_section="$section"
@@ -236,6 +235,73 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   log_boot "Applying GMS Doze..."
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
+
+  # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
+  _overlay_worked="YES"
+  for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
+             /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml \
+             /my_product/etc/sysconfig/*.xml /my_bigball/etc/sysconfig/*.xml; do
+    [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
+      _overlay_worked="NO"
+      break
+    }
+  done
+
+  if [ "$_overlay_worked" = "NO" ]; then
+    log_boot "GMS sysconfig not patched — applying per-file fallback..."
+    _mounted=0 _failed=0 _skip=0
+    _file_list=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null)
+
+    if [ -z "$_file_list" ]; then
+      log_boot "[INFO] No patched XMLs yet (first enable — will work after next reboot)"
+    fi
+
+    for _src in $_file_list; do
+      _dst="${_src#$MODDIR}"
+      [ ! -f "$_dst" ] && _dst="${_dst#/system}"
+      if [ ! -f "$_dst" ]; then
+        _alt=$(readlink -f "$_dst" 2>/dev/null)
+        [ -n "$_alt" ] && [ -f "$_alt" ] && _dst="$_alt"
+      fi
+      if [ -f "$_dst" ]; then
+        _ctx=$(stat -c %C "$_dst" 2>/dev/null)
+        [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
+        if mount --bind "$_src" "$_dst" 2>/dev/null; then
+          _mounted=$((_mounted + 1))
+          log_boot "[OK] Bind mounted: $_dst"
+        else
+          _failed=$((_failed + 1))
+          log_boot "[FAIL] Bind mount: $_dst"
+        fi
+      else
+        _skip=$((_skip + 1))
+        log_boot "[SKIP] Not found: $(echo "$_src" | sed "s|$MODDIR||")"
+      fi
+    done
+
+    log_boot "Per-file fallback: $_mounted mounted, $_failed failed, $_skip skipped"
+
+    if [ "$_mounted" -gt 0 ]; then
+      _still_unpatched="NO"
+      for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
+                 /my_product/etc/sysconfig/*.xml; do
+        [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
+          _still_unpatched="YES"
+          log_boot "[WARN] GMS entry still in: $_cp"
+          break
+        }
+      done
+      if [ "$_still_unpatched" = "NO" ]; then
+        log_boot "[GOOD] GMS sysconfig patched via per-file fallback"
+        dumpsys deviceidle whitelist -"com.google.android.gms" >/dev/null 2>&1
+        cmd deviceidle except-idle-whitelist -"com.google.android.gms" >/dev/null 2>&1
+        log_boot "[OK] Removed GMS from runtime whitelist"
+      fi
+    fi
+  else
+    log_boot "GMS sysconfig already patched — no fallback needed"
+  fi
+  unset _overlay_worked _cp _src _dst _alt _mounted _failed _skip _file_list _ctx _still_unpatched
 else
   log_boot "GMS Doze SKIPPED"
 fi

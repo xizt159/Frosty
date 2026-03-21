@@ -127,3 +127,8 @@ Dodaj do niej swoje komunikatory, aplikacje bankowe oraz budziki, by nie pominą
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 Licencja i kwestie prawne
+
+Udostępniane na licencji **GPL v3**, zobacz [LICENSE](LICENSE).  
+Nazwa **Frosty** jest zarezerwowana wyłącznie dla oficjalnych wydań. Forki i modyfikacje muszą używać innej nazwy i jasno informować, że są nieoficjalne. Pierwotny autor nie ponosi odpowiedzialności za szkody spowodowane przez nieoficjalne lub zmodyfikowane wersje.

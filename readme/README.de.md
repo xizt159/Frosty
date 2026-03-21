@@ -130,3 +130,8 @@ Füge deine Messenger-, Banking- und Wecker-Apps hinzu, um keine wichtigen Benac
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 Lizenz & Rechtliches
+
+Lizenziert unter der **GPL v3**, siehe [LICENSE](LICENSE).  
+Der Name **Frosty** ist ausschließlich für offizielle Releases reserviert. Forks und Modifikationen müssen einen anderen Namen verwenden und deutlich darauf hinweisen, dass sie inoffiziell sind. Der ursprüngliche Autor übernimmt keine Verantwortung für Schäden, die durch inoffizielle oder modifizierte Versionen verursacht werden.

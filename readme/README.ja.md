@@ -129,3 +129,8 @@ WebUI 上でリストを編集するか、`/data/adb/modules/Frosty/config/doze_
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 ライセンスと免責事項
+
+**GPL v3** ライセンスの下で提供されています。詳細は [LICENSE](LICENSE) をご覧ください。  
+**Frosty** という名称は公式リリース専用に予約されています。フォーク（派生版）や改変版は異なる名称を使用し、非公式であることを明確に記載する必要があります。原作者は、非公式版や改変版によって生じたいかなる損害についても責任を負いません。

@@ -79,6 +79,21 @@ log "RAM optimizer reverted"
 # Revert GMS Doze
 log "Reverting GMS Doze..."
 GMS_PKG="com.google.android.gms"
+DEVICEIDLE_XML="/data/system/deviceidle.xml"
+
+# Remove <un-wl> injection from deviceidle.xml
+if [ -f "$DEVICEIDLE_XML" ]; then
+  if grep -q "<un-wl n=\"$GMS_PKG\"" "$DEVICEIDLE_XML" 2>/dev/null; then
+    sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DEVICEIDLE_XML"
+    restorecon "$DEVICEIDLE_XML" 2>/dev/null
+    log "Removed <un-wl> entry from deviceidle.xml"
+  fi
+fi
+
+# Restore system whitelist tier
+cmd deviceidle sys-whitelist +"$GMS_PKG" >/dev/null 2>&1
+
+# Restore user whitelist tier
 dumpsys deviceidle whitelist +$GMS_PKG >/dev/null 2>&1
 
 user_ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+')

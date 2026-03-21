@@ -1,4 +1,24 @@
 # Changelog
+# I am not responsible for any unofficial or tampered versions of my module distributed outside this repository.
+
+## [3.6] - 2026-03-21
+### GMS Doze: Rework
+The previous implementation was only doing the runtime half. The patched XML overlay files were never actually being mounted, meaning GMS was re-added to `system-excidle` on every reboot by the framework reading the original unmodified sysconfig XMLs. The feature appeared to work but had no persistent effect. #9
+- **Improved XML patching**: searches the correct partitions for XMLs containing GMS power-save exemption entries,. Deduplicates via symlink resolution. Partition-aware overlay placement prevents bootloops on devices where `/product` is a separate mount point. Conflicting XML entries from other installed modules are also patched at early boot.
+- **Early sysconfig bind mount**: patched XMLs are now bind-mounted in `post-fs-data.sh`, before `system_server` starts.
+- **`deviceidle.xml` manipulation**: removes `<wl>` entries, injects `<un-wl>`, and cleans up malformed entries from previous versions. Secondary verification pass ensures changes took effect.
+- **Runtime whitelist removal**: `sys-whitelist` and `except-idle-whitelist` called alongside `dumpsys deviceidle whitelist` to cover all tiers.
+- **Improved status logging**: each whitelist tier checked individually with a final verdict: fully optimized, effectively dozed (`system-excidle` cosmetic, deep doze still active), or unstable.
+### Bug Fixes
+- Fixed rare black screen on wake when Kill Logs is enabled: `crash_dump32/64`, `debuggerd`, and `debuggerd64` were being stubbed out, breaking the native crash handler chain. Also removed `dmesg` and `logwrapper` which are init/service dependencies.
+- Fixed RAM optimizer aggressively killing background apps: static `max_cached_processes` overrides conflict with lmkd on Android 10+ which uses PSI pressure metrics dynamically. Overrides removed; lmkd now manages process limits as intended. Stale keys from older versions are cleaned up automatically on next apply.
+- Fixed RAM backup recording already-tweaked swappiness/extra_free_kbytes values when called from WebUI after service.sh already applied them at boot.
+- Fixed `uninstall.sh` leaving GMS doze traces in `deviceidle.xml` after module removal.
+- Fixed Force Reapply silently skipping Kill Google Tracking even when enabled.
+- Fixed Kill Logs reboot warning tag showing hardcoded English on non-English locales.
+- Fixed whitelist showing empty on KSU builds that don't support `nativeListPackages`. Also changed fallback to `pm list packages` so system apps are included. #10
+- Fixed whitelist modal shrinking while searching to match visible content.
+- Adjusted and cleaned up kernel tweaks, RAM tweaks, and system props. Removed redundant and duplicate entries, reorganized values into their correct files, and adjusted several values based on real-world testing.
 
 ## [3.5] - 2026-03-14
 ### New Feature: Kill Google Tracking
@@ -138,7 +158,6 @@ Configure exactly what Android's battery saver mode does when it's active. Indiv
 - Implement system-wide dozing for all apps.
 - Added more props and kernel tweaks.
 - Reworked action button and overhauled scripts.
-
 
 ## [1.0] **Initial release** - 2026-02-02
 - Added **GMS Doze Integration** based on [Universal GMS Doze](https://github.com/gloeyisk/universal-gms-doze) by gloeyisk. Patches system XMLs to allow Android Doze to optimize GMS battery usage.

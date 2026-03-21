@@ -129,3 +129,8 @@ Añade tus aplicaciones de mensajería, bancos y alarmas para evitar perder noti
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 Licencia y Legal
+
+Bajo licencia **GPL v3**, ver [LICENSE](LICENSE).  
+El nombre **Frosty** está reservado únicamente para lanzamientos oficiales. Los forks y las modificaciones deben usar un nombre diferente y declarar claramente que no son oficiales. El autor original no asume ninguna responsabilidad por los daños causados por versiones no oficiales o modificadas.

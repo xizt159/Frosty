@@ -129,3 +129,10 @@ Add messaging, banking, and alarm apps to prevent missed notifications.
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 License & Legal
+
+Licensed under **GPL v3** see [LICENSE](LICENSE).  
+The name **Frosty** is reserved for official releases only. Forks and modifications
+must use a different name and clearly state they are unofficial. The original author
+takes no responsibility for damage caused by unofficial or modified versions.

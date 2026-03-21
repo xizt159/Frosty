@@ -766,6 +766,9 @@
       add(userPkgs, false);
       add(sysPkgs, true);
 
+      // If native API returned nothing (unsupported KSU build), fall through to pm fallback
+      if (all.length === 0) throw new Error('nativeListPackages empty');
+
       var CHUNK = 40;
       for (var c = 0; c < all.length; c += CHUNK) {
         var chunk = all.slice(c, c + CHUNK);
@@ -790,7 +793,7 @@
       wlLoaded = true;
     } catch (e) {
       try {
-        var raw = await API.run("pm list packages -3 2>/dev/null | cut -d: -f2 | sort");
+        var raw = await API.run("pm list packages 2>/dev/null | cut -d: -f2 | sort");
         wlAllApps = raw.split('\n').filter(function (l) { return l.trim(); }).map(function (p) {
           return { pkg: p.trim(), label: p.trim(), system: false };
         });

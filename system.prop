@@ -1,7 +1,6 @@
 # FROSTY - System Properties
 # Logging and debugging disable for battery savings
 
-
 # EGL & Graphics
 debug.egl.profiler=0
 
@@ -10,7 +9,6 @@ debug.hwc.otf=0
 debug.hwc_dump_en=0
 debug.sf.dump=0
 debug.sf.ddms=0
-debug.sf.disable_backpressure=1
 debug.sf.recomputecrop=0
 debug.sf.showupdates=0
 debug.sf.showcpu=0
@@ -55,10 +53,6 @@ profiler.forse_disable_ulog=1
 # StrictMode
 persist.android.strictmode=0
 
-# KSM
-ro.config.ksm.support=false
-av.debug.disable.pers.cache=true
-
 # Battery Logging
 ro.sf.battery_log=0
 ro.sf.battery.log.enabled=0
@@ -94,11 +88,8 @@ persist.radio.oem_socket=false
 persist.oem.dump=0
 
 # Offline Logging
-persist.sys.offlinelog.kernel=1
-persist.sys.offlinelog.logcat=1
-
-# Sleep Mode
-pm.sleep_mode=1
+persist.sys.offlinelog.kernel=0
+persist.sys.offlinelog.logcat=0
 
 # SDM Debug
 sdm.debug.disable_inline_rotator=1

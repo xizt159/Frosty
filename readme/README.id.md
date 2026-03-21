@@ -129,3 +129,8 @@ Tambahkan aplikasi pesan, aplikasi perbankan, dan alarm Anda di sini agar tidak 
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 Lisensi & Hukum
+
+Dilisensikan di bawah **GPL v3**, lihat [LICENSE](LICENSE).  
+Nama **Frosty** hanya diperuntukkan bagi rilis resmi. Fork dan modifikasi harus menggunakan nama yang berbeda dan menyatakan dengan jelas bahwa versi tersebut tidak resmi. Penulis asli tidak bertanggung jawab atas kerusakan yang disebabkan oleh versi tidak resmi atau yang dimodifikasi.

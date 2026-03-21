@@ -128,3 +128,8 @@
 - **Azyrn** — [DeepDoze Enforcer](https://github.com/Azyrn/DeepDoze-Enforcer)
 - **MoZoiD** — [GMS Component Disable Script](https://t.me/MoZoiDStack/137)
 - **s1m** — [SaverTuner](https://codeberg.org/s1m/savertuner)
+
+## 📜 الترخيص والشروط القانونية
+
+مرخص بموجب **GPL v3**، انظر [LICENSE](LICENSE).  
+الاسم **Frosty** مخصص للإصدارات الرسمية فقط. يجب أن تستخدم النسخ المعدلة والمشتقة (Forks) اسماً مختلفاً وأن توضح بشكل صريح أنها غير رسمية. لا يتحمل المؤلف الأصلي أي مسؤولية عن الأضرار التي تسببها الإصدارات غير الرسمية أو المعدلة.
