@@ -25,9 +25,9 @@ get_user_ids() {
 }
 
 # Partitions that may carry sysconfig XMLs with GMS whitelist entries
-_PARTITIONS="product vendor system_ext odm india my_bigball my_heytap my_carrier \
-             my_company my_engineering my_manifest my_preload my_product \
-             my_region my_reserve my_stock"
+_PARTITIONS="india my_bigball my_carrier my_company my_engineering my_heytap \
+             my_manifest my_preload my_product my_region my_reserve my_stock \
+             odm product system system_ext vendor"
 
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
@@ -114,9 +114,8 @@ patch_xml() {
   local patched=0 _seen=""
 
   # Search for sysconfig files
-  for _base in /system /system_ext /product /vendor /odm /india \
-               /my_bigball /my_heytap /my_carrier /my_company /my_engineering \
-               /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock; do
+  for _base in $_PARTITIONS; do
+    _base="/$_base"
     [ -d "$_base/etc/sysconfig" ] || continue
     for xml in $(find "$_base/etc/sysconfig" -type f -name "*.xml" 2>/dev/null); do
       local _real
@@ -261,13 +260,22 @@ apply() {
   # Best-effort: try except-idle removal (only affects user tier of except-idle,
   cmd deviceidle except-idle-whitelist -"$GMS_PKG" >/dev/null 2>&1
 
-  # 4. Remove persistent <wl> from deviceidle.xml
-  if [ -f /data/system/deviceidle.xml ] && \
-     grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
-    sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
-    restorecon /data/system/deviceidle.xml 2>/dev/null
-    log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
-  fi
+  # 4. Remove persistent <wl> from deviceidle.xml file and replace <wl> with <un-wl> in other
+  #    whitelists (some devices may have hardcoded <wl> entries that survive whitelist removal)
+  for _base in $_PARTITIONS data/system; do
+    _base="/$_base"
+    for xml in $(find "$_base" -type f -name "*deviceidle*.xml" 2>/dev/null); do
+      if grep -q "<wl n=\"$GMS_PKG\"" "$xml" 2>/dev/null; then
+        sed -i "/<wl n=\"$GMS_PKG\"/d" "$xml"
+        restorecon "$xml" 2>/dev/null
+        log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
+      elif grep -q "<wl>$GMS_PKG</wl>" "$xml" 2>/dev/null; then
+        sed -i "s/<wl>$GMS_PKG<\/wl>/<un-wl>$GMS_PKG<\/un-wl>/g" "$xml"
+        restorecon "$xml" 2>/dev/null
+        log_doze "[OK] Replaced persistent <wl> with <un-wl> in $xml"
+      fi
+    done
+  done
 
   # 5. Full status
   _log_status "apply"
@@ -292,7 +300,19 @@ revert() {
     *) log_doze "[OK] sys-whitelist restore: ${sys_out:-executed}" ;;
   esac
 
-  # 3. Re-enable device admin receivers
+  # 3. Restore deviceidle.xml whitelists
+  for _base in $_PARTITIONS data/system; do
+    _base="/$_base"
+    for xml in $(find "$_base" -type f -name "*deviceidle*.xml" 2>/dev/null); do
+      if grep -q "<un-wl>$GMS_PKG</un-wl>" "$xml" 2>/dev/null; then
+        sed -i "s/<un-wl>$GMS_PKG<\/un-wl>/<wl>$GMS_PKG<\/wl>/g" "$xml"
+        restorecon "$xml" 2>/dev/null
+        log_doze "[OK] Replaced persistent <un-wl> with <wl> in $xml"
+      fi
+    done
+  done
+
+  # 4. Re-enable device admin receivers
   local admin_count=0
   for user_id in $(get_user_ids); do
     for admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
@@ -307,7 +327,7 @@ revert() {
   # deviceidle.xml cleanup handled by post-fs-data.sh on next boot
   log_doze "Reboot recommended for full restoration"
 
-  # 4. Full status
+  # 5. Full status
   _log_status "revert"
 }
 
