@@ -117,6 +117,9 @@ patch_xml() {
     return 0
   fi
 
+  _GREP_PATTERN=$(IFS='|'; echo "${_GMS_PATTERNS[*]}")
+  _SED_PATTERN=$(printf '/%s/d;' "${_GMS_PATTERNS[@]//\//\\/}")
+
   local patched=0 _seen=""
 
   # Search for sysconfig and other whitelist files
@@ -131,12 +134,12 @@ patch_xml() {
         case "$_seen" in *"|$_real|"*) continue ;; esac
         _seen="${_seen}|${_real}|"
 
-        grep -qE "$(IFS='|'; echo \"${_GMS_PATTERNS[*]}\")" "$xml" 2>/dev/null || continue
+        grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null || continue
 
         local dest="$MODDIR${_real}"
         mkdir -p "$(dirname "$dest")"
         if cp -af "$_real" "$dest" 2>/dev/null; then
-          sed -i "$(printf '/%s/d;' \"${_GMS_PATTERNS[@]//\//\\/}\")" "$dest"
+          sed -i "$_SED_PATTERN" "$dest"
           log_doze "[OK] Patched: $_real"
           patched=$((patched + 1))
         else
