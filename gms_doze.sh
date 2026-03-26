@@ -260,22 +260,13 @@ apply() {
   # Best-effort: try except-idle removal (only affects user tier of except-idle,
   cmd deviceidle except-idle-whitelist -"$GMS_PKG" >/dev/null 2>&1
 
-  # 4. Remove persistent <wl> from deviceidle.xml file and replace <wl> with <un-wl> in other
-  #    whitelists (some devices may have hardcoded <wl> entries that survive whitelist removal)
-  for _base in $_PARTITIONS data/system; do
-    _base="/$_base"
-    for xml in $(find "$_base" -type f -name "*deviceidle*.xml" 2>/dev/null); do
-      if grep -q "<wl n=\"$GMS_PKG\"" "$xml" 2>/dev/null; then
-        sed -i "/<wl n=\"$GMS_PKG\"/d" "$xml"
-        restorecon "$xml" 2>/dev/null
-        log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
-      elif grep -q "<wl>$GMS_PKG</wl>" "$xml" 2>/dev/null; then
-        sed -i "s/<wl>$GMS_PKG<\/wl>/<un-wl>$GMS_PKG<\/un-wl>/g" "$xml"
-        restorecon "$xml" 2>/dev/null
-        log_doze "[OK] Replaced persistent <wl> with <un-wl> in $xml"
-      fi
-    done
-  done
+  # 4. Remove persistent <wl> from deviceidle.xml
+  if [ -f /data/system/deviceidle.xml ] && \
+     grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
+    sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
+    restorecon /data/system/deviceidle.xml 2>/dev/null
+    log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
+  fi
 
   # 5. Full status
   _log_status "apply"
