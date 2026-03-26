@@ -236,15 +236,25 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
 
+  _PARTITIONS="india my_bigball my_carrier my_company my_engineering my_heytap \
+               my_manifest my_preload my_product my_region my_reserve my_stock \
+               odm product system system_ext vendor"
+
+  _GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms|<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+
   # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
   _overlay_worked="YES"
-  for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-             /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml \
-             /my_product/etc/sysconfig/*.xml /my_bigball/etc/sysconfig/*.xml; do
-    [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-      _overlay_worked="NO"
-      break
-    }
+  for _base in $_PARTITIONS; do
+    _base="/$_base"
+    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      [ -d "$_dir" ] || continue
+      for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+        [ -f "$xml" ] && grep -q "$_GMS_PATTERNS" "$xml" 2>/dev/null && {
+          _overlay_worked="NO"
+          break
+        }
+      done
+    done
   done
 
   if [ "$_overlay_worked" = "NO" ]; then
@@ -283,13 +293,18 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
 
     if [ "$_mounted" -gt 0 ]; then
       _still_unpatched="NO"
-      for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-                 /my_product/etc/sysconfig/*.xml; do
-        [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-          _still_unpatched="YES"
-          log_boot "[WARN] GMS entry still in: $_cp"
-          break
-        }
+      for _base in $_PARTITIONS; do
+        _base="/$_base"
+        for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+          [ -d "$_dir" ] || continue
+          for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+            [ -f "$xml" ] && grep -q "$_GMS_PATTERNS" "$xml" 2>/dev/null && {
+              _still_unpatched="YES"
+              log_boot "[WARN] GMS entry still in: $xml"
+              break
+            }
+          done
+        done
       done
       if [ "$_still_unpatched" = "NO" ]; then
         log_boot "[GOOD] GMS sysconfig patched via per-file fallback"
