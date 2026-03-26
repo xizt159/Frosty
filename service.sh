@@ -240,7 +240,13 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
                my_manifest my_preload my_product my_region my_reserve my_stock \
                odm product system system_ext vendor"
 
-  _GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms|<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+  _GMS_PATTERNS=(
+    "allow-in-power-save.*com\.google\.android\.gms"
+    "allow-in-data-usage-save.*com\.google\.android\.gms"
+    "<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+  )
+
+  _GREP_PATTERN=$(IFS='|'; echo "${_GMS_PATTERNS[*]}")
 
   # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
   _overlay_worked="YES"
@@ -249,7 +255,7 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
       [ -d "$_dir" ] || continue
       for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
-        [ -f "$xml" ] && grep -q "$_GMS_PATTERNS" "$xml" 2>/dev/null && {
+        [ -f "$xml" ] && grep -q "$_GREP_PATTERN" "$xml" 2>/dev/null && {
           _overlay_worked="NO"
           break
         }
@@ -298,7 +304,7 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
         for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
           [ -d "$_dir" ] || continue
           for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
-            [ -f "$xml" ] && grep -q "$_GMS_PATTERNS" "$xml" 2>/dev/null && {
+            [ -f "$xml" ] && grep -q "$_GREP_PATTERN" "$xml" 2>/dev/null && {
               _still_unpatched="YES"
               log_boot "[WARN] GMS entry still in: $xml"
               break
