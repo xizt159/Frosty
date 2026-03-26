@@ -111,12 +111,11 @@ patch_xml() {
     return 0
   fi
 
-  _GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms \
-                allow-in-data-usage-save.*com\.google\.android\.gms \
-                <wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
-  _GMS_ENTRIES=($_GMS_PATTERNS)
-  _GREP=$(IFS='|'; echo "${_GMS_ENTRIES[*]}")
-  _SED=$(printf '/%s/d;' "${_GMS_ENTRIES[@]//\//\\/}")
+  _GMS_PATTERNS=(
+    "allow-in-power-save.*com\.google\.android\.gms"
+    "allow-in-data-usage-save.*com\.google\.android\.gms"
+    "<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+  )
 
   local patched=0 _seen=""
 
@@ -132,12 +131,12 @@ patch_xml() {
         case "$_seen" in *"|$_real|"*) continue ;; esac
         _seen="${_seen}|${_real}|"
 
-        grep -qE "$_GREP" "$xml" 2>/dev/null || continue
+        grep -qE "$(IFS='|'; echo \"${_GMS_PATTERNS[*]}\")" "$xml" 2>/dev/null || continue
 
         local dest="$MODDIR${_real}"
         mkdir -p "$(dirname "$dest")"
         if cp -af "$_real" "$dest" 2>/dev/null; then
-          sed -i "$_SED" "$dest"
+          sed -i "$(printf '/%s/d;' \"${_GMS_PATTERNS[@]//\//\\/}\")" "$dest"
           log_doze "[OK] Patched: $_real"
           patched=$((patched + 1))
         else
