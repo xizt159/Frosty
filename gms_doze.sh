@@ -29,6 +29,12 @@ _PARTITIONS="india my_bigball my_carrier my_company my_engineering my_heytap \
              my_manifest my_preload my_product my_region my_reserve my_stock \
              odm product system system_ext vendor"
 
+_GMS_PATTERNS=(
+  "allow-in-power-save.*com\.google\.android\.gms"
+  "allow-in-data-usage-save.*com\.google\.android\.gms"
+  "<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+)
+
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
   local p="$1"
