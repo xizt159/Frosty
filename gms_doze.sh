@@ -111,31 +111,34 @@ patch_xml() {
     return 0
   fi
 
+  _GMS_PATTERNS='allow-in-power-save.*com.google.android.gms|allow-in-data-usage-save.*com.google.android.gms|<wl>com.google.android.gms</wl>'
+
   local patched=0 _seen=""
 
-  # Search for sysconfig files
+  # Search for sysconfig and other whitelist files
   for _base in $_PARTITIONS; do
     _base="/$_base"
-    [ -d "$_base/etc/sysconfig" ] || continue
-    for xml in $(find "$_base/etc/sysconfig" -type f -name "*.xml" 2>/dev/null); do
-      local _real
-      _real=$(readlink -f "$xml" 2>/dev/null)
-      [ -z "$_real" ] && _real="$xml"
-      case "$_seen" in *"|$_real|"*) continue ;; esac
-      _seen="${_seen}|${_real}|"
+    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      [ -d "$_dir" ] || continue
+      for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+        local _real
+        _real=$(readlink -f "$xml" 2>/dev/null)
+        [ -z "$_real" ] && _real="$xml"
+        case "$_seen" in *"|$_real|"*) continue ;; esac
+        _seen="${_seen}|${_real}|"
 
-      grep -qE 'allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms' \
-        "$xml" 2>/dev/null || continue
+        grep -qE "$_GMS_PATTERNS" "$xml" 2>/dev/null || continue
 
-      local dest="$MODDIR${_real}"
-      mkdir -p "$(dirname "$dest")"
-      if cp -af "$_real" "$dest" 2>/dev/null; then
-        sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$dest"
-        log_doze "[OK] Patched: $_real"
-        patched=$((patched + 1))
-      else
-        log_doze "[FAIL] Cannot copy: $_real"
-      fi
+        local dest="$MODDIR${_real}"
+        mkdir -p "$(dirname "$dest")"
+        if cp -af "$_real" "$dest" 2>/dev/null; then
+          sed -i -E "/${_GMS_PATTERNS//\//\\/}/d" "$dest"
+          log_doze "[OK] Patched: $_real"
+          patched=$((patched + 1))
+        else
+          log_doze "[FAIL] Cannot copy: $_real"
+        fi
+      done
     done
   done
 
