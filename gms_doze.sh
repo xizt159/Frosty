@@ -291,19 +291,7 @@ revert() {
     *) log_doze "[OK] sys-whitelist restore: ${sys_out:-executed}" ;;
   esac
 
-  # 3. Restore deviceidle.xml whitelists
-  for _base in $_PARTITIONS data/system; do
-    _base="/$_base"
-    for xml in $(find "$_base" -type f -name "*deviceidle*.xml" 2>/dev/null); do
-      if grep -q "<un-wl>$GMS_PKG</un-wl>" "$xml" 2>/dev/null; then
-        sed -i "s/<un-wl>$GMS_PKG<\/un-wl>/<wl>$GMS_PKG<\/wl>/g" "$xml"
-        restorecon "$xml" 2>/dev/null
-        log_doze "[OK] Replaced persistent <un-wl> with <wl> in $xml"
-      fi
-    done
-  done
-
-  # 4. Re-enable device admin receivers
+  # 3. Re-enable device admin receivers
   local admin_count=0
   for user_id in $(get_user_ids); do
     for admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
@@ -318,7 +306,7 @@ revert() {
   # deviceidle.xml cleanup handled by post-fs-data.sh on next boot
   log_doze "Reboot recommended for full restoration"
 
-  # 5. Full status
+  # 4. Full status
   _log_status "revert"
 }
 
