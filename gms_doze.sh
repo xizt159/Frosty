@@ -117,12 +117,6 @@ patch_xml() {
     return 0
   fi
 
-  _GMS_PATTERNS=(
-    "allow-in-power-save.*com\.google\.android\.gms"
-    "allow-in-data-usage-save.*com\.google\.android\.gms"
-    "<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
-  )
-
   local patched=0 _seen=""
 
   # Search for sysconfig and other whitelist files
