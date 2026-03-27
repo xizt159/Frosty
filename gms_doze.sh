@@ -271,7 +271,7 @@ apply() {
 
   # 4. Remove persistent <wl> from deviceidle.xml
   if [ -f /data/system/deviceidle.xml ] && \
-    grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
+      grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
     sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
     restorecon /data/system/deviceidle.xml 2>/dev/null
     log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
