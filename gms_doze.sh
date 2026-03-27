@@ -29,9 +29,9 @@ _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heyt
              /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
              /odm /product /system /system_ext /vendor"
 
-_GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms \
-               allow-in-data-usage-save.*com\.google\.android\.gms \
-               <wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+_GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
+               allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
+               <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
 
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {

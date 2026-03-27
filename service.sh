@@ -237,14 +237,16 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
 
+  _GMS="com.google.android.gms"
+
   # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
   _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
                /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
                /odm /product /system /system_ext /vendor"
 
-  _GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms \
-                 allow-in-data-usage-save.*com\.google\.android\.gms \
-                 <wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
+  _GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
+                 allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
+                 <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
 
   _GREP_PATTERN=""
   for p in $_GMS_PATTERNS; do
@@ -317,8 +319,8 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
       done
       if [ "$_still_unpatched" = "NO" ]; then
         log_boot "[GOOD] GMS sysconfig patched via per-file fallback"
-        dumpsys deviceidle whitelist -"com.google.android.gms" >/dev/null 2>&1
-        cmd deviceidle except-idle-whitelist -"com.google.android.gms" >/dev/null 2>&1
+        dumpsys deviceidle whitelist -"$_GMS" >/dev/null 2>&1
+        cmd deviceidle except-idle-whitelist -"$_GMS" >/dev/null 2>&1
         log_boot "[OK] Removed GMS from runtime whitelist"
       fi
     fi
