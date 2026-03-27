@@ -243,7 +243,7 @@ start_screen_monitor() {
 }
 
 freeze_deep_doze() {
-  echo "Frosty v${MODVER:-?} - Deep Doze - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - Deep Doze (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
 
   if [ "$ENABLE_DEEP_DOZE" != "1" ]; then
     log_deep "[SKIP] Deep Doze disabled"
@@ -267,7 +267,7 @@ freeze_deep_doze() {
 }
 
 stock_deep_doze() {
-  echo "Frosty v${MODVER:-?} - Deep Doze - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - Deep Doze (STOCK) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
   log_deep "Disabling Deep Doze..."
 
   revert_doze_constants

@@ -45,7 +45,7 @@ _is_separate_partition() {
 # Log full status to doze log
 _log_status() {
   local label="$1"
-  [ -s "$DOZE_LOG" ] || echo "Frosty v${MODVER:-?} - GMS Doze - STATUS $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+  [ -s "$DOZE_LOG" ] || echo "Frosty v${MODVER:-?} - GMS Doze (STATUS) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
   log_doze "Status after $label"
 
   local wl_full
@@ -247,7 +247,7 @@ remove_xml() {
 }
 
 apply() {
-  echo "Frosty v${MODVER:-?} - GMS Doze - APPLY $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - GMS Doze (APPLY) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
 
   if [ "$ENABLE_GMS_DOZE" != "1" ]; then
     log_doze "[SKIP] GMS Doze disabled by user"
@@ -298,7 +298,7 @@ apply() {
 }
 
 revert() {
-  echo "Frosty v${MODVER:-?} - GMS Doze - REVERT $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - GMS Doze (REVERT) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
 
   log_doze "Reverting GMS Doze..."
 

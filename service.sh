@@ -6,7 +6,6 @@ MODDIR="${0%/*}"
 
 LOGDIR="$MODDIR/logs"
 BACKUP_DIR="$MODDIR/backup"
-mkdir -p "$LOGDIR" "$BACKUP_DIR"
 BOOT_LOG="$LOGDIR/boot.log"
 TWEAKS_LOG="$LOGDIR/tweaks.log"
 PROPS_LOG="$LOGDIR/props.log"
@@ -17,6 +16,7 @@ KERNEL_TWEAKS="$MODDIR/config/kernel_tweaks.txt"
 RAM_BACKUP="$BACKUP_DIR/ram_values.txt"
 RAM_TWEAKS="$MODDIR/config/ram_tweaks.txt"
 
+mkdir -p "$LOGDIR" "$BACKUP_DIR"
 
 # Log rotation
 for log in "$LOGDIR"/*.log; do
@@ -26,15 +26,16 @@ for log in "$LOGDIR"/*.log; do
   [ "$size" -gt 102400 ] && mv "$log" "${log}.old"
 done
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
 log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
 
-echo "Frosty v$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2) Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
-echo "Frosty Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
-echo "Frosty Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
-echo "Frosty RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
-echo "Frosty Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+echo "Frosty v${MODVER:-?} - Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
+echo "Frosty v${MODVER:-?} - Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
+echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
+echo "Frosty v${MODVER:-?} - RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
+echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
 
 # Wait for boot
 until [ "$(getprop sys.boot_completed)" = "1" ] && [ -d /sdcard ]; do

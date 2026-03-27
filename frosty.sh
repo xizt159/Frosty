@@ -18,6 +18,7 @@ SYSPROP_OLD="$MODDIR/system.prop.old"
 
 mkdir -p "$LOGDIR" "$MODDIR/config"
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 log_service() { echo "$1" >> "$SERVICES_LOG"; }
 log_ram()     { echo "$1" >> "$RAM_LOG"; }
 
@@ -80,7 +81,7 @@ apply_system_props() {
 }
 
 freeze_services() {
-  echo "Frosty Services - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
+  echo "Frosty ${MODVER:-?} - Services (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
 
   if [ ! -f "$GMS_LIST" ]; then
     echo "ERROR: Service list not found! Reinstall"
@@ -130,7 +131,7 @@ freeze_services() {
 }
 
 stock_services() {
-  echo "Frosty Services - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
+  echo "Frosty ${MODVER:-?} - Services (STOCK) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
 
   if [ ! -f "$GMS_LIST" ]; then
     echo "ERROR: Service list not found! Reinstall"
@@ -174,8 +175,6 @@ backup_settings() {
   mkdir -p "$dir" 2>/dev/null || { echo "ERROR: Cannot write to /storage/emulated/0/Frosty — grant storage permission"; return 1; }
   local ts=$(date '+%Y%m%d_%H%M%S')
   local out="$dir/frosty_$ts.json"
-  local modver; modver=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-  [ -z "$modver" ] && modver="unknown"
   . "$MODDIR/config/user_prefs"
   local wl_b64=""
   if [ -f "$MODDIR/config/doze_whitelist.txt" ]; then
@@ -183,7 +182,7 @@ backup_settings() {
   fi
   cat > "$out" << ENDJSON
 {
-  "version": "$modver",
+  "version": "${MODVER:-unknown}",
   "exported": "$ts",
   "prefs": {
     "ENABLE_KERNEL_TWEAKS": $ENABLE_KERNEL_TWEAKS,
@@ -587,8 +586,9 @@ apply_battery_saver() {
   settings put global low_power 1 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power_sticky 1 2>/dev/null
+  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
   {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [OK] Applied:"
+    echo "[$(date '+%H:%M:%S')] [OK] Applied:"
     echo "$constants" | tr ',' '\n' | while IFS= read -r _entry; do
       echo "  $_entry"
     done
@@ -601,7 +601,8 @@ revert_battery_saver() {
   settings put global low_power_sticky 0 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power 0 2>/dev/null
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [OK] Reverted" >> "$BS_LOG"
+  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+  echo "[$(date '+%H:%M:%S')] [OK] Reverted" >> "$BS_LOG"
   echo '{"status":"ok"}'
 }
 
