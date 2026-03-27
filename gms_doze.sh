@@ -29,11 +29,9 @@ _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heyt
              /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
              /odm /product /system /system_ext /vendor"
 
-_GMS_PATTERNS=(
-  "allow-in-power-save.*com\.google\.android\.gms"
-  "allow-in-data-usage-save.*com\.google\.android\.gms"
-  "<wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
-)
+_GMS_PATTERNS="allow-in-power-save.*com\.google\.android\.gms \
+               allow-in-data-usage-save.*com\.google\.android\.gms \
+               <wl[^>]*>[[:space:]]*com\.google\.android\.gms[[:space:]]*</wl>"
 
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
@@ -64,18 +62,26 @@ _log_status() {
     [ -n "$in_user" ]    && log_doze "[WARN] user tier: still present"
   fi
 
-  local xml_count
-  xml_count=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | wc -l)
+  local xml_count=0
+  for _base in $_PARTITIONS; do
+    _xml_count=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
+    xml_count=$((xml_count + $_xml_count))
+  done
   log_doze "[INFO] XML overlays: $xml_count"
 
   if [ "$xml_count" -gt 0 ]; then
     local overlay_active="YES"
-    for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-               /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml; do
-      [ -f "$_cp" ] && grep -qE "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-        overlay_active="NO"
-        break
-      }
+    for _base in $_PARTITIONS; do
+      [ -d "$_base" ] || continue
+      for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+        [ -d "$_dir" ] || continue
+        for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+          [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
+            overlay_active="NO"
+            break
+          }
+        done
+      done
     done
     log_doze "[INFO] Overlay mounted: $overlay_active"
     if [ "$overlay_active" = "NO" ]; then
@@ -110,20 +116,29 @@ _log_status() {
 
 # Create patched XML overlays
 patch_xml() {
-  local existing
-  existing=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | wc -l)
+  local existing=0
+  for _base in $_PARTITIONS; do
+    _existing=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
+    existing=$((existing + $_existing))
+  done
+
   if [ "$existing" -gt 0 ]; then
     log_doze "[OK] $existing sysconfig overlay(s) already present"
     return 0
   fi
 
-  _GREP_PATTERN=$(IFS='|'; echo "${_GMS_PATTERNS[*]}")
-  _SED_PATTERN=$(printf '/%s/d;' "${_GMS_PATTERNS[@]//\//\\/}")
+  _GREP_PATTERN=""
+  _SED_PATTERN=""
+  for p in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
+    _SED_PATTERN="$_SED_PATTERN/${p/\//\\/}/d;"
+  done
 
   local patched=0 _seen=""
 
   # Search for sysconfig and other whitelist files
   for _base in $_PARTITIONS; do
+    [ -d "$_base" ] || continue
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
       [ -d "$_dir" ] || continue
       for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
@@ -159,13 +174,12 @@ patch_xml() {
       case "$_seen" in *"|$_real|"*) continue ;; esac
       _seen="${_seen}|${_real}|"
 
-      grep -qE 'allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms' \
-        "$xml" 2>/dev/null || continue
+      grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null || continue
 
       local dest="$MODDIR${_real}"
       mkdir -p "$(dirname "$dest")"
       if cp -af "$_real" "$dest" 2>/dev/null; then
-        sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$dest"
+        sed -i "$_SED_PATTERN" "$dest"
         log_doze "[OK] Patched: $_real"
         patched=$((patched + 1))
       else
@@ -187,7 +201,7 @@ patch_xml() {
 # Ensure overlay files are at the correct location for the root manager
 _fixup_partition_layout() {
   for _p in $_PARTITIONS; do
-    p="${_p#/}" # Remove starting / to prevent corrupt paths like //system
+    p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
     if _is_separate_partition "$p"; then
       # Separate: move from $MODDIR/system/$p/ → $MODDIR/$p/
       if [ -d "$MODDIR/system/$p" ] && [ ! -L "$MODDIR/system/$p" ]; then
