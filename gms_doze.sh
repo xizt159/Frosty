@@ -186,7 +186,8 @@ patch_xml() {
 
 # Ensure overlay files are at the correct location for the root manager
 _fixup_partition_layout() {
-  for p in $_PARTITIONS; do
+  for _p in $_PARTITIONS; do
+    p="${_p#/}" # Remove starting / to prevent corrupt paths like //system
     if _is_separate_partition "$p"; then
       # Separate: move from $MODDIR/system/$p/ → $MODDIR/$p/
       if [ -d "$MODDIR/system/$p" ] && [ ! -L "$MODDIR/system/$p" ]; then
