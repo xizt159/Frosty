@@ -2,6 +2,8 @@
 # FROSTY - Service script
 
 MODDIR="${0%/*}"
+[ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+
 LOGDIR="$MODDIR/logs"
 BACKUP_DIR="$MODDIR/backup"
 mkdir -p "$LOGDIR" "$BACKUP_DIR"

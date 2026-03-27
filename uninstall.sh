@@ -2,6 +2,8 @@
 # FROSTY - Uninstall Script
 
 MODDIR="${0%/*}"
+[ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+
 TEMP_DIR="/data/local/tmp/frosty_uninstall"
 mkdir -p "$TEMP_DIR"
 

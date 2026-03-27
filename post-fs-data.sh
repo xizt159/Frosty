@@ -2,6 +2,7 @@
 # FROSTY - Post-FS-Data
 
 MODDIR="${0%/*}"
+[ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
 [ -f "$MODDIR/config/user_prefs" ] && . "$MODDIR/config/user_prefs"
 
