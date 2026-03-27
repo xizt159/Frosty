@@ -236,9 +236,10 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
 
-  _PARTITIONS="india my_bigball my_carrier my_company my_engineering my_heytap \
-               my_manifest my_preload my_product my_region my_reserve my_stock \
-               odm product system system_ext vendor"
+  # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
+  _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+               /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+               /odm /product /system /system_ext /vendor"
 
   _GMS_PATTERNS=(
     "allow-in-power-save.*com\.google\.android\.gms"
@@ -251,7 +252,6 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
   _overlay_worked="YES"
   for _base in $_PARTITIONS; do
-    _base="/$_base"
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
       [ -d "$_dir" ] || continue
       for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
