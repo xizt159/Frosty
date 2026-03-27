@@ -72,7 +72,7 @@ _log_status() {
     local overlay_active="YES"
     for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
                /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml; do
-      [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
+      [ -f "$_cp" ] && grep -qE "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
         overlay_active="NO"
         break
       }
@@ -271,7 +271,7 @@ apply() {
 
   # 4. Remove persistent <wl> from deviceidle.xml
   if [ -f /data/system/deviceidle.xml ] && \
-     grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
+    grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
     sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
     restorecon /data/system/deviceidle.xml 2>/dev/null
     log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
