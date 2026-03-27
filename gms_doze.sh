@@ -11,7 +11,7 @@ USER_PREFS="$MODDIR/config/user_prefs"
 mkdir -p "$LOGDIR"
 
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-log_doze() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$DOZE_LOG"; }
+log_doze() { echo "[$(date '+%H:%M:%S')] $1" >> "$DOZE_LOG"; }
 
 ENABLE_GMS_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
@@ -45,6 +45,7 @@ _is_separate_partition() {
 # Log full status to doze log
 _log_status() {
   local label="$1"
+  [ -s "$DOZE_LOG" ] || echo "Frosty v${MODVER:-?} - GMS Doze - STATUS $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
   log_doze "Status after $label"
 
   local wl_full

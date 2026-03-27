@@ -12,7 +12,8 @@ MONITOR_PID_FILE="$MODDIR/tmp/screen_monitor.pid"
 
 mkdir -p "$LOGDIR" "$MODDIR/tmp"
 
-log_deep() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
 
 ENABLE_DEEP_DOZE=0
 DEEP_DOZE_LEVEL="moderate"
@@ -242,7 +243,7 @@ start_screen_monitor() {
 }
 
 freeze_deep_doze() {
-  echo "Frosty Deep Doze - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - Deep Doze - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
 
   if [ "$ENABLE_DEEP_DOZE" != "1" ]; then
     log_deep "[SKIP] Deep Doze disabled"
@@ -266,7 +267,7 @@ freeze_deep_doze() {
 }
 
 stock_deep_doze() {
-  echo "Frosty Deep Doze - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - Deep Doze - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
   log_deep "Disabling Deep Doze..."
 
   revert_doze_constants
