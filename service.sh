@@ -28,8 +28,8 @@ done
 
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
-log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
+log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 
 echo "Frosty v${MODVER:-?} - Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
 echo "Frosty v${MODVER:-?} - Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
@@ -71,8 +71,6 @@ else
     log_boot "System props: DISABLED"
   fi
 fi
-
-log_props ""
 
 write_val() {
   local file="$1" value="$2" name="$3"

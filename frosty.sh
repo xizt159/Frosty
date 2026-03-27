@@ -19,8 +19,8 @@ SYSPROP_OLD="$MODDIR/system.prop.old"
 mkdir -p "$LOGDIR" "$MODDIR/config"
 
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+log_ram()     { echo "[$(date '+%H:%M:%S')] $1" >> "$RAM_LOG"; }
 log_service() { echo "$1" >> "$SERVICES_LOG"; }
-log_ram()     { echo "$1" >> "$RAM_LOG"; }
 
 load_prefs() {
   if [ -f "$USER_PREFS" ]; then
