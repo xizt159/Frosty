@@ -33,11 +33,30 @@ _GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
                allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
                <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
 
+# Only apps in /data/app are really safe to be optimized
+_is_safe_app() {
+  _paths="$(pm path "$1" 2>/dev/null)"
+  [ -z "$_paths" ] && return 1
+
+  while IFS= read -r path; do
+    case "$path" in
+      package:/data/app/*) ;;  # User-App
+      package:/*) return 1 ;;           # System-App
+      *) continue ;;
+    esac
+  done <<EOF
+$_paths
+EOF
+
+  return 0
+}
+
 DEVICEIDLE_FILE="$MODDIR/config/deviceidle_pkgs.txt"
 if [ -f "$DEVICEIDLE_FILE" ]; then
   for pkg in $(sed 's/#.*//;s/[[:space:]]//g' "$DEVICEIDLE_FILE"); do
-    [ -n "$pkg" ] && pm path "$pkg" >/dev/null 2>&1 && \
-      _GMS_PATTERNS+=" <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+    [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
+    
+    _GMS_PATTERNS+=" <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
   done
 fi
 
