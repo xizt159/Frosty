@@ -33,6 +33,14 @@ _GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
                allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
                <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
 
+DEVICEIDLE_FILE="$MODDIR/config/deviceidle_pkgs.txt"
+if [ -f "$DEVICEIDLE_FILE" ]; then
+  for pkg in $(sed 's/#.*//;s/[[:space:]]//g' "$DEVICEIDLE_FILE"); do
+    [ -n "$pkg" ] && pm path "$pkg" >/dev/null 2>&1 && \
+      _GMS_PATTERNS+=" <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+  done
+fi
+
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
   local p="$1"

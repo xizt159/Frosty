@@ -1,0 +1,5 @@
+# Frosty - DeviceIdle Optimization
+# Apps listed here will be optimized (removed from deviceidle whitelist).
+# Add package names one per line. Lines starting with # are comments.
+
+# com.android.vending
