@@ -9,6 +9,7 @@ SERVICES_LOG="$LOGDIR/services.log"
 RAM_LOG="$LOGDIR/ram.log"
 GMS_LIST="$MODDIR/config/gms_services.txt"
 USER_PREFS="$MODDIR/config/user_prefs"
+KERNEL_TWEAKS="$MODDIR/backup/kernel_tweaks.txt"
 KERNEL_BACKUP="$MODDIR/backup/kernel_values.txt"
 RAM_TWEAKS="$MODDIR/config/ram_tweaks.txt"
 RAM_BACKUP="$MODDIR/backup/ram_values.txt"
@@ -434,9 +435,7 @@ revert_ram_optimizer() {
 }
 
 apply_kernel() {
-  local tweaks="$MODDIR/config/kernel_tweaks.txt"
-
-  if [ ! -f "$tweaks" ]; then
+  if [ ! -f "$KERNEL_TWEAKS" ]; then
     echo '{"status":"error","message":"kernel_tweaks.txt not found"}'
     return
   fi
@@ -453,7 +452,7 @@ apply_kernel() {
       _name=$(basename "$_path")
       _val=$(cat "$_path" 2>/dev/null)
       printf "%s=%s=%s\n" "$_name" "$_val" "$_path" >> "$KERNEL_BACKUP"
-    done < "$tweaks"
+    done < "$KERNEL_TWEAKS"
   fi
 
   local count=0 fail=0 skip=0
@@ -473,7 +472,7 @@ apply_kernel() {
     else
       fail=$((fail + 1))
     fi
-  done < "$tweaks"
+  done < "$KERNEL_TWEAKS"
 
   # TCP congestion: backup and apply best available algorithm
   _tcp_cc=/proc/sys/net/ipv4/tcp_congestion_control
