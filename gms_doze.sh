@@ -120,12 +120,12 @@ _log_status() {
 
   local has_unwl="NO"
   [ -f /data/system/deviceidle.xml ] && \
-    grep -q "<un-wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null && has_unwl="YES"
+    grep -q "<un-wl n=\"${GMS_PKG//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null && has_unwl="YES"
   log_doze "[INFO] deviceidle.xml <un-wl>: $has_unwl"
 
   local has_wl="NO"
   [ -f /data/system/deviceidle.xml ] && \
-    grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null && has_wl="YES"
+    grep -q "<wl n=\"${GMS_PKG//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null && has_wl="YES"
   log_doze "[INFO] deviceidle.xml <wl>: $has_wl"
 
   # Final verdict
@@ -317,8 +317,8 @@ apply() {
 
   # 4. Remove persistent <wl> from deviceidle.xml
   if [ -f /data/system/deviceidle.xml ] && \
-      grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
-    sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
+      grep -q "<wl n=\"${GMS_PKG//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null; then
+    sed -i "/<wl n=\"${GMS_PKG//[\.]/\\.}\"/d" /data/system/deviceidle.xml
     restorecon /data/system/deviceidle.xml 2>/dev/null
     log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
   fi
