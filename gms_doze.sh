@@ -11,7 +11,7 @@ USER_PREFS="$MODDIR/config/user_prefs"
 mkdir -p "$LOGDIR"
 
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-log_doze() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$DOZE_LOG"; }
+log_doze() { echo "[$(date '+%H:%M:%S')] $1" >> "$DOZE_LOG"; }
 
 ENABLE_GMS_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
@@ -24,10 +24,14 @@ get_user_ids() {
   pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
 }
 
-# Partitions that may carry sysconfig XMLs with GMS whitelist entries
-_PARTITIONS="product vendor system_ext odm india my_bigball my_heytap my_carrier \
-             my_company my_engineering my_manifest my_preload my_product \
-             my_region my_reserve my_stock"
+# Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
+_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+             /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+             /odm /product /system /system_ext /vendor"
+
+_GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
+               allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
+               <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
 
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
@@ -41,6 +45,7 @@ _is_separate_partition() {
 # Log full status to doze log
 _log_status() {
   local label="$1"
+  [ -s "$DOZE_LOG" ] || echo "Frosty v${MODVER:-?} - GMS Doze (STATUS) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
   log_doze "Status after $label"
 
   local wl_full
@@ -58,18 +63,26 @@ _log_status() {
     [ -n "$in_user" ]    && log_doze "[WARN] user tier: still present"
   fi
 
-  local xml_count
-  xml_count=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | wc -l)
+  local xml_count=0
+  for _base in $_PARTITIONS; do
+    _xml_count=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
+    xml_count=$((xml_count + $_xml_count))
+  done
   log_doze "[INFO] XML overlays: $xml_count"
 
   if [ "$xml_count" -gt 0 ]; then
     local overlay_active="YES"
-    for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-               /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml; do
-      [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-        overlay_active="NO"
-        break
-      }
+    for _base in $_PARTITIONS; do
+      [ -d "$_base" ] || continue
+      for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+        [ -d "$_dir" ] || continue
+        for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+          [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
+            overlay_active="NO"
+            break
+          }
+        done
+      done
     done
     log_doze "[INFO] Overlay mounted: $overlay_active"
     if [ "$overlay_active" = "NO" ]; then
@@ -104,39 +117,50 @@ _log_status() {
 
 # Create patched XML overlays
 patch_xml() {
-  local existing
-  existing=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | wc -l)
+  local existing=0
+  for _base in $_PARTITIONS; do
+    _existing=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
+    existing=$((existing + $_existing))
+  done
+
   if [ "$existing" -gt 0 ]; then
     log_doze "[OK] $existing sysconfig overlay(s) already present"
     return 0
   fi
 
+  _GREP_PATTERN=""
+  _SED_PATTERN=""
+  for p in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
+    _SED_PATTERN="$_SED_PATTERN/${p/\//\\/}/d;"
+  done
+
   local patched=0 _seen=""
 
-  # Search for sysconfig files
-  for _base in /system /system_ext /product /vendor /odm /india \
-               /my_bigball /my_heytap /my_carrier /my_company /my_engineering \
-               /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock; do
-    [ -d "$_base/etc/sysconfig" ] || continue
-    for xml in $(find "$_base/etc/sysconfig" -type f -name "*.xml" 2>/dev/null); do
-      local _real
-      _real=$(readlink -f "$xml" 2>/dev/null)
-      [ -z "$_real" ] && _real="$xml"
-      case "$_seen" in *"|$_real|"*) continue ;; esac
-      _seen="${_seen}|${_real}|"
+  # Search for sysconfig and other whitelist files
+  for _base in $_PARTITIONS; do
+    [ -d "$_base" ] || continue
+    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      [ -d "$_dir" ] || continue
+      for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+        local _real
+        _real=$(readlink -f "$xml" 2>/dev/null)
+        [ -z "$_real" ] && _real="$xml"
+        case "$_seen" in *"|$_real|"*) continue ;; esac
+        _seen="${_seen}|${_real}|"
 
-      grep -qE 'allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms' \
-        "$xml" 2>/dev/null || continue
+        grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null || continue
 
-      local dest="$MODDIR${_real}"
-      mkdir -p "$(dirname "$dest")"
-      if cp -af "$_real" "$dest" 2>/dev/null; then
-        sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$dest"
-        log_doze "[OK] Patched: $_real"
-        patched=$((patched + 1))
-      else
-        log_doze "[FAIL] Cannot copy: $_real"
-      fi
+        local dest="$MODDIR${_real}"
+        mkdir -p "$(dirname "$dest")"
+        if cp -af "$_real" "$dest" 2>/dev/null; then
+          sed -i "$_SED_PATTERN" "$dest"
+          log_doze "[OK] Patched: $_real"
+          patched=$((patched + 1))
+        else
+          log_doze "[FAIL] Cannot copy: $_real"
+        fi
+      done
     done
   done
 
@@ -151,13 +175,12 @@ patch_xml() {
       case "$_seen" in *"|$_real|"*) continue ;; esac
       _seen="${_seen}|${_real}|"
 
-      grep -qE 'allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms' \
-        "$xml" 2>/dev/null || continue
+      grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null || continue
 
       local dest="$MODDIR${_real}"
       mkdir -p "$(dirname "$dest")"
       if cp -af "$_real" "$dest" 2>/dev/null; then
-        sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$dest"
+        sed -i "$_SED_PATTERN" "$dest"
         log_doze "[OK] Patched: $_real"
         patched=$((patched + 1))
       else
@@ -178,7 +201,8 @@ patch_xml() {
 
 # Ensure overlay files are at the correct location for the root manager
 _fixup_partition_layout() {
-  for p in $_PARTITIONS; do
+  for _p in $_PARTITIONS; do
+    p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
     if _is_separate_partition "$p"; then
       # Separate: move from $MODDIR/system/$p/ → $MODDIR/$p/
       if [ -d "$MODDIR/system/$p" ] && [ ! -L "$MODDIR/system/$p" ]; then
@@ -223,7 +247,7 @@ remove_xml() {
 }
 
 apply() {
-  echo "Frosty v${MODVER:-?} - GMS Doze - APPLY $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - GMS Doze (APPLY) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
 
   if [ "$ENABLE_GMS_DOZE" != "1" ]; then
     log_doze "[SKIP] GMS Doze disabled by user"
@@ -263,7 +287,7 @@ apply() {
 
   # 4. Remove persistent <wl> from deviceidle.xml
   if [ -f /data/system/deviceidle.xml ] && \
-     grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
+      grep -q "<wl n=\"$GMS_PKG\"" /data/system/deviceidle.xml 2>/dev/null; then
     sed -i "/<wl n=\"$GMS_PKG\"/d" /data/system/deviceidle.xml
     restorecon /data/system/deviceidle.xml 2>/dev/null
     log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
@@ -274,7 +298,7 @@ apply() {
 }
 
 revert() {
-  echo "Frosty v${MODVER:-?} - GMS Doze - REVERT $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+  echo "Frosty v${MODVER:-?} - GMS Doze (REVERT) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
 
   log_doze "Reverting GMS Doze..."
 

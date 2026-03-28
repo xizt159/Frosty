@@ -18,8 +18,9 @@ SYSPROP_OLD="$MODDIR/system.prop.old"
 
 mkdir -p "$LOGDIR" "$MODDIR/config"
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+log_ram()     { echo "[$(date '+%H:%M:%S')] $1" >> "$RAM_LOG"; }
 log_service() { echo "$1" >> "$SERVICES_LOG"; }
-log_ram()     { echo "$1" >> "$RAM_LOG"; }
 
 load_prefs() {
   if [ -f "$USER_PREFS" ]; then
@@ -80,7 +81,7 @@ apply_system_props() {
 }
 
 freeze_services() {
-  echo "Frosty Services - FREEZE $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
+  echo "Frosty ${MODVER:-?} - Services (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
 
   if [ ! -f "$GMS_LIST" ]; then
     echo "ERROR: Service list not found! Reinstall"
@@ -130,7 +131,7 @@ freeze_services() {
 }
 
 stock_services() {
-  echo "Frosty Services - STOCK $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
+  echo "Frosty ${MODVER:-?} - Services (STOCK) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
 
   if [ ! -f "$GMS_LIST" ]; then
     echo "ERROR: Service list not found! Reinstall"
@@ -174,8 +175,6 @@ backup_settings() {
   mkdir -p "$dir" 2>/dev/null || { echo "ERROR: Cannot write to /storage/emulated/0/Frosty — grant storage permission"; return 1; }
   local ts=$(date '+%Y%m%d_%H%M%S')
   local out="$dir/frosty_$ts.json"
-  local modver; modver=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-  [ -z "$modver" ] && modver="unknown"
   . "$MODDIR/config/user_prefs"
   local wl_b64=""
   if [ -f "$MODDIR/config/doze_whitelist.txt" ]; then
@@ -183,7 +182,7 @@ backup_settings() {
   fi
   cat > "$out" << ENDJSON
 {
-  "version": "$modver",
+  "version": "${MODVER:-unknown}",
   "exported": "$ts",
   "prefs": {
     "ENABLE_KERNEL_TWEAKS": $ENABLE_KERNEL_TWEAKS,
@@ -302,7 +301,7 @@ share_backup() {
 }
 
 apply_ram_optimizer() {
-  log_ram "[RAM] Applying RAM optimizer..."
+  log_ram "Applying RAM optimizer..."
   mkdir -p "$MODDIR/backup"
 
   # Backup current RAM sysfs values (skip if backup already exists)
@@ -318,7 +317,7 @@ apply_ram_optimizer() {
       _val=$(cat "$_path" 2>/dev/null)
       printf "%s=%s=%s\n" "$_name" "$_val" "$_path" >> "$RAM_BACKUP"
     done < "$RAM_TWEAKS"
-    log_ram "[RAM][OK] RAM backup saved"
+    log_ram "[OK] RAM backup saved"
   fi
 
   # Apply sysfs tweaks from ram_tweaks.txt
@@ -337,10 +336,10 @@ apply_ram_optimizer() {
         kcount=$((kcount + 1))
       else
         kfail=$((kfail + 1))
-        log_ram "[RAM][FAIL] $_path"
+        log_ram "[FAIL] $_path"
       fi
     done < "$RAM_TWEAKS"
-    log_ram "[RAM][OK] RAM tweaks applied ($kcount ok, $kfail failed)"
+    log_ram "[OK] RAM tweaks applied ($kcount ok, $kfail failed)"
   fi
 
   # Android-layer tweaks
@@ -358,7 +357,7 @@ apply_ram_optimizer() {
   else
     swappiness=80; extra_free=8192   # <4GB
   fi
-  log_ram "[RAM][OK] RAM detected: $((${total_kb:-0} / 1024))MB — swappiness=$swappiness extra_free=${extra_free}KB"
+  log_ram "[OK] RAM detected: $((${total_kb:-0} / 1024))MB — swappiness=$swappiness extra_free=${extra_free}KB"
 
   # Backup and apply tiered swappiness
   if [ -f /proc/sys/vm/swappiness ]; then
@@ -367,7 +366,7 @@ apply_ram_optimizer() {
       printf 'swappiness=%s=/proc/sys/vm/swappiness\n' "$_orig_swap" >> "$RAM_BACKUP"
     fi
     printf '%s\n' "$swappiness" > /proc/sys/vm/swappiness 2>/dev/null && \
-      log_ram "[RAM][OK] swappiness = $swappiness" || log_ram "[RAM][FAIL] swappiness"
+      log_ram "[OK] swappiness = $swappiness" || log_ram "[FAIL] swappiness"
   fi
 
   # Backup and apply tiered extra_free_kbytes
@@ -377,7 +376,7 @@ apply_ram_optimizer() {
       printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$_orig_efk" >> "$RAM_BACKUP"
     fi
     printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null && \
-      log_ram "[RAM][OK] extra_free_kbytes = $extra_free" || log_ram "[RAM][FAIL] extra_free_kbytes"
+      log_ram "[OK] extra_free_kbytes = $extra_free" || log_ram "[FAIL] extra_free_kbytes"
   fi
 
   # Clean up stale process limit overrides
@@ -392,13 +391,13 @@ apply_ram_optimizer() {
   if [ "${sdk:-0}" -ge 30 ] 2>/dev/null; then
     content call --uri content://settings/config --method PUT_value \
       --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null && \
-      log_ram "[RAM][OK] usap_pool_enabled = true" || log_ram "[RAM][FAIL] usap_pool_enabled"
+      log_ram "[OK] usap_pool_enabled = true" || log_ram "[FAIL] usap_pool_enabled"
   fi
   echo '{"status":"ok"}'
 }
 
 revert_ram_optimizer() {
-  log_ram "[RAM] Reverting RAM optimizer..."
+  log_ram "Reverting RAM optimizer..."
 
   # Restore RAM values from backup
   if [ -f "$RAM_BACKUP" ]; then
@@ -414,9 +413,9 @@ revert_ram_optimizer() {
       printf '%s\n' "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
     done < "$RAM_BACKUP"
     rm -f "$RAM_BACKUP"
-    log_ram "[RAM][OK] RAM values restored ($kcount)"
+    log_ram "[OK] RAM values restored ($kcount)"
   else
-    log_ram "[RAM] No RAM backup found, skipping kernel revert"
+    log_ram "No RAM backup found, skipping kernel revert"
   fi
 
   # Undo Android-layer tweaks
@@ -430,7 +429,7 @@ revert_ram_optimizer() {
     --arg activity_manager_constants >/dev/null 2>&1
   content call --uri content://settings/config --method DELETE_value \
     --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
-  log_ram "[RAM][OK] RAM optimizer reverted"
+  log_ram "[OK] RAM optimizer reverted"
   echo "{\"status\":\"ok\"}"
 }
 
@@ -587,8 +586,9 @@ apply_battery_saver() {
   settings put global low_power 1 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power_sticky 1 2>/dev/null
+  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
   {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [OK] Applied:"
+    echo "[$(date '+%H:%M:%S')] [OK] Applied:"
     echo "$constants" | tr ',' '\n' | while IFS= read -r _entry; do
       echo "  $_entry"
     done
@@ -601,7 +601,8 @@ revert_battery_saver() {
   settings put global low_power_sticky 0 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power 0 2>/dev/null
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [OK] Reverted" >> "$BS_LOG"
+  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+  echo "[$(date '+%H:%M:%S')] [OK] Reverted" >> "$BS_LOG"
   echo '{"status":"ok"}'
 }
 

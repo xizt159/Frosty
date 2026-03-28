@@ -2,9 +2,10 @@
 # FROSTY - Service script
 
 MODDIR="${0%/*}"
+[ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+
 LOGDIR="$MODDIR/logs"
 BACKUP_DIR="$MODDIR/backup"
-mkdir -p "$LOGDIR" "$BACKUP_DIR"
 BOOT_LOG="$LOGDIR/boot.log"
 TWEAKS_LOG="$LOGDIR/tweaks.log"
 PROPS_LOG="$LOGDIR/props.log"
@@ -15,6 +16,7 @@ KERNEL_TWEAKS="$MODDIR/config/kernel_tweaks.txt"
 RAM_BACKUP="$BACKUP_DIR/ram_values.txt"
 RAM_TWEAKS="$MODDIR/config/ram_tweaks.txt"
 
+mkdir -p "$LOGDIR" "$BACKUP_DIR"
 
 # Log rotation
 for log in "$LOGDIR"/*.log; do
@@ -24,15 +26,16 @@ for log in "$LOGDIR"/*.log; do
   [ "$size" -gt 102400 ] && mv "$log" "${log}.old"
 done
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
-log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
+log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 
-echo "Frosty v$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2) Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
-echo "Frosty Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
-echo "Frosty Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
-echo "Frosty RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
-echo "Frosty Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+echo "Frosty v${MODVER:-?} - Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
+echo "Frosty v${MODVER:-?} - Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
+echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
+echo "Frosty v${MODVER:-?} - RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
+echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
 
 # Wait for boot
 until [ "$(getprop sys.boot_completed)" = "1" ] && [ -d /sdcard ]; do
@@ -68,8 +71,6 @@ else
     log_boot "System props: DISABLED"
   fi
 fi
-
-log_props ""
 
 write_val() {
   local file="$1" value="$2" name="$3"
@@ -236,15 +237,35 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
 
+  _GMS="com.google.android.gms"
+
+  # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
+  _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+               /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+               /odm /product /system /system_ext /vendor"
+
+  _GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
+                 allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
+                 <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
+
+  _GREP_PATTERN=""
+  for p in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
+  done
+
   # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
   _overlay_worked="YES"
-  for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-             /system_ext/etc/sysconfig/*.xml /vendor/etc/sysconfig/*.xml \
-             /my_product/etc/sysconfig/*.xml /my_bigball/etc/sysconfig/*.xml; do
-    [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-      _overlay_worked="NO"
-      break
-    }
+  for _base in $_PARTITIONS; do
+    [ -d "$_base" ] || continue
+    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      [ -d "$_dir" ] || continue
+      for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+        [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
+          _overlay_worked="NO"
+          break
+        }
+      done
+    done
   done
 
   if [ "$_overlay_worked" = "NO" ]; then
@@ -283,18 +304,23 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
 
     if [ "$_mounted" -gt 0 ]; then
       _still_unpatched="NO"
-      for _cp in /product/etc/sysconfig/*.xml /system/product/etc/sysconfig/*.xml \
-                 /my_product/etc/sysconfig/*.xml; do
-        [ -f "$_cp" ] && grep -q "allow-in-power-save.*com\.google\.android\.gms" "$_cp" 2>/dev/null && {
-          _still_unpatched="YES"
-          log_boot "[WARN] GMS entry still in: $_cp"
-          break
-        }
+      for _base in $_PARTITIONS; do
+        [ -d "$_base" ] || continue
+        for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+          [ -d "$_dir" ] || continue
+          for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
+            [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
+              _still_unpatched="YES"
+              log_boot "[WARN] GMS entry still in: $xml"
+              break
+            }
+          done
+        done
       done
       if [ "$_still_unpatched" = "NO" ]; then
         log_boot "[GOOD] GMS sysconfig patched via per-file fallback"
-        dumpsys deviceidle whitelist -"com.google.android.gms" >/dev/null 2>&1
-        cmd deviceidle except-idle-whitelist -"com.google.android.gms" >/dev/null 2>&1
+        dumpsys deviceidle whitelist -"$_GMS" >/dev/null 2>&1
+        cmd deviceidle except-idle-whitelist -"$_GMS" >/dev/null 2>&1
         log_boot "[OK] Removed GMS from runtime whitelist"
       fi
     fi
