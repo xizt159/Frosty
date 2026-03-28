@@ -56,7 +56,8 @@ if [ -f "$DEVICEIDLE_FILE" ]; then
   for pkg in $(sed 's/#.*//;s/[[:space:]]//g' "$DEVICEIDLE_FILE"); do
     [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
     
-    _GMS_PATTERNS+=" <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+    _GMS_PATTERNS="$_GMS_PATTERNS \
+                   <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
   done
 fi
 
@@ -224,7 +225,7 @@ patch_xml() {
   else
     log_doze "[OK] $patched XML(s) patched — reboot for overlay to take effect"
     # Clear cache of GMS to fix possible notification delays
-    rm -rf /data/data/$GMS_PKG/cache/* 2>/dev/null && \
+    rm -rf "/data/data/$GMS_PKG/cache/*" 2>/dev/null && \
       log_doze "[OK] GMS cache cleared"
   fi
 }
