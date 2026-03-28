@@ -196,6 +196,9 @@ patch_xml() {
     log_doze "[INFO] No sysconfig XMLs with GMS entries found"
   else
     log_doze "[OK] $patched XML(s) patched — reboot for overlay to take effect"
+    # Clear cache of GMS to fix possible notification delays
+    rm -rf /data/data/$GMS_PKG/cache/* 2>/dev/null && \
+      log_doze "[OK] GMS cache cleared"
   fi
 }
 
