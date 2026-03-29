@@ -40,8 +40,8 @@ _is_safe_app() {
 
   while IFS= read -r path; do
     case "$path" in
-      package:/data/app/*) ;;  # User-App
-      package:/*) return 1 ;;           # System-App
+      package:/data/app/*) ;;
+      package:/*) return 1 ;;
       *) continue ;;
     esac
   done <<EOF
