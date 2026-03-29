@@ -1550,6 +1550,8 @@
       return;
     }
 
+    showLoading(t('io_loading'));
+
     await initLang();
 
     bind();
@@ -1564,6 +1566,8 @@
       wlPkgs = wl.packages || [];
       updateWlCount();
     } catch (e) {}
+
+    hideLoading();
   }
 
 
