@@ -1,4 +1,4 @@
-# Frosty - Kernel Tweaks
+# Frosty — Kernel Tweaks
 # Format: /path/to/kernel/file|value
 # Applied when Kernel Tweaks is enabled. Backed up to backup/kernel_values.txt before writing.
 
