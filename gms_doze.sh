@@ -7,6 +7,8 @@ MODDIR="${0%/*}"
 LOGDIR="$MODDIR/logs"
 DOZE_LOG="$LOGDIR/gms_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
+DEVICEIDLE_PATCHES="$MODDIR/config/deviceidle_patches.txt"
+DEVICEIDLE_BACKUP="$MODDIR/backup/deviceidle_patches.txt"
 
 mkdir -p "$LOGDIR"
 
@@ -32,6 +34,37 @@ _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heyt
 _GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
                allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
                <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
+
+# Only apps in /data/app are really safe to be optimized
+_is_safe_app() {
+  _paths="$(pm path "$1" 2>/dev/null)"
+  [ -z "$_paths" ] && return 1
+
+  while IFS= read -r path; do
+    case "$path" in
+      package:/data/app/*) ;;
+      package:/*) return 1 ;;
+      *) continue ;;
+    esac
+  done <<EOF
+$_paths
+EOF
+
+  return 0
+}
+
+_add_custom_patches(){
+  if [ -f "$DEVICEIDLE_PATCHES" ]; then
+    echo "Frosty v${MODVER:-?} - GMS Doze (PATCHES) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
+    for pkg in $(sed 's/#.*//;s/[[:space:]]//g' "$DEVICEIDLE_PATCHES"); do
+      [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
+      
+      _GMS_PATTERNS="$_GMS_PATTERNS \
+                    <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+      echo "$pkg" >> "$DEVICEIDLE_BACKUP"
+    done
+  fi
+}
 
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
@@ -115,18 +148,37 @@ _log_status() {
   fi
 }
 
-# Create patched XML overlays
-patch_xml() {
+_is_patched() {
+  # If deviceidle_patches.txt has been changed since last apply (backup timestamp)
+  if [ -f "$DEVICEIDLE_PATCHES" ] && [ -f "$DEVICEIDLE_BACKUP" ] && \
+      [ "$(stat -c %Y "$DEVICEIDLE_PATCHES")" -gt "$(stat -c %Y "$DEVICEIDLE_BACKUP")" ]; then
+    log_doze "[INFO] deviceidle_patches.txt has been updated — will reapply patches"
+    return 1
+  fi
+
   local existing=0
   for _base in $_PARTITIONS; do
     _existing=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
     existing=$((existing + $_existing))
   done
 
-  if [ "$existing" -gt 0 ]; then
-    log_doze "[OK] $existing sysconfig overlay(s) already present"
+  # If no sysconfig overlays are present
+  if [ "$existing" -eq 0 ]; then
+    log_doze "[INFO] No sysconfig overlay(s) present — will apply patches"
+    return 1
+  fi
+
+  log_doze "[OK] $existing sysconfig overlay(s) already present"
+  return 0
+}
+
+# Create patched XML overlays
+patch_xml() {
+  if _is_patched; then
     return 0
   fi
+
+  _add_custom_patches
 
   _GREP_PATTERN=""
   _SED_PATTERN=""
