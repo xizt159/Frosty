@@ -1,6 +1,7 @@
 #!/system/bin/sh
 # FROSTY - Service script
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
@@ -16,8 +17,12 @@ KERNEL_TWEAKS="$MODDIR/config/kernel_tweaks.txt"
 RAM_BACKUP="$BACKUP_DIR/ram_values.txt"
 RAM_TWEAKS="$MODDIR/config/ram_tweaks.txt"
 
-mkdir -p "$LOGDIR" "$BACKUP_DIR"
+# System props status
+SYSPROP="$MODDIR/system.prop"
+SYSPROP_OLD="$MODDIR/system.prop.old"
 
+
+mkdir -p "$LOGDIR" "$BACKUP_DIR"
 # Log rotation
 for log in "$LOGDIR"/*.log; do
   [ -f "$log" ] || continue
@@ -26,11 +31,11 @@ for log in "$LOGDIR"/*.log; do
   [ "$size" -gt 102400 ] && mv "$log" "${log}.old"
 done
 
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
 log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 
+# Initialize logfiles
 echo "Frosty v${MODVER:-?} - Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
 echo "Frosty v${MODVER:-?} - Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
 echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
@@ -48,29 +53,6 @@ mkdir -p "$MODDIR/config"
 
 # Load preferences (default everything is off)
 . "$MODDIR/config/user_prefs" 2>/dev/null || true
-
-# System props status
-SYSPROP="$MODDIR/system.prop"
-SYSPROP_OLD="$MODDIR/system.prop.old"
-
-if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
-  if [ -f "$SYSPROP" ]; then
-    PROP_COUNT=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
-    log_props "[OK] system.prop is ACTIVE — $PROP_COUNT props loaded at boot"
-    log_boot "System props: ACTIVE ($PROP_COUNT props)"
-  else
-    log_props "[WARN] ENABLE_SYSTEM_PROPS=1 but system.prop is missing"
-    log_boot "System props: WARNING — file missing despite being enabled"
-  fi
-else
-  if [ -f "$SYSPROP_OLD" ]; then
-    log_props "[OFF] system.prop is DISABLED (system.prop.old present)"
-    log_boot "System props: DISABLED (.old present)"
-  else
-    log_props "[OFF] system.prop is DISABLED (no .old file found)"
-    log_boot "System props: DISABLED"
-  fi
-fi
 
 write_val() {
   local file="$1" value="$2" name="$3"
@@ -180,7 +162,28 @@ apply_kernel_tweaks() {
   log_boot "Kernel tweaks applied (ok=$count_ok skip=$count_skip fail=$count_fail)"
 }
 
-# Kernel tweaks
+
+# === System Props ===
+if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
+  if [ -f "$SYSPROP" ]; then
+    PROP_COUNT=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
+    log_props "[OK] system.prop is ACTIVE — $PROP_COUNT props loaded at boot"
+    log_boot "System props: ACTIVE ($PROP_COUNT props)"
+  else
+    log_props "[WARN] ENABLE_SYSTEM_PROPS=1 but system.prop is missing"
+    log_boot "System props: WARNING — file missing despite being enabled"
+  fi
+else
+  if [ -f "$SYSPROP_OLD" ]; then
+    log_props "[OFF] system.prop is DISABLED (system.prop.old present)"
+    log_boot "System props: DISABLED (.old present)"
+  else
+    log_props "[OFF] system.prop is DISABLED (no .old file found)"
+    log_boot "System props: DISABLED"
+  fi
+fi
+
+# === Kernel tweaks ===
 if [ "$ENABLE_KERNEL_TWEAKS" = "1" ]; then
   log_boot "Applying kernel tweaks..."
   backup_kernel
@@ -189,7 +192,7 @@ else
   log_boot "Kernel tweaks SKIPPED"
 fi
 
-# RAM Optimizer
+# === RAM Optimizer ===
 if [ "$ENABLE_RAM_OPTIMIZER" = "1" ]; then
   log_boot "Applying RAM optimizer..."
   backup_ram
@@ -198,7 +201,7 @@ else
   log_boot "RAM optimizer SKIPPED"
 fi
 
-# Kill log processes
+# === Kill log processes ===
 if [ "$ENABLE_LOG_KILLING" = "1" ]; then
   log_boot "Killing log processes..."
   sh "$MODDIR/frosty.sh" kill_logs >/dev/null 2>&1
@@ -207,7 +210,7 @@ else
   log_boot "Log killing SKIPPED"
 fi
 
-# Kill Google Tracking
+# === Kill Google Tracking ===
 if [ "$ENABLE_KILL_TRACKING" = "1" ]; then
   log_boot "Blocking Google tracking..."
   sh "$MODDIR/frosty.sh" kill_tracking >/dev/null 2>&1
@@ -216,6 +219,7 @@ else
   log_boot "Kill tracking SKIPPED"
 fi
 
+# === GMS Freezing ===
 # Apply GMS freezing if any category is enabled
 has_frozen_cats=0
 for _cat in DISABLE_TELEMETRY DISABLE_BACKGROUND DISABLE_LOCATION DISABLE_CONNECTIVITY \
@@ -231,7 +235,7 @@ else
   log_boot "No GMS categories enabled, skipping GMS freeze"
 fi
 
-# GMS Doze
+# === GMS Doze ===
 if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   log_boot "Applying GMS Doze..."
   chmod +x "$MODDIR/gms_doze.sh"
@@ -240,24 +244,34 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   _GMS="com.google.android.gms"
 
   # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
-  _PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
-               /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
-               /odm /product /system /system_ext /vendor"
+  _ALL_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+                  /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+                  /odm /product /system /system_ext /vendor"
+
+  _PARTITIONS=""
 
   _GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
                  allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
                  <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
 
   _GREP_PATTERN=""
-  for p in $_GMS_PATTERNS; do
-    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
+
+  # Filter partitions by existence
+  for _p in $_ALL_PARTITIONS;do
+    [ -d "$_p" ] || continue
+    _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
+  done
+
+  # Convert _GMS_PATTERNS to _GREP_PATTERN
+  for _pattern in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$_pattern"
   done
 
   # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
   _overlay_worked="YES"
-  for _base in $_PARTITIONS; do
-    [ -d "$_base" ] || continue
-    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+  for _p in $_PARTITIONS; do
+    [ -d "$_p" ] || continue
+    for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
       [ -d "$_dir" ] || continue
       for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
         [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
@@ -304,9 +318,9 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
 
     if [ "$_mounted" -gt 0 ]; then
       _still_unpatched="NO"
-      for _base in $_PARTITIONS; do
-        [ -d "$_base" ] || continue
-        for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      for _p in $_PARTITIONS; do
+        [ -d "$_p" ] || continue
+        for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
           [ -d "$_dir" ] || continue
           for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
             [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
@@ -332,7 +346,7 @@ else
   log_boot "GMS Doze SKIPPED"
 fi
 
-# Deep Doze
+# === Deep Doze ===
 if [ "$ENABLE_DEEP_DOZE" = "1" ]; then
   log_boot "Applying Deep Doze..."
   chmod +x "$MODDIR/deep_doze.sh"
@@ -341,7 +355,7 @@ else
   log_boot "Deep Doze SKIPPED"
 fi
 
-# Battery Saver Tuner
+# === Battery Saver Tuner ===
 if [ "$ENABLE_BATTERY_SAVER" = "1" ]; then
   log_boot "Applying Battery Saver Tuner..."
   sh "$MODDIR/frosty.sh" bss_apply >/dev/null 2>&1
@@ -351,6 +365,5 @@ else
 fi
 
 log_boot "Boot complete at $(date '+%Y-%m-%d %H:%M:%S')"
-
 
 exit 0

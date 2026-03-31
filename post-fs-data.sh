@@ -11,15 +11,33 @@ _DIXML="/data/system/deviceidle.xml"
 _GMS="com.google.android.gms"
 
 # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
-_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
-             /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
-             /odm /product /system /system_ext /vendor"
+_ALL_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+                 /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+                 /odm /product /system /system_ext /vendor"
+
+_PARTITIONS=""
 
 _GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
                allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
                <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
 
+
 if [ "$ENABLE_GMS_DOZE" = "1" ]; then
+  _GREP_PATTERN=""
+  _SED_PATTERN=""
+
+  # Filter partitions by existence
+  for _p in $_ALL_PARTITIONS;do
+    [ -d "$_p" ] || continue
+    _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
+  done
+
+  # Convert _GMS_PATTERNS to _GREP_PATTERN & _SED_PATTERN
+  for _pattern in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$_pattern"
+    _SED_PATTERN="$_SED_PATTERN/${_pattern/\//\\/}/d;"
+  done
+
   # Patch deviceidle.xml
   if [ -f "$_DIXML" ]; then
     _tmp="${_DIXML}.frosty.tmp"
@@ -66,19 +84,12 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
     fi
   fi
 
-  _GREP_PATTERN=""
-  _SED_PATTERN=""
-  for p in $_GMS_PATTERNS; do
-    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
-    _SED_PATTERN="$_SED_PATTERN/${p/\//\\/}/d;"
-  done
-
   # Early bind mount of patched sysconfig and whitelist XMLs — must happen before system_server
   # starts (which populates system-excidle by reading sysconfig).
   # On first boot after enabling GMS Doze the patched XMLs don't exist yet
   # gms_doze.sh creates them in service.sh, and they'll be mounted here from the next boot.
-  for _base in $_PARTITIONS; do
-    find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
+  for _p in $_PARTITIONS; do
+    find "$MODDIR" -path "*/${_p#/}/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
       _dst="${_src#$MODDIR}"
       # Separate partition layout: $MODDIR/product/... → /product/...
       [ ! -f "$_dst" ] && _dst="${_dst#/system}"
@@ -94,8 +105,8 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
 
   # Patch conflicting modules search entire modules/ tree
   # KSU moves partition dirs (product/, vendor/) out of system/ to module root
-  for _base in $_PARTITIONS; do
-    find /data/adb/modules -path "*/${_base#/}/*.xml" -type f 2>/dev/null |
+  for _p in $_PARTITIONS; do
+    find /data/adb/modules -path "*/${_p#/}/*.xml" -type f 2>/dev/null |
     while IFS= read -r _xml; do
       case "$_xml" in "$MODDIR/"*) continue ;; esac
       if grep -qE "$_GREP_PATTERN" "$_xml" 2>/dev/null; then

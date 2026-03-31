@@ -1,6 +1,7 @@
 #!/system/bin/sh
 # FROSTY - Deep Doze Enforcer
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
@@ -10,14 +11,13 @@ USER_PREFS="$MODDIR/config/user_prefs"
 WHITELIST_FILE="$MODDIR/config/doze_whitelist.txt"
 MONITOR_PID_FILE="$MODDIR/tmp/screen_monitor.pid"
 
-mkdir -p "$LOGDIR" "$MODDIR/tmp"
-
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
-
 ENABLE_DEEP_DOZE=0
 DEEP_DOZE_LEVEL="moderate"
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
+
+
+mkdir -p "$LOGDIR" "$MODDIR/tmp"
+log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
 
 ensure_whitelist() {
   if [ ! -f "$WHITELIST_FILE" ]; then
@@ -170,15 +170,6 @@ unrestrict_alarms() {
   log_deep "[OK] Alarms unrestricted"
 }
 
-stop_screen_monitor() {
-  if [ -f "$MONITOR_PID_FILE" ]; then
-    local pid=$(cat "$MONITOR_PID_FILE")
-    kill "$pid" 2>/dev/null
-    rm -f "$MONITOR_PID_FILE"
-    log_deep "[OK] Screen monitor stopped (PID $pid)"
-  fi
-}
-
 # Get screen state with fallback across Android versions
 get_screen_state() {
   local state
@@ -241,6 +232,16 @@ start_screen_monitor() {
   echo $! > "$MONITOR_PID_FILE"
   log_deep "[OK] Monitor started (PID $!)"
 }
+
+stop_screen_monitor() {
+  if [ -f "$MONITOR_PID_FILE" ]; then
+    local pid=$(cat "$MONITOR_PID_FILE")
+    kill "$pid" 2>/dev/null
+    rm -f "$MONITOR_PID_FILE"
+    log_deep "[OK] Screen monitor stopped (PID $pid)"
+  fi
+}
+
 
 freeze_deep_doze() {
   echo "Frosty v${MODVER:-?} - Deep Doze (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"

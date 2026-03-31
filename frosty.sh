@@ -1,6 +1,7 @@
 #!/system/bin/sh
 # FROSTY - Main service handler
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
@@ -17,9 +18,8 @@ BS_LOG="$LOGDIR/battery_saver.log"
 SYSPROP="$MODDIR/system.prop"
 SYSPROP_OLD="$MODDIR/system.prop.old"
 
-mkdir -p "$LOGDIR" "$MODDIR/config"
 
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+mkdir -p "$LOGDIR" "$MODDIR/config"
 log_ram()     { echo "[$(date '+%H:%M:%S')] $1" >> "$RAM_LOG"; }
 log_service() { echo "$1" >> "$SERVICES_LOG"; }
 
@@ -41,8 +41,6 @@ load_prefs() {
   fi
 }
 
-load_prefs
-
 should_disable_category() {
   case "$1" in
     background)   [ "$DISABLE_BACKGROUND" = "1" ] ;;
@@ -58,7 +56,8 @@ should_disable_category() {
 }
 
 
-# Toggle system.prop
+load_prefs
+
 apply_system_props() {
   if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
     if [ -f "$SYSPROP_OLD" ]; then

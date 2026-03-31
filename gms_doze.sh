@@ -1,17 +1,13 @@
 #!/system/bin/sh
 # FROSTY - GMS Doze Handler
 
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
 LOGDIR="$MODDIR/logs"
 DOZE_LOG="$LOGDIR/gms_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
-
-mkdir -p "$LOGDIR"
-
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
-log_doze() { echo "[$(date '+%H:%M:%S')] $1" >> "$DOZE_LOG"; }
 
 ENABLE_GMS_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
@@ -20,30 +16,114 @@ GMS_PKG="com.google.android.gms"
 GMS_ADMIN1="$GMS_PKG/$GMS_PKG.auth.managed.admin.DeviceAdminReceiver"
 GMS_ADMIN2="$GMS_PKG/$GMS_PKG.mdm.receivers.MdmDeviceAdminReceiver"
 
-get_user_ids() {
-  pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
-}
-
 # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
-_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
-             /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
-             /odm /product /system /system_ext /vendor"
+_ALL_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
+                 /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
+                 /odm /product /system /system_ext /vendor"
+
+_PARTITIONS=""
 
 _GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
                allow-in-data-usage-save.*${GMS_PKG//[\.]/\\.} \
                <wl[^>]*>[[:space:]]*${GMS_PKG//[\.]/\\.}[[:space:]]*</wl>"
 
+_GREP_PATTERN=""
+_SED_PATTERN=""
+
+
+mkdir -p "$LOGDIR"
+log_doze() { echo "[$(date '+%H:%M:%S')] $1" >> "$DOZE_LOG"; }
+
+# Initialize variables
+_init() {
+  # Filter partitions by existence
+  for _p in $_ALL_PARTITIONS;do
+    [ -d "$_p" ] || continue
+    _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
+  done
+
+  # Convert _GMS_PATTERNS to _GREP_PATTERN & _SED_PATTERN
+  for _pattern in $_GMS_PATTERNS; do
+    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$_pattern"
+    _SED_PATTERN="$_SED_PATTERN/${_pattern/\//\\/}/d;"
+  done
+}
+
 # Returns 0 if /$1 is a separate mount point (not under /system)
 _is_separate_partition() {
-  local p="$1"
+  local p="${1#/}"
   mountpoint -q "/$p" 2>/dev/null && return 0
   [ -L "/system/$p" ] && return 0
   grep -qE "^[^ ]+ /$p " /proc/mounts 2>/dev/null && return 0
   return 1
 }
 
+# Check if everything is patched already
+_is_patched() {
+  local existing=0
+  for _p in $_PARTITIONS; do
+    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
+    _existing=$(find "$MODDIR" -path "*/$_p/*.xml" -type f 2>/dev/null | wc -l)
+    existing=$((existing + $_existing))
+  done
+
+  # If no sysconfig overlays are present
+  if [ "$existing" -eq 0 ]; then
+    log_doze "[INFO] No sysconfig overlay(s) present — will apply patches"
+    return 1
+  fi
+
+  log_doze "[OK] $existing sysconfig overlay(s) already present"
+  return 0
+}
+
+# Ensure overlay files are at the correct location for the root manager
+_fixup_partition_layout() {
+  for _p in $_PARTITIONS; do
+    [ -d "$_p" ] || continue
+    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
+    if _is_separate_partition "$_p"; then
+      # Separate: move from $MODDIR/system/$_p/ → $MODDIR/$_p/
+      if [ -d "$MODDIR/system/$_p" ] && [ ! -L "$MODDIR/system/$_p" ]; then
+        mkdir -p "$MODDIR/$_p"
+        if cp -af "$MODDIR/system/$_p/." "$MODDIR/$_p/" 2>/dev/null; then
+          rm -rf "$MODDIR/system/$_p"
+          log_doze "[OK] /$_p is separate — moved overlay to \$MODDIR/$_p/"
+        else
+          log_doze "[WARN] cp failed for /$_p — keeping at \$MODDIR/system/$_p/"
+        fi
+      fi
+      # Compatibility symlink (KSU convention)
+      if [ -d "$MODDIR/$_p" ] && [ ! -e "$MODDIR/system/$_p" ]; then
+        mkdir -p "$MODDIR/system" 2>/dev/null
+        ln -sf "../$_p" "$MODDIR/system/$_p" 2>/dev/null
+      fi
+    else
+      # Integrated: move from $MODDIR/$_p/ → $MODDIR/system/$_p/
+      if [ -d "/system/$_p" ] && [ -d "$MODDIR/$_p" ] && [ ! -L "$MODDIR/$_p" ]; then
+        mkdir -p "$MODDIR/system/$_p"
+        if cp -af "$MODDIR/$_p/." "$MODDIR/system/$_p/" 2>/dev/null; then
+          rm -rf "$MODDIR/$_p"
+          log_doze "[OK] /$_p under /system — moved overlay to \$MODDIR/system/$_p/"
+        else
+          log_doze "[WARN] cp failed for /$_p — keeping at \$MODDIR/$_p/"
+        fi
+      fi
+    fi
+  done
+}
+
+# Get user IDs of device
+_get_user_ids() {
+  pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
+}
+
+
+# Initialize variables before running any scripts
+_init
+
 # Log full status to doze log
-_log_status() {
+log_status() {
   local label="$1"
   [ -s "$DOZE_LOG" ] || echo "Frosty v${MODVER:-?} - GMS Doze (STATUS) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DOZE_LOG"
   log_doze "Status after $label"
@@ -64,17 +144,19 @@ _log_status() {
   fi
 
   local xml_count=0
-  for _base in $_PARTITIONS; do
-    _xml_count=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
+  for _p in $_PARTITIONS; do
+    [ -d "$_p" ] || continue
+    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
+    _xml_count=$(find "$MODDIR" -path "*/$_p/*.xml" -type f 2>/dev/null | wc -l)
     xml_count=$((xml_count + $_xml_count))
   done
   log_doze "[INFO] XML overlays: $xml_count"
 
   if [ "$xml_count" -gt 0 ]; then
     local overlay_active="YES"
-    for _base in $_PARTITIONS; do
-      [ -d "$_base" ] || continue
-      for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+    for _p in $_PARTITIONS; do
+      [ -d "$_p" ] || continue
+      for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
         [ -d "$_dir" ] || continue
         for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
           [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
@@ -115,42 +197,18 @@ _log_status() {
   fi
 }
 
-_is_patched() {
-  local existing=0
-  for _base in $_PARTITIONS; do
-    _existing=$(find "$MODDIR" -path "*/${_base#/}/*.xml" -type f 2>/dev/null | wc -l)
-    existing=$((existing + $_existing))
-  done
-
-  # If no sysconfig overlays are present
-  if [ "$existing" -eq 0 ]; then
-    log_doze "[INFO] No sysconfig overlay(s) present — will apply patches"
-    return 1
-  fi
-
-  log_doze "[OK] $existing sysconfig overlay(s) already present"
-  return 0
-}
-
 # Create patched XML overlays
 patch_xml() {
   if _is_patched; then
     return 0
   fi
 
-  _GREP_PATTERN=""
-  _SED_PATTERN=""
-  for p in $_GMS_PATTERNS; do
-    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$p"
-    _SED_PATTERN="$_SED_PATTERN/${p/\//\\/}/d;"
-  done
-
   local patched=0 _seen=""
 
   # Search for sysconfig and other whitelist files
-  for _base in $_PARTITIONS; do
-    [ -d "$_base" ] || continue
-    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+  for _p in $_PARTITIONS; do
+    [ -d "$_p" ] || continue
+    for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
       [ -d "$_dir" ] || continue
       for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
         local _real
@@ -212,49 +270,16 @@ patch_xml() {
   fi
 }
 
-# Ensure overlay files are at the correct location for the root manager
-_fixup_partition_layout() {
-  for _p in $_PARTITIONS; do
-    p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
-    if _is_separate_partition "$p"; then
-      # Separate: move from $MODDIR/system/$p/ → $MODDIR/$p/
-      if [ -d "$MODDIR/system/$p" ] && [ ! -L "$MODDIR/system/$p" ]; then
-        mkdir -p "$MODDIR/$p"
-        if cp -af "$MODDIR/system/$p/." "$MODDIR/$p/" 2>/dev/null; then
-          rm -rf "$MODDIR/system/$p"
-          log_doze "[OK] /$p is separate — moved overlay to \$MODDIR/$p/"
-        else
-          log_doze "[WARN] cp failed for /$p — keeping at \$MODDIR/system/$p/"
-        fi
-      fi
-      # Compatibility symlink (KSU convention)
-      if [ -d "$MODDIR/$p" ] && [ ! -e "$MODDIR/system/$p" ]; then
-        mkdir -p "$MODDIR/system" 2>/dev/null
-        ln -sf "../$p" "$MODDIR/system/$p" 2>/dev/null
-      fi
-    else
-      # Integrated: move from $MODDIR/$p/ → $MODDIR/system/$p/
-      if [ -d "$MODDIR/$p" ] && [ ! -L "$MODDIR/$p" ]; then
-        mkdir -p "$MODDIR/system/$p"
-        if cp -af "$MODDIR/$p/." "$MODDIR/system/$p/" 2>/dev/null; then
-          rm -rf "$MODDIR/$p"
-          log_doze "[OK] /$p under /system — moved overlay to \$MODDIR/system/$p/"
-        else
-          log_doze "[WARN] cp failed for /$p — keeping at \$MODDIR/$p/"
-        fi
-      fi
-    fi
-  done
-}
-
 # Remove patched XML overlays
 remove_xml() {
   find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null -delete
-  for p in $_PARTITIONS; do
-    [ -L "$MODDIR/system/$p" ] && rm -f "$MODDIR/system/$p" 2>/dev/null
-    [ -d "$MODDIR/$p" ] && find "$MODDIR/$p" -type d -empty -delete 2>/dev/null
-    [ -d "$MODDIR/system/$p" ] && [ ! -L "$MODDIR/system/$p" ] && \
-      find "$MODDIR/system/$p" -type d -empty -delete 2>/dev/null
+  for _p in $_PARTITIONS; do
+    [ -d "$_p" ] || continue
+    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
+    [ -L "$MODDIR/system/$_p" ] && rm -f "$MODDIR/system/$_p" 2>/dev/null
+    [ -d "$MODDIR/$_p" ] && find "$MODDIR/$_p" -type d -empty -delete 2>/dev/null
+    [ -d "$MODDIR/system/$_p" ] && [ ! -L "$MODDIR/system/$_p" ] && \
+      find "$MODDIR/system/$_p" -type d -empty -delete 2>/dev/null
   done
   log_doze "[OK] XML overlays removed"
 }
@@ -274,7 +299,7 @@ apply() {
 
   # 2. Disable device admin receivers
   local admin_count=0
-  for user_id in $(get_user_ids); do
+  for user_id in $(_get_user_ids); do
     for admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
       if pm disable --user "$user_id" "$admin" >/dev/null 2>&1; then
         log_doze "[OK] Disabled: $admin (user $user_id)"
@@ -307,7 +332,7 @@ apply() {
   fi
 
   # 5. Full status
-  _log_status "apply"
+  log_status "apply"
 }
 
 revert() {
@@ -331,7 +356,7 @@ revert() {
 
   # 3. Re-enable device admin receivers
   local admin_count=0
-  for user_id in $(get_user_ids); do
+  for user_id in $(_get_user_ids); do
     for admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
       if pm enable --user "$user_id" "$admin" >/dev/null 2>&1; then
         log_doze "[OK] Enabled: $admin (user $user_id)"
@@ -345,7 +370,7 @@ revert() {
   log_doze "Reboot recommended for full restoration"
 
   # 4. Full status
-  _log_status "revert"
+  log_status "revert"
 }
 
 case "$1" in
