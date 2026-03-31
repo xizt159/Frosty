@@ -1,9 +1,9 @@
 #!/system/bin/sh
 # FROSTY - Deep Doze Enforcer
 
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
 DEEP_DOZE_LOG="$LOGDIR/deep_doze.log"

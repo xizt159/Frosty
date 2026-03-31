@@ -1,9 +1,9 @@
 #!/system/bin/sh
 # FROSTY - GMS Doze Handler
 
-MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
 DOZE_LOG="$LOGDIR/gms_doze.log"
@@ -62,8 +62,7 @@ _is_separate_partition() {
 _is_patched() {
   local existing=0
   for _p in $_PARTITIONS; do
-    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
-    _existing=$(find "$MODDIR" -path "*/$_p/*.xml" -type f 2>/dev/null | wc -l)
+    _existing=$(find "$MODDIR" -path "*/${_p#/}/*.xml" -type f 2>/dev/null | wc -l)
     existing=$((existing + $_existing))
   done
 
@@ -146,8 +145,7 @@ log_status() {
   local xml_count=0
   for _p in $_PARTITIONS; do
     [ -d "$_p" ] || continue
-    _p="${_p#/}" # Remove starting "/" to prevent corrupt paths like //system
-    _xml_count=$(find "$MODDIR" -path "*/$_p/*.xml" -type f 2>/dev/null | wc -l)
+    _xml_count=$(find "$MODDIR" -path "*/${_p#/}/*.xml" -type f 2>/dev/null | wc -l)
     xml_count=$((xml_count + $_xml_count))
   done
   log_doze "[INFO] XML overlays: $xml_count"
