@@ -1,6 +1,6 @@
-# Frosty — GMS Services (complete list)
-# Format: gms.service/package.name|category
-# Note: should not be touched!
+### Frosty — GMS Services (complete list)
+### Format: gms.service/package.name|category
+### Note: should not be touched!
 
 # TELEMETRY — Ads, Tracking, Analytics, Reporting
 com.google.android.gms/com.google.android.gms.ads.identifier.service.AdvertisingIdNotificationService|telemetry

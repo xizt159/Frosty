@@ -1,6 +1,6 @@
-# Frosty — Doze Whitelist
-# Apps listed here are excluded from Deep Doze restrictions.
-# Add package names one per line. Lines starting with # are comments.
+### Frosty — Doze Whitelist
+### Apps listed here are excluded from Deep Doze restrictions.
+### Add package names one per line. Lines starting with # are comments.
 
 # Core System & UI
 android
