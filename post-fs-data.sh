@@ -6,15 +6,15 @@ MODDIR="${0%/*}"
 
 [ -f "$MODDIR/config/user_prefs" ] && . "$MODDIR/config/user_prefs"
 
-_DIXML="/data/system/deviceidle.xml"
-_GMS="com.google.android.gms"
+DIXML="/data/system/deviceidle.xml"
+GMS_PKG="com.google.android.gms"
 
 _GMS_GREP="allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms"
 
 if [ "$ENABLE_GMS_DOZE" = "1" ]; then
-  if [ -f "$_DIXML" ]; then
-    _tmp="${_DIXML}.frosty.tmp"
-    cp -af "$_DIXML" "$_tmp" 2>/dev/null
+  if [ -f "$DIXML" ]; then
+    _tmp="${DIXML}.frosty.tmp"
+    cp -af "$DIXML" "$_tmp" 2>/dev/null
     _changed=0
 
     if grep -q '<un n="' "$_tmp" 2>/dev/null; then
@@ -27,27 +27,27 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
       _changed=1
     fi
 
-    if grep -q "<wl n=\"$_GMS\"" "$_tmp" 2>/dev/null; then
-      sed -i "/<wl n=\"$_GMS\"/d" "$_tmp"
+    if grep -q "<wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
+      sed -i "/<wl n=\"$GMS_PKG\"/d" "$_tmp"
       _changed=1
     fi
 
-    if ! grep -q "<un-wl n=\"$_GMS\"" "$_tmp" 2>/dev/null; then
+    if ! grep -q "<un-wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
       sed -i '/<\/config>/d' "$_tmp"
-      echo "<un-wl n=\"$_GMS\" />" >> "$_tmp"
+      echo "<un-wl n=\"$GMS_PKG\" />" >> "$_tmp"
       echo "</config>" >> "$_tmp"
       _changed=1
     fi
 
     if [ "$_changed" -eq 1 ] && grep -q '</config>' "$_tmp" 2>/dev/null; then
-      cat "$_tmp" > "$_DIXML"
-      restorecon "$_DIXML" 2>/dev/null
+      cat "$_tmp" > "$DIXML"
+      restorecon "$DIXML" 2>/dev/null
     fi
     rm -f "$_tmp" 2>/dev/null
 
-    if grep -q "<wl n=\"$_GMS\"" "$_DIXML" 2>/dev/null; then
-      sed -i "/<wl n=\"$_GMS\"/d" "$_DIXML"
-      restorecon "$_DIXML" 2>/dev/null
+    if grep -q "<wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
+      sed -i "/<wl n=\"$GMS_PKG\"/d" "$DIXML"
+      restorecon "$DIXML" 2>/dev/null
     fi
   fi
 
@@ -80,25 +80,25 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   done
 
 else
-  if [ -f "$_DIXML" ]; then
+  if [ -f "$DIXML" ]; then
     _changed=0
-    if grep -q '<un n="' "$_DIXML" 2>/dev/null; then
-      sed -i '/<un n="/d' "$_DIXML"
+    if grep -q '<un n="' "$DIXML" 2>/dev/null; then
+      sed -i '/<un n="/d' "$DIXML"
       _changed=1
     fi
-    if grep -q '\\n' "$_DIXML" 2>/dev/null; then
-      sed -i 's/\\n//g' "$_DIXML"
+    if grep -q '\\n' "$DIXML" 2>/dev/null; then
+      sed -i 's/\\n//g' "$DIXML"
       _changed=1
     fi
-    if grep -q "<un-wl n=\"$_GMS\"" "$_DIXML" 2>/dev/null; then
-      sed -i "/<un-wl n=\"$_GMS\"/d" "$_DIXML"
+    if grep -q "<un-wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
+      sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DIXML"
       _changed=1
     fi
-    [ "$_changed" -eq 1 ] && restorecon "$_DIXML" 2>/dev/null
+    [ "$_changed" -eq 1 ] && restorecon "$DIXML" 2>/dev/null
   fi
 fi
 
-unset _DIXML _GMS _GMS_GREP _changed _tmp _xml _src _dst _ctx
+unset DIXML GMS_PKG _GMS_GREP _changed _tmp _xml _src _dst _ctx
 
 # Blur Disable
 if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
