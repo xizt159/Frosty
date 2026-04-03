@@ -331,7 +331,7 @@ apply_ram_optimizer() {
   mkdir -p "$MODDIR/backup"
 
   if [ ! -f "$RAM_BACKUP" ] && [ -f "$RAM_TWEAKS" ]; then
-    printf "# RAM Backup - $(date)\n" > "$RAM_BACKUP"
+    printf "# RAM Backup - $(date '+%Y-%m-%d %H:%M:%S')\n" > "$RAM_BACKUP"
     while IFS= read -r _line; do
       case "$_line" in ''|'#'*) continue ;; esac
       _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
@@ -427,8 +427,8 @@ apply_kernel() {
   echo "Frosty v${MODVER:-?} - Tweaks (apply) - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
 
   if [ ! -f "$KERNEL_BACKUP" ]; then
-    mkdir -p "$MODDIR/backup"
-    printf "# Kernel Backup - $(date)\n" > "$KERNEL_BACKUP"
+    mkdir -p "$MODDIR/backup"$
+    printf "# Kernel Backup - $(date '+%Y-%m-%d %H:%M:%S')\n" > "$KERNEL_BACKUP"
     while IFS= read -r _line; do
       case "$_line" in ''|'#'*) continue ;; esac
       _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')

@@ -26,7 +26,7 @@ GMS_PKG="com.google.android.gms"
 DEVICEIDLE_XML="/data/system/deviceidle.xml"
 
 log() { echo "[$(date '+%H:%M:%S')] $1" >> "$LOGFILE"; }
-echo "Frosty uninstall - $(date)" > "$LOGFILE"
+echo "Frosty uninstall - $(date '+%Y-%m-%d %H:%M:%S')" > "$LOGFILE"
 
 sleep 10
 [ ! -d "$TEMP_DIR" ] && exit 1
