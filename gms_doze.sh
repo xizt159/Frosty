@@ -9,6 +9,7 @@ LOGDIR="$MODDIR/logs"
 DOZE_LOG="$LOGDIR/gms_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
 OVERLAYS_FILE="$MODDIR/config/gms_overlays.txt"
+PATCHES_FILE="$MODDIR/config/deviceidle_patches.txt"
 
 ENABLE_GMS_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
@@ -43,6 +44,15 @@ _init() {
     _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
   done
 
+  # Add custom patches to _GMS_PATTERNS
+  if [ -f "$PATCHES_FILE" ]; then
+    for pkg in $(grep -E '^[[:space:]]*[^#[:space:]]' "$PATCHES_FILE");do
+      [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
+      _GMS_PATTERNS="$_GMS_PATTERNS \
+                     <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+    done
+  fi
+
   # Convert _GMS_PATTERNS to _GMS_GREP & _GMS_SED
   for _pattern in $_GMS_PATTERNS; do
     _GMS_GREP="${_GMS_GREP:+$_GMS_GREP|}$_pattern"
@@ -52,13 +62,30 @@ _init() {
 
 # Check if overlays file exists (maybe more checks soon)
 _is_patched() {
-  [ -f "$OVERLAYS_FILE" ] && return 0
-  return 1
+  [ ! -f "$OVERLAYS_FILE" ] && return 1
+  return 0
 }
 
 # Get user IDs of device
 _get_user_ids() {
   pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
+}
+
+# Only apps in /data/app are really safe to be optimized
+_is_safe_app() {
+  _paths="$(pm path "$1" 2>/dev/null)"
+  [ -z "$_paths" ] && return 1 # App is not installed
+
+  while IFS= read -r path; do
+    case "$path" in
+      package:/data/app/*) ;;
+      package:/*) return 1 ;;
+      *) continue ;;
+    esac
+  done <<EOF
+$_paths
+EOF
+  return 0
 }
 
 

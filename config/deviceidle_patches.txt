@@ -1,0 +1,5 @@
+### Frosty — Doze Whitelist
+### Apps listed here are excluded from Deep Doze restrictions.
+### Add package names one per line. Lines starting with # are comments.
+
+# com.android.vending
