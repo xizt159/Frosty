@@ -121,7 +121,7 @@ patch_xml() {
   fi
 
   log_doze "Scanning for GMS whitelist XMLs..."
-  local patched=0 scanned=0 seen=""
+  local count=0 scanned=0 seen=""
 
   for _p in $_PARTITIONS; do
     [ -d "$_p" ] || continue
@@ -153,7 +153,7 @@ patch_xml() {
           sed -i "$_GMS_SED" "$dest"
           echo "$dest" >> "$OVERLAYS_FILE"
           log_doze "[OK] Patched: $real -> $relative"
-          patched=$((patched + 1))
+          count=$((count + 1))
         else
           log_doze "[FAIL] Cannot copy: $real"
         fi
@@ -161,7 +161,7 @@ patch_xml() {
     done
   done
 
-  if [ "$patched" -eq 0 ]; then
+  if [ "$count" -eq 0 ]; then
     log_doze "[INFO] No GMS whitelist XMLs found in $scanned files - device may use runtime whitelist only"
     log_doze "[INFO] GMS Doze relies on deviceidle.xml <un-wl> injection + runtime whitelist removal"
   else
@@ -174,12 +174,12 @@ patch_xml() {
 
 remove_xml() {
   if _is_patched; then
-    local patched=0
+    local count=0
     while IFS= read -r file; do
-      [ -f "$file" ] && rm -f "$file" && patched=$((patched + 1))
+      [ -f "$file" ] && rm -f "$file" && count=$((count + 1))
     done < "$OVERLAYS_FILE"
     rm -f "$OVERLAYS_FILE"
-    log_doze "[OK] Removed $patched overlay files"
+    log_doze "[OK] Removed $count overlay files"
   fi
 
   for _root in system product vendor odm system_ext; do
