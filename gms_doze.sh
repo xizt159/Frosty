@@ -285,19 +285,19 @@ apply() {
   done
   log_doze "Disabled $admin_count device admin receiver(s)"
 
-  local _wl_removed="" _syswl_removed="" _patched=""
+  local _wl_ok=0 _wl_fail="" _syswl_ok=0 _syswl_fail="" _patched=0
   for pkg in $_PKGS_TO_PATCH "$GMS_PKG";do
     pkg="${pkg#\*}"
     log_doze "Patching \"$pkg\"..."
 
     # 3. Runtime whitelist removal
     dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1 && \
-      _wl_removed="${_wl_removed:+$_wl_removed, }$pkg"
+      _wl_ok=$((_wl_ok + 1)) || _wl_fail="${_wl_fail:+$_wl_fail }$pkg"
 
     local sys_out=$(cmd deviceidle sys-whitelist -"$GMS_PKG" 2>&1)
     case "$sys_out" in
-      *[Uu]nknown*|*[Ee]rror*) ;;
-      *) _syswl_removed="${_syswl_removed:+$_syswl_removed, }$pkg" ;;
+      *[Uu]nknown*|*[Ee]rror*) _syswl_fail="${_syswl_fail:+$_syswl_fail }$pkg" ;;
+      *) _syswl_ok=$((_syswl_ok + 1)) ;;
     esac
     
     # Best-effort: try except-idle removal (only affects user tier of except-idle,
@@ -308,16 +308,15 @@ apply() {
         grep -q "<wl n=\"${pkg//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null; then
       sed -i "/<wl n=\"${pkg//[\.]/\\.}\"/d" /data/system/deviceidle.xml
       restorecon /data/system/deviceidle.xml 2>/dev/null
-      _patched="${_patched:+$_patched, }$pkg"
+      _patched=$((_patched + 1))
     fi
   done
 
-  log_doze "[INFO] Removed from user whitelist:"
-  log_doze "$_wl_removed"
-  log_doze "[INFO] Removed from sys-whitelist:"
-  log_doze "$_syswl_removed"
-  log_doze "[INFO] Removed persistent <wl> from deviceidle.xml:"
-  log_doze "$_patched"
+  log_doze "[INFO] User whitelist: $_wl_ok OK, $(set -- ${_wl_fail:-}; echo $#) FAIL"
+  [ -n "$_wl_fail" ] && log_doze "Failed: $_wl_fail"
+  log_doze "[INFO] Sys-whitelist: $_syswl_ok OK, $(set -- ${_syswl_fail:-}; echo $#) FAIL"
+  [ -n "$_syswl_fail" ] && log_doze "Failed: $_syswl_fail"
+  log_doze "[INFO] Persistent <wl> in deviceidle.xml: $_patched OK"
 
   # GMS loses allow-in-power-save via sysconfig, so the OS is now allowed to
   # kill its processes during idle. Warm it back up here so Camera, PayPal, and
