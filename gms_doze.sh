@@ -10,6 +10,7 @@ DOZE_LOG="$LOGDIR/gms_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
 OVERLAYS_FILE="$MODDIR/config/gms_overlays.txt"
 PATCHES_FILE="$MODDIR/config/deviceidle_patches.txt"
+PATCHES_BACKUP="$MODDIR/backup/patched_packages.txt"
 
 ENABLE_GMS_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
@@ -32,6 +33,8 @@ _GMS_PATTERNS="allow-in-power-save.*${GMS_PKG//[\.]/\\.} \
 _GMS_GREP=""
 _GMS_SED=""
 
+_PKGS_TO_PATCH=""
+
 
 mkdir -p "$LOGDIR"
 log_doze() { echo "[$(date '+%H:%M:%S')] $1" >> "$DOZE_LOG"; }
@@ -45,13 +48,12 @@ _init() {
   done
 
   # Add custom patches to _GMS_PATTERNS
-  if [ -f "$PATCHES_FILE" ]; then
-    for pkg in $(grep -E '^[[:space:]]*[^#[:space:]]' "$PATCHES_FILE");do
-      [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
-      _GMS_PATTERNS="$_GMS_PATTERNS \
-                     <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
-    done
-  fi
+  _load_patches
+  for pkg in $_PKGS_TO_PATCH; do
+    pkg="${pkg#\*}"
+    _GMS_PATTERNS="$_GMS_PATTERNS \
+                   <wl[^>]*>[[:space:]]*${pkg//[\.]/\\.}[[:space:]]*</wl>"
+  done
 
   # Convert _GMS_PATTERNS to _GMS_GREP & _GMS_SED
   for _pattern in $_GMS_PATTERNS; do
@@ -60,9 +62,16 @@ _init() {
   done
 }
 
-# Check if overlays file exists (maybe more checks soon)
+# Check if overlays file exists and no new patches are needed
 _is_patched() {
   [ ! -f "$OVERLAYS_FILE" ] && return 1
+  [ -n "$_PKGS_TO_PATCH" ] && {
+    for pkg in $_PKGS_TO_PATCH; do
+      case "$pkg" in
+        \**) return 1 ;;
+      esac
+    done
+  }
   return 0
 }
 
@@ -86,6 +95,43 @@ _is_safe_app() {
 $_paths
 EOF
   return 0
+}
+
+_load_patches() {
+  _normalize() {
+    sed -E 's/^[[:space:]]*#.*//;s/#.*//;s/^[[:space:]]+//;s/[[:space:]]+$//' "$1" \
+    | grep -v '^$' | sort -u
+  }
+
+  [ ! -f "$PATCHES_BACKUP" ] && {
+    mkdir -p "$(dirname "$PATCHES_BACKUP")"
+    printf "# DeviceIdle Patches - $(date '+%Y-%m-%d %H:%M:%S')\n" > "$PATCHES_BACKUP"
+  }
+
+  OLD_PKGS="$(_normalize "$PATCHES_BACKUP")"
+  NEW_PKGS="$(_normalize "$PATCHES_FILE")"
+
+  if [ "$NEW_PKGS" != "$OLD_PKGS" ]; then
+    for pkg in $NEW_PKGS; do
+      [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
+
+      case " $OLD_PKGS " in
+        *" $pkg "*) continue ;;
+      esac
+      
+      _PKGS_TO_PATCH="${_PKGS_TO_PATCH:+$_PKGS_TO_PATCH }*$pkg"
+    done
+
+    {
+      printf "# DeviceIdle Patches - %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
+      printf "%s\n" $NEW_PKGS 
+    } > "$PATCHES_BACKUP"
+  else
+    for pkg in $OLD_PKGS; do
+      [ -n "$pkg" ] && _is_safe_app "$pkg" || continue
+      _PKGS_TO_PATCH="${_PKGS_TO_PATCH:+$_PKGS_TO_PATCH }$pkg"
+    done
+  fi
 }
 
 
@@ -239,26 +285,31 @@ apply() {
   done
   log_doze "Disabled $admin_count device admin receiver(s)"
 
-  # 3. Runtime whitelist removal
-  dumpsys deviceidle whitelist -"$GMS_PKG" >/dev/null 2>&1
-  log_doze "[OK] Removed from user whitelist"
+  for pkg in $_PKGS_TO_PATCH "$GMS_PKG";do
+    pkg="${pkg#\*}"
+    log_doze "Patching \"$pkg\"..."
 
-  local sys_out=$(cmd deviceidle sys-whitelist -"$GMS_PKG" 2>&1)
-  case "$sys_out" in
-    *[Uu]nknown*|*[Ee]rror*) log_doze "[INFO] sys-whitelist not available" ;;
-    *) log_doze "[OK] sys-whitelist: ${sys_out:-executed}" ;;
-  esac
+    # 3. Runtime whitelist removal
+    dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1
+    log_doze "[OK] Removed from user whitelist"
 
-  # Best-effort: try except-idle removal (only affects user tier of except-idle,
-  cmd deviceidle except-idle-whitelist -"$GMS_PKG" >/dev/null 2>&1
+    local sys_out=$(cmd deviceidle sys-whitelist -"$GMS_PKG" 2>&1)
+    case "$sys_out" in
+      *[Uu]nknown*|*[Ee]rror*) log_doze "[INFO] sys-whitelist not available" ;;
+      *) log_doze "[OK] sys-whitelist: ${sys_out:-executed}" ;;
+    esac
+    
+    # Best-effort: try except-idle removal (only affects user tier of except-idle,
+    cmd deviceidle except-idle-whitelist -"$pkg" >/dev/null 2>&1
 
-  # 4. Remove persistent <wl> from deviceidle.xml
-  if [ -f /data/system/deviceidle.xml ] && \
-      grep -q "<wl n=\"${GMS_PKG//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null; then
-    sed -i "/<wl n=\"${GMS_PKG//[\.]/\\.}\"/d" /data/system/deviceidle.xml
-    restorecon /data/system/deviceidle.xml 2>/dev/null
-    log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
-  fi
+    # 4. Remove persistent <wl> from deviceidle.xml
+    if [ -f /data/system/deviceidle.xml ] && \
+        grep -q "<wl n=\"${pkg//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null; then
+      sed -i "/<wl n=\"${pkg//[\.]/\\.}\"/d" /data/system/deviceidle.xml
+      restorecon /data/system/deviceidle.xml 2>/dev/null
+      log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
+    fi
+  done
 
   # GMS loses allow-in-power-save via sysconfig, so the OS is now allowed to
   # kill its processes during idle. Warm it back up here so Camera, PayPal, and
