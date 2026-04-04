@@ -57,7 +57,12 @@ print_banner() {
 
 print_section() {
   local text="$1"
-  local len=${#text}
+  local nbytes nbytes_ascii len
+  nbytes=$(printf '%s' "$text" | wc -c)
+  nbytes_ascii=$(printf '%s' "$text" | LC_ALL=C tr -cd '[:print:]' | wc -c)
+  local overhead=$(( nbytes - nbytes_ascii ))
+  len=$(( nbytes_ascii + overhead / 2 ))
+  [ "$len" -le 0 ] && len=${#text}
   local inner=$((COLS - 4))
   local offset=$(( (inner - len) / 2 ))
   [ "$offset" -lt 0 ] && offset=0
@@ -122,7 +127,7 @@ case "$_LANG" in
 esac
 
 if [ -n "$_LANG_NAME" ]; then
-  print_section "$_LANG_NAME detected"
+  print_section "$_LANG_FLAG  $_LANG_NAME detected"
   ui_print ""
   ui_print "  ⬆️ Vol UP   = Use $_LANG_NAME"
   ui_print "  ⬇️ Vol DOWN = Keep English 🇬🇧"
@@ -160,245 +165,249 @@ s() {
   local key="$1"
   case "${INSTALL_LANG}:${key}" in
 
-    fr:cfg_detected)  echo "Configuration existante detectee !" ;;
-    de:cfg_detected)  echo "Bestehende Konfiguration erkannt!" ;;
-    pl:cfg_detected)  echo "Wykryto istniejaca konfiguracje!" ;;
-    it:cfg_detected)  echo "Configurazione esistente rilevata!" ;;
-    es:cfg_detected)  echo "Configuracion existente detectada!" ;;
-    pt:cfg_detected)  echo "Configuracao existente detectada!" ;;
-    tr:cfg_detected)  echo "Mevcut yapilandirma tespit edildi!" ;;
-    id:cfg_detected)  echo "Konfigurasi saat ini terdeteksi!" ;;
-    ru:cfg_detected)  echo "Obnaruzhena sushchestvuyushchaya konfiguraciya!" ;;
-    uk:cfg_detected)  echo "Vyyavleno nayavnu konfiguraciyu!" ;;
-    zh:cfg_detected)  echo "Existing configuration detected!" ;;
-    ja:cfg_detected)  echo "Existing configuration detected!" ;;
-    ar:cfg_detected)  echo "Existing configuration detected!" ;;
-     *:cfg_detected)  echo "Existing configuration detected!" ;;
+    # EXISTING CONFIG
+    fr:cfg_detected)  echo "♻️  Configuration existante détectée !" ;;
+    de:cfg_detected)  echo "♻️  Bestehende Konfiguration erkannt!" ;;
+    pl:cfg_detected)  echo "♻️  Wykryto istniejącą konfigurację!" ;;
+    it:cfg_detected)  echo "♻️  Configurazione esistente rilevata!" ;;
+    es:cfg_detected)  echo "♻️  ¡Configuración existente detectada!" ;;
+    pt:cfg_detected)  echo "♻️  Configuração existente detectada!" ;;
+    tr:cfg_detected)  echo "♻️  Mevcut yapılandırma tespit edildi!" ;;
+    id:cfg_detected)  echo "♻️  Konfigurasi saat ini terdeteksi!" ;;
+    ru:cfg_detected)  echo "♻️  Обнаружена существующая конфигурация!" ;;
+    uk:cfg_detected)  echo "♻️  Виявлено наявну конфігурацію!" ;;
+    zh:cfg_detected)  echo "♻️  检测到现有配置！" ;;
+    ja:cfg_detected)  echo "♻️  既存の設定が見つかりました！" ;;
+    ar:cfg_detected)  echo "♻️  تم اكتشاف إعدادات محفوظة!" ;;
+     *:cfg_detected)  echo "♻️  Existing configuration detected!" ;;
 
     fr:cfg_vol_keep)  echo "  ⬆️ Vol HAUT   = Garder config & whitelist" ;;
     de:cfg_vol_keep)  echo "  ⬆️ Vol HOCH   = Konfig & Whitelist behalten" ;;
-    pl:cfg_vol_keep)  echo "  ⬆️ Vol GORA   = Zachowaj config i whiteliste" ;;
+    pl:cfg_vol_keep)  echo "  ⬆️ Vol GÓRA   = Zachowaj config i whitelistę" ;;
     it:cfg_vol_keep)  echo "  ⬆️ Vol SU     = Mantieni config & whitelist" ;;
     es:cfg_vol_keep)  echo "  ⬆️ Vol ARRIBA = Mantener config y whitelist" ;;
     pt:cfg_vol_keep)  echo "  ⬆️ Vol CIMA   = Manter config e whitelist" ;;
-    tr:cfg_vol_keep)  echo "  ⬆️ Ses YUKARI = Ayarlari ve Whitelist'i koru" ;;
+    tr:cfg_vol_keep)  echo "  ⬆️ Ses YUKARI = Ayarları ve Whitelist'i koru" ;;
     id:cfg_vol_keep)  echo "  ⬆️ Vol ATAS   = Simpan config & whitelist" ;;
-    ru:cfg_vol_keep)  echo "  ⬆️ Grom +     = Ostavit' konfig i Whitelist" ;;
-    uk:cfg_vol_keep)  echo "  ⬆️ Guchn. +   = Zberegty konfig ta Whitelist" ;;
-    zh:cfg_vol_keep)  echo "  ⬆️ Vol UP     = Keep existing config & whitelist" ;;
-    ja:cfg_vol_keep)  echo "  ⬆️ Vol UP     = Keep existing config & whitelist" ;;
-    ar:cfg_vol_keep)  echo "  ⬆️ Vol UP     = Keep existing config & whitelist" ;;
+    ru:cfg_vol_keep)  echo "  ⬆️ Гром +     = Оставить конфиг и Whitelist" ;;
+    uk:cfg_vol_keep)  echo "  ⬆️ Гучн. +    = Зберегти конфіг та Whitelist" ;;
+    zh:cfg_vol_keep)  echo "  ⬆️ 音量上      = 保留配置和白名单" ;;
+    ja:cfg_vol_keep)  echo "  ⬆️ 音量UP      = 設定とホワイトリストを保持" ;;
+    ar:cfg_vol_keep)  echo "  ⬆️ رفع الصوت   = الإبقاء على الإعدادات والقائمة" ;;
      *:cfg_vol_keep)  echo "  ⬆️ Vol UP     = Keep existing config & whitelist" ;;
 
-    fr:cfg_vol_reset) echo "  ⬇️ Vol BAS    = Reinit. (tout desactive)" ;;
-    de:cfg_vol_reset) echo "  ⬇️ Vol RUNTER = Zurucksetzen (alles aus)" ;;
-    pl:cfg_vol_reset) echo "  ⬇️ Vol DOL    = Resetuj (wszystko wyl.)" ;;
-    it:cfg_vol_reset) echo "  ⬇️ Vol GIU    = Ripristina (tutto off)" ;;
+    fr:cfg_vol_reset) echo "  ⬇️ Vol BAS    = Réinit. (tout désactivé)" ;;
+    de:cfg_vol_reset) echo "  ⬇️ Vol RUNTER = Zurücksetzen (alles aus)" ;;
+    pl:cfg_vol_reset) echo "  ⬇️ Vol DÓŁ    = Resetuj (wszystko wył.)" ;;
+    it:cfg_vol_reset) echo "  ⬇️ Vol GIÙ    = Ripristina (tutto off)" ;;
     es:cfg_vol_reset) echo "  ⬇️ Vol ABAJO  = Restablecer (todo off)" ;;
     pt:cfg_vol_reset) echo "  ⬇️ Vol BAIXO  = Redefinir (tudo off)" ;;
-    tr:cfg_vol_reset) echo "  ⬇️ Ses ASAGI  = Sifirla (her sey kapali)" ;;
+    tr:cfg_vol_reset) echo "  ⬇️ Ses AŞAĞI  = Sıfırla (her şey kapalı)" ;;
     id:cfg_vol_reset) echo "  ⬇️ Vol BAWAH  = Reset (semua nonaktif)" ;;
-    ru:cfg_vol_reset) echo "  ⬇️ Grom -     = Sbros (vsyo otklyucheno)" ;;
-    uk:cfg_vol_reset) echo "  ⬇️ Guchn. -   = Skydannya (vse vymkneno)" ;;
-    zh:cfg_vol_reset) echo "  ⬇️ Vol DOWN   = Reset to defaults (everything off)" ;;
-    ja:cfg_vol_reset) echo "  ⬇️ Vol DOWN   = Reset to defaults (everything off)" ;;
-    ar:cfg_vol_reset) echo "  ⬇️ Vol DOWN   = Reset to defaults (everything off)" ;;
+    ru:cfg_vol_reset) echo "  ⬇️ Гром -     = Сброс (всё отключено)" ;;
+    uk:cfg_vol_reset) echo "  ⬇️ Гучн. -    = Скидання (все вимкнено)" ;;
+    zh:cfg_vol_reset) echo "  ⬇️ 音量下      = 重置 (全部关闭)" ;;
+    ja:cfg_vol_reset) echo "  ⬇️ 音量DOWN    = リセット (すべてオフ)" ;;
+    ar:cfg_vol_reset) echo "  ⬇️ خفض الصوت  = استعادة الافتراضي (معطل)" ;;
      *:cfg_vol_reset) echo "  ⬇️ Vol DOWN   = Reset to defaults (everything off)" ;;
 
     fr:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → conserve la configuration" ;;
-    de:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → behalt Konfiguration" ;;
-    pl:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → zachowuje konfiguracje" ;;
+    de:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → behält Konfiguration" ;;
+    pl:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → zachowuje konfigurację" ;;
     it:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → mantiene configurazione" ;;
-    es:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → conserva la configuracion" ;;
-    pt:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → mantem a configuracao" ;;
-    tr:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → mevcut ayarlari korur" ;;
+    es:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → conserva la configuración" ;;
+    pt:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → mantém a configuração" ;;
+    tr:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → mevcut ayarları korur" ;;
     id:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → pertahankan konfigurasi" ;;
-    ru:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → sohranyaet konfiguraciyu" ;;
-    uk:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → zberigae konfiguraciyu" ;;
-    zh:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s timeout → keeps existing" ;;
-    ja:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s timeout → keeps existing" ;;
-    ar:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s timeout → keeps existing" ;;
+    ru:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → сохраняет конфигурацию" ;;
+    uk:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → зберігає конфігурацію" ;;
+    zh:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → 自动保留配置" ;;
+    ja:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s → 既存の設定を保持" ;;
+    ar:cfg_timeout)   echo "  ⏱️ مهلة ${TIMEOUT} ثانية → الاحتفاظ بالإعدادات" ;;
      *:cfg_timeout)   echo "  ⏱️ ${TIMEOUT}s timeout → keeps existing" ;;
 
-    fr:cfg_kept)      echo "  → Configuration existante conservee ✅" ;;
+    fr:cfg_kept)      echo "  → Configuration existante conservée ✅" ;;
     de:cfg_kept)      echo "  → Bestehende Konfiguration beibehalten ✅" ;;
-    pl:cfg_kept)      echo "  → Istniejaca konfiguracja zachowana ✅" ;;
+    pl:cfg_kept)      echo "  → Istniejąca konfiguracja zachowana ✅" ;;
     it:cfg_kept)      echo "  → Configurazione esistente mantenuta ✅" ;;
-    es:cfg_kept)      echo "  → Configuracion existente conservada ✅" ;;
-    pt:cfg_kept)      echo "  → Configuracao existente mantida ✅" ;;
-    tr:cfg_kept)      echo "  → Mevcut yapilandirma korundu ✅" ;;
+    es:cfg_kept)      echo "  → Configuración existente conservada ✅" ;;
+    pt:cfg_kept)      echo "  → Configuração existente mantida ✅" ;;
+    tr:cfg_kept)      echo "  → Mevcut yapılandırma korundu ✅" ;;
     id:cfg_kept)      echo "  → Konfigurasi saat ini dipertahankan ✅" ;;
-    ru:cfg_kept)      echo "  → Tekushchaya konfiguraciya sohranena ✅" ;;
-    uk:cfg_kept)      echo "  → Potochna konfiguraciya zberezhena ✅" ;;
-    zh:cfg_kept)      echo "  → Keeping existing config ✅" ;;
-    ja:cfg_kept)      echo "  → Keeping existing config ✅" ;;
-    ar:cfg_kept)      echo "  → Keeping existing config ✅" ;;
+    ru:cfg_kept)      echo "  → Текущая конфигурация сохранена ✅" ;;
+    uk:cfg_kept)      echo "  → Поточна конфігурація збережена ✅" ;;
+    zh:cfg_kept)      echo "  → 已保留现有配置 ✅" ;;
+    ja:cfg_kept)      echo "  → 既存の設定を保持しました ✅" ;;
+    ar:cfg_kept)      echo "  → تم الاحتفاظ بالإعدادات الحالية ✅" ;;
      *:cfg_kept)      echo "  → Keeping existing config ✅" ;;
 
-    fr:cfg_reset)     echo "  → Reinitialisation aux valeurs par defaut" ;;
-    de:cfg_reset)     echo "  → Auf Standardwerte zuruckgesetzt" ;;
-    pl:cfg_reset)     echo "  → Zresetowano do ustawien domyslnych" ;;
-    it:cfg_reset)     echo "  → Ripristinato ai valori predefiniti" ;;
-    es:cfg_reset)     echo "  → Restableciendo valores por defecto" ;;
-    pt:cfg_reset)     echo "  → Redefinindo para os padroes" ;;
-    tr:cfg_reset)     echo "  → Varsayilan ayarlara sifirlandi" ;;
-    id:cfg_reset)     echo "  → Mengembalikan ke default" ;;
-    ru:cfg_reset)     echo "  → Sbros do nastroek po umolchaniyu" ;;
-    uk:cfg_reset)     echo "  → Skydannya do typovyh nalashtuvan'" ;;
-    zh:cfg_reset)     echo "  → Resetting to defaults" ;;
-    ja:cfg_reset)     echo "  → Resetting to defaults" ;;
-    ar:cfg_reset)     echo "  → Resetting to defaults" ;;
-     *:cfg_reset)     echo "  → Resetting to defaults" ;;
+    fr:cfg_reset)     echo "  → Réinitialisation aux valeurs par défaut ⚙️" ;;
+    de:cfg_reset)     echo "  → Auf Standardwerte zurückgesetzt ⚙️" ;;
+    pl:cfg_reset)     echo "  → Zresetowano do ustawień domyślnych ⚙️" ;;
+    it:cfg_reset)     echo "  → Ripristinato ai valori predefiniti ⚙️" ;;
+    es:cfg_reset)     echo "  → Restableciendo valores por defecto ⚙️" ;;
+    pt:cfg_reset)     echo "  → Redefinindo para os padrões ⚙️" ;;
+    tr:cfg_reset)     echo "  → Varsayılan ayarlara sıfırlandı ⚙️" ;;
+    id:cfg_reset)     echo "  → Mengembalikan ke default ⚙️" ;;
+    ru:cfg_reset)     echo "  → Сброс до настроек по умолчанию ⚙️" ;;
+    uk:cfg_reset)     echo "  → Скидання до типових налаштувань ⚙️" ;;
+    zh:cfg_reset)     echo "  → 已重置为默认设置 ⚙️" ;;
+    ja:cfg_reset)     echo "  → デフォルト設定にリセットしました ⚙️" ;;
+    ar:cfg_reset)     echo "  → استعادة الوضع الافتراضي ⚙️" ;;
+     *:cfg_reset)     echo "  → Resetting to defaults ⚙️" ;;
 
-    fr:save_title)    echo "Sauvegarde de la Configuration" ;;
-    de:save_title)    echo "Konfiguration speichern" ;;
-    pl:save_title)    echo "Zapisywanie konfiguracji" ;;
-    it:save_title)    echo "Salvataggio configurazione" ;;
-    es:save_title)    echo "Guardando Configuracion" ;;
-    pt:save_title)    echo "Salvando Configuracao" ;;
-    tr:save_title)    echo "Yapilandirma Kaydediliyor" ;;
-    id:save_title)    echo "Menyimpan Konfigurasi" ;;
-    ru:save_title)    echo "Sohranenie konfiguracii" ;;
-    uk:save_title)    echo "Zberezhennya konfiguracii" ;;
-    zh:save_title)    echo "Saving Configuration" ;;
-    ja:save_title)    echo "Saving Configuration" ;;
-    ar:save_title)    echo "Saving Configuration" ;;
-     *:save_title)    echo "Saving Configuration" ;;
+    # SAVE CONFIG
+    fr:save_title)    echo "💾  Sauvegarde de la Configuration" ;;
+    de:save_title)    echo "💾  Konfiguration speichern" ;;
+    pl:save_title)    echo "💾  Zapisywanie konfiguracji" ;;
+    it:save_title)    echo "💾  Salvataggio configurazione" ;;
+    es:save_title)    echo "💾  Guardando Configuración" ;;
+    pt:save_title)    echo "💾  Salvando Configuração" ;;
+    tr:save_title)    echo "💾  Yapılandırma Kaydediliyor" ;;
+    id:save_title)    echo "💾  Menyimpan Konfigurasi" ;;
+    ru:save_title)    echo "💾  Сохранение конфигурации" ;;
+    uk:save_title)    echo "💾  Збереження конфігурації" ;;
+    zh:save_title)    echo "💾  保存配置" ;;
+    ja:save_title)    echo "💾  設定を保存" ;;
+    ar:save_title)    echo "💾  حفظ الإعدادات" ;;
+     *:save_title)    echo "💾  Saving Configuration" ;;
 
-    fr:save_kept)     echo "  ✓ Configuration existante conservee" ;;
+    fr:save_kept)     echo "  ✓ Configuration existante conservée" ;;
     de:save_kept)     echo "  ✓ Bestehende Konfiguration beibehalten" ;;
-    pl:save_kept)     echo "  ✓ Istniejaca konfiguracja zachowana" ;;
+    pl:save_kept)     echo "  ✓ Istniejąca konfiguracja zachowana" ;;
     it:save_kept)     echo "  ✓ Configurazione esistente mantenuta" ;;
-    es:save_kept)     echo "  ✓ Configuracion existente conservada" ;;
-    pt:save_kept)     echo "  ✓ Configuracao existente mantida" ;;
-    tr:save_kept)     echo "  ✓ Mevcut yapilandirma korundu" ;;
+    es:save_kept)     echo "  ✓ Configuración existente conservada" ;;
+    pt:save_kept)     echo "  ✓ Configuração existente mantida" ;;
+    tr:save_kept)     echo "  ✓ Mevcut yapılandırma korundu" ;;
     id:save_kept)     echo "  ✓ Konfigurasi yang ada dipertahankan" ;;
-    ru:save_kept)     echo "  ✓ Sushchestvuyushchaya konfiguraciya sohranena" ;;
-    uk:save_kept)     echo "  ✓ Nayavnu konfiguraciyu zberezheno" ;;
-    zh:save_kept)     echo "  ✓ Existing configuration kept" ;;
-    ja:save_kept)     echo "  ✓ Existing configuration kept" ;;
-    ar:save_kept)     echo "  ✓ Existing configuration kept" ;;
+    ru:save_kept)     echo "  ✓ Существующая конфигурация сохранена" ;;
+    uk:save_kept)     echo "  ✓ Наявну конфігурацію збережено" ;;
+    zh:save_kept)     echo "  ✓ 已保留现有配置" ;;
+    ja:save_kept)     echo "  ✓ 既存の設定を保持しました" ;;
+    ar:save_kept)     echo "  ✓ تم الاحتفاظ بالإعدادات الحالية" ;;
      *:save_kept)     echo "  ✓ Existing configuration kept" ;;
 
-    fr:save_wl)       echo "  ↩ Whitelist Doze preservee" ;;
+    fr:save_wl)       echo "  ↩ Whitelist Doze préservée" ;;
     de:save_wl)       echo "  ↩ Doze-Whitelist beibehalten" ;;
-    pl:save_wl)       echo "  ↩ Biala lista Doze zachowana" ;;
+    pl:save_wl)       echo "  ↩ Biała lista Doze zachowana" ;;
     it:save_wl)       echo "  ↩ Whitelist Doze preservata" ;;
     es:save_wl)       echo "  ↩ Lista blanca Doze preservada" ;;
     pt:save_wl)       echo "  ↩ Lista branca Doze preservada" ;;
     tr:save_wl)       echo "  ↩ Doze beyaz listesi korundu" ;;
     id:save_wl)       echo "  ↩ Daftar putih Doze dipertahankan" ;;
-    ru:save_wl)       echo "  ↩ Belyj spisok Doze sohranyeon" ;;
-    uk:save_wl)       echo "  ↩ Bilyj spysok Doze zberezheno" ;;
-    zh:save_wl)       echo "  ↩ Doze whitelist preserved" ;;
-    ja:save_wl)       echo "  ↩ Doze whitelist preserved" ;;
-    ar:save_wl)       echo "  ↩ Doze whitelist preserved" ;;
+    ru:save_wl)       echo "  ↩ Белый список Doze сохранён" ;;
+    uk:save_wl)       echo "  ↩ Білий список Doze збережено" ;;
+    zh:save_wl)       echo "  ↩ Doze 白名单已保留" ;;
+    ja:save_wl)       echo "  ↩ Doze ホワイトリストを保持" ;;
+    ar:save_wl)       echo "  ↩ تم الاحتفاظ بالقائمة البيضاء (Whitelist)" ;;
      *:save_wl)       echo "  ↩ Doze whitelist preserved" ;;
 
-    fr:save_default)  echo "  ✓ Config par defaut appliquee (tout desactive)" ;;
+    fr:save_default)  echo "  ✓ Config par défaut appliquée (tout désactivé)" ;;
     de:save_default)  echo "  ✓ Standardkonfiguration angewendet (alles aus)" ;;
-    pl:save_default)  echo "  ✓ Konfiguracja domyslna (wszystko wylaczone)" ;;
+    pl:save_default)  echo "  ✓ Konfiguracja domyślna (wszystko wyłączone)" ;;
     it:save_default)  echo "  ✓ Config predefinita applicata (tutto off)" ;;
-    es:save_default)  echo "  ✓ Configuracion por defecto (todo desactivado)" ;;
-    pt:save_default)  echo "  ✓ Configuracao padrao aplicada (tudo off)" ;;
-    tr:save_default)  echo "  ✓ Varsayilan yapilandirma uygulandi (hepsi kapali)" ;;
+    es:save_default)  echo "  ✓ Configuración por defecto (todo desactivado)" ;;
+    pt:save_default)  echo "  ✓ Configuração padrão aplicada (tudo off)" ;;
+    tr:save_default)  echo "  ✓ Varsayılan yapılandırma uygulandı (hepsi kapalı)" ;;
     id:save_default)  echo "  ✓ Konfigurasi default diterapkan (semua nonaktif)" ;;
-    ru:save_default)  echo "  ✓ Primenena konfiguraciya po umolchaniyu (vsyo vykl.)" ;;
-    uk:save_default)  echo "  ✓ Zastosovano typovu konfiguraciyu (vse vymk.)" ;;
-    zh:save_default)  echo "  ✓ Default config applied (everything off)" ;;
-    ja:save_default)  echo "  ✓ Default config applied (everything off)" ;;
-    ar:save_default)  echo "  ✓ Default config applied (everything off)" ;;
+    ru:save_default)  echo "  ✓ Применена конфигурация по умолчанию (всё выкл.)" ;;
+    uk:save_default)  echo "  ✓ Застосовано типову конфігурацію (все вимк.)" ;;
+    zh:save_default)  echo "  ✓ 已应用默认配置（全部关闭）" ;;
+    ja:save_default)  echo "  ✓ デフォルト設定を適用（すべてオフ）" ;;
+    ar:save_default)  echo "  ✓ تم تطبيق الإعداد الافتراضي (كل شيء معطل)" ;;
      *:save_default)  echo "  ✓ Default config applied (everything off)" ;;
 
-    fr:done_title)    echo "Installation Terminee" ;;
-    de:done_title)    echo "Installation Abgeschlossen" ;;
-    pl:done_title)    echo "Instalacja Zakonczona" ;;
-    it:done_title)    echo "Installazione Completata" ;;
-    es:done_title)    echo "Instalacion Completada" ;;
-    pt:done_title)    echo "Instalacao Concluida" ;;
-    tr:done_title)    echo "Kurulum Tamamlandi" ;;
-    id:done_title)    echo "Instalasi Selesai" ;;
-    ru:done_title)    echo "Ustanovka Zavershena" ;;
-    uk:done_title)    echo "Vstanovlennya Zaversheno" ;;
-    zh:done_title)    echo "Installation Complete" ;;
-    ja:done_title)    echo "Installation Complete" ;;
-    ar:done_title)    echo "Installation Complete" ;;
-     *:done_title)    echo "Installation Complete" ;;
 
-    fr:done_reboot)   echo "  > Redemarrez votre appareil" ;;
-    de:done_reboot)   echo "  > Gerat neu starten" ;;
-    pl:done_reboot)   echo "  > Uruchom ponownie urzadzenie" ;;
-    it:done_reboot)   echo "  > Riavvia il dispositivo" ;;
-    es:done_reboot)   echo "  > Reinicia tu dispositivo" ;;
-    pt:done_reboot)   echo "  > Reinicie seu dispositivo" ;;
-    tr:done_reboot)   echo "  > Cihazi yeniden baslat" ;;
-    id:done_reboot)   echo "  > Restart perangkat Anda" ;;
-    ru:done_reboot)   echo "  > Perezagruzite ustrojstvo" ;;
-    uk:done_reboot)   echo "  > Perezavantazhte pristrij" ;;
-    zh:done_reboot)   echo "  > Reboot your device" ;;
-    ja:done_reboot)   echo "  > Reboot your device" ;;
-    ar:done_reboot)   echo "  > Reboot your device" ;;
-     *:done_reboot)   echo "  > Reboot your device" ;;
+    # INSTALLATION COMPLETE
+    fr:done_title)    echo "✅  Installation Terminée" ;;
+    de:done_title)    echo "✅  Installation Abgeschlossen" ;;
+    pl:done_title)    echo "✅  Instalacja Zakończona" ;;
+    it:done_title)    echo "✅  Installazione Completata" ;;
+    es:done_title)    echo "✅  Instalación Completada" ;;
+    pt:done_title)    echo "✅  Instalação Concluída" ;;
+    tr:done_title)    echo "✅  Kurulum Tamamlandı" ;;
+    id:done_title)    echo "✅  Instalasi Selesai" ;;
+    ru:done_title)    echo "✅  Установка Завершена" ;;
+    uk:done_title)    echo "✅  Встановлення Завершено" ;;
+    zh:done_title)    echo "✅  安装完成" ;;
+    ja:done_title)    echo "✅  インストール完了" ;;
+    ar:done_title)    echo "✅  اكتمل التثبيت" ;;
+     *:done_title)    echo "✅  Installation Complete" ;;
 
-    fr:done_webui)    echo "  > Ouvrez la WebUI pour activer les fonctionnalites" ;;
-    de:done_webui)    echo "  > Offne die WebUI, um Funktionen zu aktivieren" ;;
-    pl:done_webui)    echo "  > Otworz WebUI, aby aktywowac funkcje" ;;
-    it:done_webui)    echo "  > Apri la WebUI per abilitare le funzionalita" ;;
-    es:done_webui)    echo "  > Abre la WebUI para activar las funciones" ;;
-    pt:done_webui)    echo "  > Abra a WebUI para ativar os recursos" ;;
-    tr:done_webui)    echo "  > Ozellikleri acmak icin WebUI'yi kullanin" ;;
-    id:done_webui)    echo "  > Buka WebUI untuk mengaktifkan fitur" ;;
-    ru:done_webui)    echo "  > Otkrojte WebUI dlya vklyucheniya funkcij" ;;
-    uk:done_webui)    echo "  > Vidkryjte WebUI dlya uvimknennya funkcij" ;;
-    zh:done_webui)    echo "  > Open WebUI to enable features" ;;
-    ja:done_webui)    echo "  > Open WebUI to enable features" ;;
-    ar:done_webui)    echo "  > Open WebUI to enable features" ;;
-     *:done_webui)    echo "  > Open WebUI to enable features" ;;
+    fr:done_reboot)   echo "  🔄 Redémarrez votre appareil" ;;
+    de:done_reboot)   echo "  🔄 Gerät neu starten" ;;
+    pl:done_reboot)   echo "  🔄 Uruchom ponownie urządzenie" ;;
+    it:done_reboot)   echo "  🔄 Riavvia il dispositivo" ;;
+    es:done_reboot)   echo "  🔄 Reinicia tu dispositivo" ;;
+    pt:done_reboot)   echo "  🔄 Reinicie seu dispositivo" ;;
+    tr:done_reboot)   echo "  🔄 Cihazı yeniden başlat" ;;
+    id:done_reboot)   echo "  🔄 Restart perangkat Anda" ;;
+    ru:done_reboot)   echo "  🔄 Перезагрузите устройство" ;;
+    uk:done_reboot)   echo "  🔄 Перезавантажте пристрій" ;;
+    zh:done_reboot)   echo "  🔄 重启设备" ;;
+    ja:done_reboot)   echo "  🔄 デバイスを再起動" ;;
+    ar:done_reboot)   echo "  🔄 أعد تشغيل جهازك" ;;
+     *:done_reboot)   echo "  🔄 Reboot your device" ;;
 
-    fr:done_off)      echo "    (tout commence DESACTIVE par defaut)" ;;
-    de:done_off)      echo "    (alles startet DEAKTIVIERT)" ;;
-    pl:done_off)      echo "    (domyslnie wszystko jest WYLACZONE)" ;;
-    it:done_off)      echo "    (tutto parte DISATTIVATO di default)" ;;
-    es:done_off)      echo "    (todo comienza DESACTIVADO por defecto)" ;;
-    pt:done_off)      echo "    (tudo comeca DESATIVADO por padrao)" ;;
-    tr:done_off)      echo "    (varsayilan olarak her sey KAPALI baslar)" ;;
-    id:done_off)      echo "    (semuanya DINONAKTIFKAN secara default)" ;;
-    ru:done_off)      echo "    (po umolchaniyu vsyo OTKLYUCHENO)" ;;
-    uk:done_off)      echo "    (za zamovchuvannyam use VYMKNENO)" ;;
-    zh:done_off)      echo "    (everything starts OFF by default)" ;;
-    ja:done_off)      echo "    (everything starts OFF by default)" ;;
-    ar:done_off)      echo "    (everything starts OFF by default)" ;;
-     *:done_off)      echo "    (everything starts OFF by default)" ;;
+    fr:done_webui)    echo "  ⚙️  Ouvrez la WebUI pour activer les fonctionnalités" ;;
+    de:done_webui)    echo "  ⚙️  Öffne die WebUI, um Funktionen zu aktivieren" ;;
+    pl:done_webui)    echo "  ⚙️  Otwórz WebUI, aby aktywować funkcje" ;;
+    it:done_webui)    echo "  ⚙️  Apri la WebUI per abilitare le funzionalità" ;;
+    es:done_webui)    echo "  ⚙️  Abre la WebUI para activar las funciones" ;;
+    pt:done_webui)    echo "  ⚙️  Abra a WebUI para ativar os recursos" ;;
+    tr:done_webui)    echo "  ⚙️  Özellikleri açmak için WebUI'yi kullanın" ;;
+    id:done_webui)    echo "  ⚙️  Buka WebUI untuk mengaktifkan fitur" ;;
+    ru:done_webui)    echo "  ⚙️  Откройте WebUI для включения функций модуля" ;;
+    uk:done_webui)    echo "  ⚙️  Відкрийте WebUI для увімкнення функцій модуля" ;;
+    zh:done_webui)    echo "  ⚙️  请打开 WebUI 启用所需的模块功能" ;;
+    ja:done_webui)    echo "  ⚙️  WebUI を開いて機能を有効化してください" ;;
+    ar:done_webui)    echo "  ⚙️  افتح واجهة WebUI لتفعيل الميزات" ;;
+     *:done_webui)    echo "  ⚙️  Open WebUI in your root manager to enable" ;;
 
-    fr:done_logs)     echo "  > Journaux : /data/adb/modules/Frosty/logs/" ;;
-    de:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
-    pl:done_logs)     echo "  > Logi: /data/adb/modules/Frosty/logs/" ;;
-    it:done_logs)     echo "  > Log: /data/adb/modules/Frosty/logs/" ;;
-    es:done_logs)     echo "  > Registros: /data/adb/modules/Frosty/logs/" ;;
-    pt:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
-    tr:done_logs)     echo "  > Gunlukler: /data/adb/modules/Frosty/logs/" ;;
-    id:done_logs)     echo "  > Log: /data/adb/modules/Frosty/logs/" ;;
-    ru:done_logs)     echo "  > Logi: /data/adb/modules/Frosty/logs/" ;;
-    uk:done_logs)     echo "  > Logy: /data/adb/modules/Frosty/logs/" ;;
-    zh:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
-    ja:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
-    ar:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
-     *:done_logs)     echo "  > Logs: /data/adb/modules/Frosty/logs/" ;;
+    fr:done_off)      echo "     (tout commence DÉSACTIVÉ par défaut)" ;;
+    de:done_off)      echo "     (alles startet DEAKTIVIERT standardmäßig)" ;;
+    pl:done_off)      echo "     (domyślnie wszystko jest WYŁĄCZONE)" ;;
+    it:done_off)      echo "     (tutto parte DISATTIVATO di default)" ;;
+    es:done_off)      echo "     (todo comienza DESACTIVADO por defecto)" ;;
+    pt:done_off)      echo "     (tudo começa DESATIVADO por padrão)" ;;
+    tr:done_off)      echo "     (varsayılan olarak her şey KAPALI başlar)" ;;
+    id:done_off)      echo "     (semuanya DINONAKTIFKAN secara default)" ;;
+    ru:done_off)      echo "     (по умолчанию всё ОТКЛЮЧЕНО)" ;;
+    uk:done_off)      echo "     (за замовчуванням усе ВИМКНЕНО)" ;;
+    zh:done_off)      echo "     （默认情况下所有功能均为关闭状态）" ;;
+    ja:done_off)      echo "     （デフォルトではすべてオフになっています）" ;;
+    ar:done_off)      echo "     (كل شيء معطل افتراضياً)" ;;
+     *:done_off)      echo "     features, everything starts OFF by default" ;;
 
-    fr:stay_frosty)   echo "Stay Frosty!" ;;
-    de:stay_frosty)   echo "Stay Frosty!" ;;
-    pl:stay_frosty)   echo "Stay Frosty!" ;;
-    it:stay_frosty)   echo "Stay Frosty!" ;;
-    es:stay_frosty)   echo "Stay Frosty!" ;;
-    pt:stay_frosty)   echo "Stay Frosty!" ;;
-    tr:stay_frosty)   echo "Stay Frosty!" ;;
-    id:stay_frosty)   echo "Stay Frosty!" ;;
-    ru:stay_frosty)   echo "Stay Frosty!" ;;
-    uk:stay_frosty)   echo "Stay Frosty!" ;;
-    zh:stay_frosty)   echo "Stay Frosty!" ;;
-    ja:stay_frosty)   echo "Stay Frosty!" ;;
-    ar:stay_frosty)   echo "Stay Frosty!" ;;
-     *:stay_frosty)   echo "Stay Frosty!" ;;
+    fr:done_logs)     echo "  📄 Journaux : $MODPATH/logs/" ;;
+    de:done_logs)     echo "  📄 Logs: $MODPATH/logs/" ;;
+    pl:done_logs)     echo "  📄 Logi: $MODPATH/logs/" ;;
+    it:done_logs)     echo "  📄 Log: $MODPATH/logs/" ;;
+    es:done_logs)     echo "  📄 Registros: $MODPATH/logs/" ;;
+    pt:done_logs)     echo "  📄 Logs: $MODPATH/logs/" ;;
+    tr:done_logs)     echo "  📄 Günlükler: $MODPATH/logs/" ;;
+    id:done_logs)     echo "  📄 Log: $MODPATH/logs/" ;;
+    ru:done_logs)     echo "  📄 Логи: $MODPATH/logs/" ;;
+    uk:done_logs)     echo "  📄 Логи: $MODPATH/logs/" ;;
+    zh:done_logs)     echo "  📄 日志: $MODPATH/logs/" ;;
+    ja:done_logs)     echo "  📄 ログ: $MODPATH/logs/" ;;
+    ar:done_logs)     echo "  📄 السجلات: $MODPATH/logs/" ;;
+     *:done_logs)     echo "  📄 Logs: $MODPATH/logs/" ;;
+
+    fr:stay_frosty)   echo "❆  Reste au frais !  ❆" ;;
+    de:stay_frosty)   echo "❆  Bleib cool!  ❆" ;;
+    pl:stay_frosty)   echo "❆  Bądź Frosty!  ❆" ;;
+    it:stay_frosty)   echo "❆  Resta Frosty!  ❆" ;;
+    es:stay_frosty)   echo "❆  ¡Quédate Frosty!  ❆" ;;
+    pt:stay_frosty)   echo "❆  Fique Frosty!  ❆" ;;
+    tr:stay_frosty)   echo "❆  Frosty kal!  ❆" ;;
+    id:stay_frosty)   echo "❆  Tetap Frosty!  ❆" ;;
+    ru:stay_frosty)   echo "❆  Оставайся Frosty!  ❆" ;;
+    uk:stay_frosty)   echo "❆  Залишайся Frosty!  ❆" ;;
+    zh:stay_frosty)   echo "❆  保持凉爽！  ❆" ;;
+    ja:stay_frosty)   echo "❆  Stay Frosty!  ❆" ;;
+    ar:stay_frosty)   echo "❆  Stay Frosty!  ❆" ;;
+     *:stay_frosty)   echo "❆  Stay Frosty!  ❆" ;;
 
   esac
 }
