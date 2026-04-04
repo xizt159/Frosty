@@ -1,5 +1,5 @@
-### Frosty — Doze Whitelist
-### Apps listed here are excluded from Deep Doze restrictions.
+### Frosty — DeviceIdle Patches
+### Apps listed here will no longer bypass Doze mode and will remain optimized.
 ### Add package names one per line. Lines starting with # are comments.
 
 # com.android.vending
