@@ -20,9 +20,11 @@ log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
 
 ensure_whitelist() {
   if [ ! -f "$WHITELIST_FILE" ]; then
-    echo "# Frosty — Doze Whitelist" > "$WHITELIST_FILE"
-    echo "# Apps listed here are excluded from Deep Doze restrictions." >> "$WHITELIST_FILE"
-    echo "# Add package names one per line. Lines starting with # are comments." >> "$WHITELIST_FILE"
+    {
+      echo "### Frosty — Doze Whitelist"
+      echo "### Apps listed here are excluded from Deep Doze restrictions."
+      echo "### Add package names one per line. Lines starting with # are comments."
+    } > "$WHITELIST_FILE"
     log_deep "Created empty whitelist"
   fi
 }

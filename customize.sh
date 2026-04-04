@@ -406,7 +406,7 @@ s() {
 # Existing config detection
 EXISTING_PREFS="/data/adb/modules/$MODID/config/user_prefs"
 EXISTING_WHITELIST="/data/adb/modules/$MODID/config/doze_whitelist.txt"
-EXISTING_PATCHES="/data/adb/modules/$MODID/config/deviceidle_patches.txt"
+EXISTING_PATCHES="/data/adb/modules/$MODID/config/doze_patches.txt"
 USE_EXISTING=0
 
 if [ -f "$EXISTING_PREFS" ]; then
@@ -456,7 +456,7 @@ if [ "$USE_EXISTING" -eq 1 ]; then
     ui_print "$(s save_wl)"
   fi
   if [ -f "$EXISTING_PATCHES" ]; then
-    cp -f "$EXISTING_PATCHES" "$MODPATH/config/deviceidle_patches.txt"
+    cp -f "$EXISTING_PATCHES" "$MODPATH/config/doze_patches.txt"
   fi
   . "$MODPATH/config/user_prefs"
   SYSPROP="$MODPATH/system.prop"
