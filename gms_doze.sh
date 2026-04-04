@@ -316,7 +316,7 @@ apply() {
   [ -n "$_wl_fail" ] && log_doze "Failed: $_wl_fail"
   log_doze "[INFO] Sys-whitelist: $_syswl_ok OK, $(set -- ${_syswl_fail:-}; echo $#) FAIL"
   [ -n "$_syswl_fail" ] && log_doze "Failed: $_syswl_fail"
-  log_doze "[INFO] Persistent <wl> in deviceidle.xml: $_patched OK"
+  log_doze "[INFO] Persistent <wl> removed from deviceidle.xml: $_patched"
 
   # GMS loses allow-in-power-save via sysconfig, so the OS is now allowed to
   # kill its processes during idle. Warm it back up here so Camera, PayPal, and
