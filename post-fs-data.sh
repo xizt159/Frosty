@@ -1,145 +1,104 @@
 #!/system/bin/sh
-# FROSTY - Post-FS-Data
+# Frosty - Post-FS-Data
 
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 
 [ -f "$MODDIR/config/user_prefs" ] && . "$MODDIR/config/user_prefs"
 
-# GMS Doze: deviceidle.xml + conflicting module patching
-_DIXML="/data/system/deviceidle.xml"
-_GMS="com.google.android.gms"
+DIXML="/data/system/deviceidle.xml"
+GMS_PKG="com.google.android.gms"
 
-# Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
-_ALL_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
-                 /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
-                 /odm /product /system /system_ext /vendor"
-
-_PARTITIONS=""
-
-_GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
-               allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
-               <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
-
+_GMS_GREP="allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms"
 
 if [ "$ENABLE_GMS_DOZE" = "1" ]; then
-  _GREP_PATTERN=""
-  _SED_PATTERN=""
-
-  # Filter partitions by existence
-  for _p in $_ALL_PARTITIONS;do
-    [ -d "$_p" ] || continue
-    _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
-  done
-
-  # Convert _GMS_PATTERNS to _GREP_PATTERN & _SED_PATTERN
-  for _pattern in $_GMS_PATTERNS; do
-    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$_pattern"
-    _SED_PATTERN="$_SED_PATTERN/${_pattern/\//\\/}/d;"
-  done
-
-  # Patch deviceidle.xml
-  if [ -f "$_DIXML" ]; then
-    _tmp="${_DIXML}.frosty.tmp"
-    cp -af "$_DIXML" "$_tmp" 2>/dev/null
+  if [ -f "$DIXML" ]; then
+    _tmp="${DIXML}.frosty.tmp"
+    cp -af "$DIXML" "$_tmp" 2>/dev/null
     _changed=0
 
-    # Clean up invalid <un n="...">
     if grep -q '<un n="' "$_tmp" 2>/dev/null; then
       sed -i '/<un n="/d' "$_tmp"
       _changed=1
     fi
 
-    # Clean up literal \n from non-portable sed
     if grep -q '\\n' "$_tmp" 2>/dev/null; then
       sed -i 's/\\n//g' "$_tmp"
       _changed=1
     fi
 
-    # Remove <wl> entry for GMS (prevents user tier re-add on boot)
-    if grep -q "<wl n=\"$_GMS\"" "$_tmp" 2>/dev/null; then
-      sed -i "/<wl n=\"$_GMS\"/d" "$_tmp"
+    if grep -q "<wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
+      sed -i "/<wl n=\"$GMS_PKG\"/d" "$_tmp"
       _changed=1
     fi
 
-    # Inject <un-wl> to remove GMS from system whitelist tier
-    if ! grep -q "<un-wl n=\"$_GMS\"" "$_tmp" 2>/dev/null; then
+    if ! grep -q "<un-wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
       sed -i '/<\/config>/d' "$_tmp"
-      echo "<un-wl n=\"$_GMS\" />" >> "$_tmp"
+      echo "<un-wl n=\"$GMS_PKG\" />" >> "$_tmp"
       echo "</config>" >> "$_tmp"
       _changed=1
     fi
 
-    # Validate and apply
     if [ "$_changed" -eq 1 ] && grep -q '</config>' "$_tmp" 2>/dev/null; then
-      cat "$_tmp" > "$_DIXML"
-      restorecon "$_DIXML" 2>/dev/null
+      cat "$_tmp" > "$DIXML"
+      restorecon "$DIXML" 2>/dev/null
     fi
     rm -f "$_tmp" 2>/dev/null
 
-    # Defense in depth: re-verify <wl> is gone from the actual file
-    if grep -q "<wl n=\"$_GMS\"" "$_DIXML" 2>/dev/null; then
-      sed -i "/<wl n=\"$_GMS\"/d" "$_DIXML"
-      restorecon "$_DIXML" 2>/dev/null
+    if grep -q "<wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
+      sed -i "/<wl n=\"$GMS_PKG\"/d" "$DIXML"
+      restorecon "$DIXML" 2>/dev/null
     fi
   fi
 
-  # Early bind mount of patched sysconfig and whitelist XMLs — must happen before system_server
-  # starts (which populates system-excidle by reading sysconfig).
-  # On first boot after enabling GMS Doze the patched XMLs don't exist yet
-  # gms_doze.sh creates them in service.sh, and they'll be mounted here from the next boot.
-  for _p in $_PARTITIONS; do
-    find "$MODDIR" -path "*/${_p#/}/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
-      _dst="${_src#$MODDIR}"
-      # Separate partition layout: $MODDIR/product/... → /product/...
-      [ ! -f "$_dst" ] && _dst="${_dst#/system}"
-      [ ! -f "$_dst" ] && continue
-      # Only mount if destination still has the GMS entry (overlay not already effective)
-      grep -qE "$_GREP_PATTERN" "$_dst" 2>/dev/null || continue
-      # Match SELinux context of destination
-      _ctx=$(stat -c %C "$_dst" 2>/dev/null)
-      [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
-      mount --bind "$_src" "$_dst" 2>/dev/null
-    done
+  # Bind mount fallback for patched sysconfig XMLs — must happen before system_server
+  # starts. On first boot after enabling, patched XMLs don't exist yet (created later
+  # by gms_doze.sh in service.sh); they'll be mounted from the next boot.
+  find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
+    _dst="${_src#$MODDIR}"
+    # For known separate partitions, the path is already correct and must NOT be
+    # resolved through the /system/<partition> symlink — doing so causes stale
+    # bind mounts that stack across boots on devices where these are separate mount points.
+    case "$_dst" in
+      /product/*|/vendor/*|/odm/*|/system_ext/*) ;;
+      *) [ ! -f "$_dst" ] && _dst="${_dst#/system}" ;;
+    esac
+    [ ! -f "$_dst" ] && continue
+    grep -qE "$_GMS_GREP" "$_dst" 2>/dev/null || continue
+    _ctx=$(stat -c %C "$_dst" 2>/dev/null)
+    [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
+    mount --bind "$_src" "$_dst" 2>/dev/null
   done
 
-  # Patch conflicting modules search entire modules/ tree
-  # KSU moves partition dirs (product/, vendor/) out of system/ to module root
-  for _p in $_PARTITIONS; do
-    find /data/adb/modules -path "*/${_p#/}/*.xml" -type f 2>/dev/null |
-    while IFS= read -r _xml; do
-      case "$_xml" in "$MODDIR/"*) continue ;; esac
-      if grep -qE "$_GREP_PATTERN" "$_xml" 2>/dev/null; then
-        sed -i "$_SED_PATTERN" "$_xml"
-      fi
-    done
+  # Patch conflicting modules that re-add GMS to power-save whitelists
+  find /data/adb/modules -path "*/sysconfig/*.xml" -type f 2>/dev/null |
+  while IFS= read -r _xml; do
+    case "$_xml" in "$MODDIR/"*) continue ;; esac
+    if grep -qE "$_GMS_GREP" "$_xml" 2>/dev/null; then
+      sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$_xml"
+    fi
   done
 
 else
-  # GMS Doze disabled, clean up deviceidle.xml
-  if [ -f "$_DIXML" ]; then
+  if [ -f "$DIXML" ]; then
     _changed=0
-
-    if grep -q '<un n="' "$_DIXML" 2>/dev/null; then
-      sed -i '/<un n="/d' "$_DIXML"
+    if grep -q '<un n="' "$DIXML" 2>/dev/null; then
+      sed -i '/<un n="/d' "$DIXML"
       _changed=1
     fi
-
-    if grep -q '\\n' "$_DIXML" 2>/dev/null; then
-      sed -i 's/\\n//g' "$_DIXML"
+    if grep -q '\\n' "$DIXML" 2>/dev/null; then
+      sed -i 's/\\n//g' "$DIXML"
       _changed=1
     fi
-
-    if grep -q "<un-wl n=\"$_GMS\"" "$_DIXML" 2>/dev/null; then
-      sed -i "/<un-wl n=\"$_GMS\"/d" "$_DIXML"
+    if grep -q "<un-wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
+      sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DIXML"
       _changed=1
     fi
-
-    [ "$_changed" -eq 1 ] && restorecon "$_DIXML" 2>/dev/null
+    [ "$_changed" -eq 1 ] && restorecon "$DIXML" 2>/dev/null
   fi
 fi
 
-unset _DIXML _GMS _changed _tmp _xml _src _dst _ctx
+unset DIXML GMS_PKG _GMS_GREP _changed _tmp _xml _src _dst _ctx
 
 # Blur Disable
 if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
@@ -150,7 +109,7 @@ if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
   resetprop -n ro.surface_flinger.supports_background_blur 0
 fi
 
-# Log Killing
+# Log Binary Stubs
 INITDIR="$MODDIR/system/etc/init"
 BINDIR="$MODDIR/system/bin"
 
@@ -161,28 +120,25 @@ if [ "$ENABLE_LOG_KILLING" = "1" ]; then
   resetprop -n ro.lmk.log_stats false
   resetprop -n dalvik.vm.dex2oat-minidebuginfo false
   resetprop -n dalvik.vm.minidebuginfo false
-
   resetprop -n sys.wifitracing.started 0
   resetprop -n persist.vendor.wifienhancelog 0
 
-  mkdir -p "$INITDIR"
+  mkdir -p "$INITDIR" "$BINDIR"
+
   for rc in atrace atrace_userdebug bugreport dmesgd \
-            dumpstate logcat logcatd logd logtagd lpdumpd tombstoned \
+            dumpstate logcat logcatd logd logtagd lpdumpd \
             traced traced_perf traced_probes traceur; do
-    [ ! -f "$INITDIR/${rc}.rc" ] && : > "$INITDIR/${rc}.rc"
+    : > "$INITDIR/${rc}.rc"
   done
 
-  mkdir -p "$BINDIR"
   for bin in atrace bugreport bugreport_procdump bugreportz \
             diag_socket_log dmabuf_dump dmesgd \
             dumpstate i2cdump log logcat logcatd logd logger logname \
-            logpersist.cat logpersist.start logpersist.stop \
-            lpdump lpdumpd notify_traceur.sh tcpdump tombstoned traced \
+            logpersist.cat logpersist.start logpersist.stop logwrapper \
+            lpdump lpdumpd notify_traceur.sh tcpdump traced \
             traced_perf traced_probes tracepath tracepath6 traceroute6; do
-    if [ ! -f "$BINDIR/$bin" ]; then
-      : > "$BINDIR/$bin"
-      chmod 755 "$BINDIR/$bin"
-    fi
+    printf '#!/system/bin/sh\nexit 0\n' > "$BINDIR/$bin"
+    chmod 755 "$BINDIR/$bin"
   done
 else
   if [ -d "$INITDIR" ]; then

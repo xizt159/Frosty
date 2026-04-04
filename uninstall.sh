@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# FROSTY - Uninstall Script
+# Frosty - Delayed Uninstallation Handler
 
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
@@ -7,17 +7,12 @@ MODDIR="${0%/*}"
 TEMP_DIR="/data/local/tmp/frosty_uninstall"
 mkdir -p "$TEMP_DIR"
 
-# Copy needed files to temp before module dir is removed
 [ -f "$MODDIR/config/gms_services.txt" ] && cp -f "$MODDIR/config/gms_services.txt" "$TEMP_DIR/"
 [ -f "$MODDIR/config/user_prefs" ]       && cp -f "$MODDIR/config/user_prefs"       "$TEMP_DIR/"
 
-# Kill screen monitor while pidfile is still accessible
 if [ -f "$MODDIR/tmp/screen_monitor.pid" ]; then
   monitor_pid=$(cat "$MODDIR/tmp/screen_monitor.pid" 2>/dev/null)
-  if [ -n "$monitor_pid" ]; then
-    kill "$monitor_pid" 2>/dev/null
-    echo "$monitor_pid" > "$TEMP_DIR/monitor_pid"
-  fi
+  [ -n "$monitor_pid" ] && kill "$monitor_pid" 2>/dev/null
 fi
 
 cat > "/data/adb/frosty_uninstall_runner.sh" << 'UNINSTALL_EOF'
@@ -27,85 +22,47 @@ LOGFILE="/data/local/tmp/frosty_uninstall.log"
 TEMP_DIR="/data/local/tmp/frosty_uninstall"
 GMS_LIST="$TEMP_DIR/gms_services.txt"
 USER_PREFS="$TEMP_DIR/user_prefs"
+GMS_PKG="com.google.android.gms"
+DEVICEIDLE_XML="/data/system/deviceidle.xml"
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOGFILE"; }
-echo "Frosty uninstall started $(date)" > "$LOGFILE"
+log() { echo "[$(date '+%H:%M:%S')] $1" >> "$LOGFILE"; }
+echo "Frosty uninstall - $(date '+%Y-%m-%d %H:%M:%S')" > "$LOGFILE"
 
-# Wait for system
 sleep 10
-if [ ! -d "$TEMP_DIR" ]; then
-  log "ERROR: Temp files missing, aborting"
-  rm -f "/data/adb/frosty_uninstall_runner.sh"
-  exit 1
-fi
-
+[ ! -d "$TEMP_DIR" ] && exit 1
 until [ -d "/sdcard/" ]; do sleep 1; done
 sleep 5
-
-# Verify screen monitor is dead
-if [ -f "$TEMP_DIR/monitor_pid" ]; then
-  pid=$(cat "$TEMP_DIR/monitor_pid")
-  kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
-  log "Screen monitor killed (PID $pid)"
-fi
 
 # Revert resetprop
 log "Reverting resetprop..."
 for prop in tombstoned.max_tombstone_count tombstoned.max_anr_count ro.lmk.debug ro.lmk.log_stats \
-  dalvik.vm.dex2oat-minidebuginfo dalvik.vm.minidebuginfo \
-  sys.wifitracing.started persist.vendor.wifienhancelog \
-  disableBlurs enable_blurs_on_windows ro.launcher.blur.appLaunch \
-  ro.sf.blurs_are_expensive ro.surface_flinger.supports_background_blur \
-  persist.traced.enable; do
+            dalvik.vm.dex2oat-minidebuginfo dalvik.vm.minidebuginfo \
+            disableBlurs enable_blurs_on_windows ro.launcher.blur.appLaunch \
+            ro.sf.blurs_are_expensive ro.surface_flinger.supports_background_blur \
+            persist.traced.enable; do
   resetprop --delete "$prop" 2>/dev/null
 done
 
-ENABLE_GMS_DOZE=0
-ENABLE_DEEP_DOZE=0
-[ -f "$USER_PREFS" ] && . "$USER_PREFS"
-
-# Revert RAM optimizer Android-layer tweaks
+# Revert RAM optimizer
 log "Reverting RAM optimizer..."
 content call --uri content://settings/config --method DELETE_value \
-  --arg activity_manager/max_cached_processes >/dev/null 2>&1
-content call --uri content://settings/config --method DELETE_value \
-  --arg activity_manager/max_empty_processes >/dev/null 2>&1
-content call --uri content://settings/config --method DELETE_value \
-  --arg activity_manager/max_empty_time >/dev/null 2>&1
-content call --uri content://settings/global --method DELETE_value \
-  --arg activity_manager_constants >/dev/null 2>&1
-content call --uri content://settings/config --method DELETE_value \
   --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
-log "RAM optimizer reverted"
 
 # Revert GMS Doze
 log "Reverting GMS Doze..."
-GMS_PKG="com.google.android.gms"
-DEVICEIDLE_XML="/data/system/deviceidle.xml"
-
-# Remove <un-wl> injection from deviceidle.xml
 if [ -f "$DEVICEIDLE_XML" ]; then
-  if grep -q "<un-wl n=\"$GMS_PKG\"" "$DEVICEIDLE_XML" 2>/dev/null; then
-    sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DEVICEIDLE_XML"
-    restorecon "$DEVICEIDLE_XML" 2>/dev/null
-    log "Removed <un-wl> entry from deviceidle.xml"
-  fi
+  sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DEVICEIDLE_XML"
+  restorecon "$DEVICEIDLE_XML" 2>/dev/null
 fi
 
-# Restore system whitelist tier
 cmd deviceidle sys-whitelist +"$GMS_PKG" >/dev/null 2>&1
+dumpsys deviceidle whitelist +"$GMS_PKG" >/dev/null 2>&1
 
-# Restore user whitelist tier
-dumpsys deviceidle whitelist +$GMS_PKG >/dev/null 2>&1
-
-user_ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+')
-[ -z "$user_ids" ] && user_ids=$(ls /data/user 2>/dev/null)
-
+user_ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null)
 for user_id in $user_ids; do
   pm enable --user "$user_id" "$GMS_PKG/$GMS_PKG.auth.managed.admin.DeviceAdminReceiver" >/dev/null 2>&1
   pm enable --user "$user_id" "$GMS_PKG/$GMS_PKG.mdm.receivers.MdmDeviceAdminReceiver"   >/dev/null 2>&1
 done
-log "GMS Doze reverted"
 
 # Revert Battery Saver
 log "Reverting Battery Saver..."
@@ -113,28 +70,22 @@ settings delete global battery_saver_constants 2>/dev/null
 settings put global low_power_sticky 0 2>/dev/null
 settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
 settings put global low_power 0 2>/dev/null
-log "Battery Saver reverted"
 
+# Revert Deep Doze
 log "Reverting Deep Doze..."
 settings delete global device_idle_constants 2>/dev/null
-settings put global forced_app_standby_enabled 0 2>/dev/null
-settings put global app_auto_restriction_enabled false 2>/dev/null
 settings delete global app_standby_enabled 2>/dev/null
 settings delete global adaptive_battery_management_enabled 2>/dev/null
 
 for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
   appops set "$pkg" WAKE_LOCK allow 2>/dev/null
-  appops set "$pkg" SCHEDULE_EXACT_ALARM allow 2>/dev/null
-  appops set "$pkg" USE_EXACT_ALARM allow 2>/dev/null
   am set-standby-bucket "$pkg" active 2>/dev/null
   am set-inactive "$pkg" false 2>/dev/null
 done
-
 dumpsys deviceidle unforce 2>/dev/null
-log "Deep Doze reverted"
 
-# Revert DropBox category disables
-log "Reverting DropBox settings..."
+# Revert DropBox
+log "Reverting DropBox..."
 for tag in dumpsys:procstats dumpsys:usagestats procstats usagestats \
            data_app_wtf keymaster system_server_wtf system_app_strictmode \
            system_app_wtf system_server_strictmode data_app_strictmode \
@@ -145,40 +96,37 @@ for tag in dumpsys:procstats dumpsys:usagestats procstats usagestats \
            SYSTEM_TOMBSTONE SYSTEM_TOMBSTONE_PROTO data_app_native_crash \
            SYSTEM_RESTART; do
   content call --uri content://settings/global --method DELETE_value \
-      --arg "dropbox:$tag" 2>/dev/null
+    --arg "dropbox:$tag" 2>/dev/null >/dev/null
 done
 settings delete global battery_stats_constants 2>/dev/null
-log "DropBox and battery stats settings reverted"
 
-# Revert NetworkStats and WiFi scan settings
-log "Reverting NetworkStats and WiFi scan settings..."
+# Revert NetworkStats and WiFi scan
+log "Reverting NetworkStats..."
 settings delete global netstats_poll_interval 2>/dev/null
 settings delete global netstats_persist_threshold 2>/dev/null
 settings delete global netstats_global_alert_bytes 2>/dev/null
 settings put global wifi_scan_throttle_enabled 1 2>/dev/null
 settings put global wifi_scan_always_enabled 1 2>/dev/null
-log "NetworkStats and WiFi scan settings reverted"
 
-# Revert Kill Google Tracking
-log "Reverting Google tracking settings..."
-settings put global gmscorestat_enabled 1 2>/dev/null
-settings put global play_store_panel_logging_enabled 1 2>/dev/null
-settings put global clearcut_enabled 1 2>/dev/null
-settings put global clearcut_events 1 2>/dev/null
-settings put global clearcut_gcm 1 2>/dev/null
-settings delete global phenotype__debug_bypass_phenotype 2>/dev/null
-settings delete global phenotype_boot_count 2>/dev/null
-settings delete global phenotype_flags 2>/dev/null
-settings put global ga_collection_enabled 1 2>/dev/null
-settings put global analytics_enabled 1 2>/dev/null
-settings put global uploading_enabled 1 2>/dev/null
-settings put global bug_report_in_power_menu 1 2>/dev/null
-settings put global usage_stats_enabled 1 2>/dev/null
-settings put global usagestats_collection_enabled 1 2>/dev/null
-settings put global network_watchlist_enabled 1 2>/dev/null
-settings put global limit_ad_tracking 0 2>/dev/null
-settings put global tron_enabled 1 2>/dev/null
-log "Google tracking settings reverted"
+# Revert Google tracking
+log "Reverting Google tracking..."
+settings put global gmscorestat_enabled 1 >/dev/null 2>&1
+settings put global play_store_panel_logging_enabled 1 >/dev/null 2>&1
+settings put global clearcut_enabled 1 >/dev/null 2>&1
+settings put global clearcut_events 1 >/dev/null 2>&1
+settings put global clearcut_gcm 1 >/dev/null 2>&1
+settings delete global phenotype__debug_bypass_phenotype >/dev/null 2>&1
+settings delete global phenotype_boot_count >/dev/null 2>&1
+settings delete global phenotype_flags >/dev/null 2>&1
+settings put global ga_collection_enabled 1 >/dev/null 2>&1
+settings put global analytics_enabled 1 >/dev/null 2>&1
+settings put global uploading_enabled 1 >/dev/null 2>&1
+settings put global bug_report_in_power_menu 1 >/dev/null 2>&1
+settings put global usage_stats_enabled 1 >/dev/null 2>&1
+settings put global usagestats_collection_enabled 1 >/dev/null 2>&1
+settings put global network_watchlist_enabled 1 >/dev/null 2>&1
+settings put global limit_ad_tracking 0 >/dev/null 2>&1
+settings put global tron_enabled 1 >/dev/null 2>&1
 
 # Re-enable GMS services
 if [ -f "$GMS_LIST" ]; then
@@ -192,10 +140,9 @@ if [ -f "$GMS_LIST" ]; then
   log "Re-enabled $count services"
 fi
 
-log "UNINSTALL COMPLETE - Please reboot"
-
+log "UNINSTALL COMPLETE - reboot recommended"
 rm -rf "$TEMP_DIR"
-sleep 10
+sleep 5
 rm -f "/data/adb/frosty_uninstall_runner.sh"
 
 UNINSTALL_EOF

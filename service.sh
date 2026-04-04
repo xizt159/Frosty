@@ -1,28 +1,17 @@
 #!/system/bin/sh
-# FROSTY - Service script
+# Frosty - Late Boot Execution
 
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
-BACKUP_DIR="$MODDIR/backup"
 BOOT_LOG="$LOGDIR/boot.log"
-TWEAKS_LOG="$LOGDIR/tweaks.log"
 PROPS_LOG="$LOGDIR/props.log"
-RAM_LOG="$LOGDIR/ram.log"
-BS_LOG="$LOGDIR/battery_saver.log"
-KERNEL_BACKUP="$BACKUP_DIR/kernel_values.txt"
-KERNEL_TWEAKS="$MODDIR/config/kernel_tweaks.txt"
-RAM_BACKUP="$BACKUP_DIR/ram_values.txt"
-RAM_TWEAKS="$MODDIR/config/ram_tweaks.txt"
-
-# System props status
 SYSPROP="$MODDIR/system.prop"
 SYSPROP_OLD="$MODDIR/system.prop.old"
 
-
-mkdir -p "$LOGDIR" "$BACKUP_DIR"
+mkdir -p "$LOGDIR"
 # Log rotation
 for log in "$LOGDIR"/*.log; do
   [ -f "$log" ] || continue
@@ -33,145 +22,27 @@ done
 
 log_boot()  { echo "[$(date '+%H:%M:%S')] $1" >> "$BOOT_LOG"; }
 log_props() { echo "[$(date '+%H:%M:%S')] $1" >> "$PROPS_LOG"; }
-log_tweak() { echo "$1" >> "$TWEAKS_LOG"; }
 
-# Initialize logfiles
 echo "Frosty v${MODVER:-?} - Boot - $(date '+%Y-%m-%d %H:%M:%S')" > "$BOOT_LOG"
-echo "Frosty v${MODVER:-?} - Tweaks - $(date '+%Y-%m-%d %H:%M:%S')" > "$TWEAKS_LOG"
 echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
-echo "Frosty v${MODVER:-?} - RAM - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
-echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
 
 # Wait for boot
-until [ "$(getprop sys.boot_completed)" = "1" ] && [ -d /sdcard ]; do
-  sleep 5
-done
+until [ "$(getprop sys.boot_completed)" = "1" ] && [ -d /sdcard ]; do sleep 5; done
 sleep 10
 log_boot "Boot initialized"
 
 mkdir -p "$MODDIR/config"
-
-# Load preferences (default everything is off)
 . "$MODDIR/config/user_prefs" 2>/dev/null || true
 
-write_val() {
-  local file="$1" value="$2" name="$3"
-  [ ! -f "$file" ] && { log_tweak "[SKIP] $name"; return 1; }
-  chmod +w "$file" 2>/dev/null
-  if printf '%s\n' "$value" > "$file" 2>/dev/null; then
-    log_tweak "[OK] $name = $value"
-    return 0
-  else
-    log_tweak "[FAIL] $name"
-    return 1
-  fi
-}
-
-# Back up current kernel values before tweaking.
-backup_kernel() {
-  log_boot "Backing up kernel values..."
-  echo "# Kernel Backup - $(date '+%Y-%m-%d %H:%M:%S')" > "$KERNEL_BACKUP"
-
-  if [ ! -f "$KERNEL_TWEAKS" ]; then
-    log_boot "WARNING: kernel_tweaks.txt not found, skipping backup"
-    return
-  fi
-
-  while IFS= read -r line; do
-    case "$line" in '#'*|'') continue ;; esac
-    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
-    [ -z "$path" ] || [ ! -f "$path" ] && continue
-    name=$(basename "$path")
-    val=$(cat "$path" 2>/dev/null)
-    printf '%s=%s=%s\n' "$name" "$val" "$path" >> "$KERNEL_BACKUP"
-  done < "$KERNEL_TWEAKS"
-
-  log_boot "Kernel backup saved"
-}
-
-# Back up current RAM sysfs values before tweaking.
-backup_ram() {
-  log_boot "Backing up RAM sysfs values..."
-  echo "# RAM Backup - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_BACKUP"
-
-  if [ ! -f "$RAM_TWEAKS" ]; then
-    log_boot "WARNING: ram_tweaks.txt not found, skipping RAM backup"
-    return
-  fi
-
-  while IFS= read -r line; do
-    case "$line" in '#'*|'') continue ;; esac
-    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
-    [ -z "$path" ] || [ ! -f "$path" ] && continue
-    name=$(basename "$path")
-    val=$(cat "$path" 2>/dev/null)
-    printf '%s=%s=%s\n' "$name" "$val" "$path" >> "$RAM_BACKUP"
-  done < "$RAM_TWEAKS"
-
-  log_boot "RAM backup saved"
-}
-
-# Apply all tweaks from kernel_tweaks.txt.
-apply_kernel_tweaks() {
-  if [ ! -f "$KERNEL_TWEAKS" ]; then
-    log_boot "ERROR: kernel_tweaks.txt not found at $KERNEL_TWEAKS, reinstall"
-    return 1
-  fi
-
-  local last_section="" count_ok=0 count_fail=0 count_skip=0
-
-  while IFS= read -r line; do
-    case "$line" in
-      '# '*)
-        section=$(echo "$line" | sed 's/^# ── *//;s/ *─*$//')
-        if [ "$section" != "$last_section" ]; then
-          last_section="$section"
-          log_tweak ""
-          log_tweak "$section"
-        fi
-        continue
-        ;;
-      '#'*|'') continue ;;
-    esac
-
-    path=$(printf '%s' "$line" | cut -d'|' -f1 | tr -d ' ')
-    value=$(printf '%s' "$line" | cut -d'|' -f2-)
-    [ -z "$path" ] || [ -z "$value" ] && continue
-    name=$(basename "$path")
-
-    if write_val "$path" "$value" "$name"; then
-      count_ok=$((count_ok + 1))
-    else
-      [ ! -f "$path" ] && count_skip=$((count_skip + 1)) || count_fail=$((count_fail + 1))
-    fi
-  done < "$KERNEL_TWEAKS"
-
-  # Dynamic debug masks
-  log_tweak ""
-  log_tweak "DEBUG MASKS (dynamic)"
-  local debug_count=0
-  for pattern in debug_mask log_level debug_level enable_event_log tracing_on; do
-    for dpath in $(find /sys/ -maxdepth 4 -type f -name "*${pattern}*" 2>/dev/null | head -20); do
-      if write_val "$dpath" 0 "$(basename "$dpath")"; then
-        debug_count=$((debug_count + 1))
-      fi
-    done
-  done
-  log_tweak "Disabled $debug_count debug masks"
-
-  log_boot "Kernel tweaks applied (ok=$count_ok skip=$count_skip fail=$count_fail)"
-}
-
-
-# === System Props ===
+# System props status
 if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
   if [ -f "$SYSPROP" ]; then
     PROP_COUNT=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
-    log_props "[OK] system.prop is ACTIVE — $PROP_COUNT props loaded at boot"
+    log_props "[OK] system.prop is ACTIVE - $PROP_COUNT props loaded at boot"
     log_boot "System props: ACTIVE ($PROP_COUNT props)"
   else
     log_props "[WARN] ENABLE_SYSTEM_PROPS=1 but system.prop is missing"
-    log_boot "System props: WARNING — file missing despite being enabled"
+    log_boot "System props: WARNING - file missing despite being enabled"
   fi
 else
   if [ -f "$SYSPROP_OLD" ]; then
@@ -183,25 +54,25 @@ else
   fi
 fi
 
-# === Kernel tweaks ===
+# Kernel tweaks
 if [ "$ENABLE_KERNEL_TWEAKS" = "1" ]; then
   log_boot "Applying kernel tweaks..."
-  backup_kernel
-  apply_kernel_tweaks
+  sh "$MODDIR/frosty.sh" apply_kernel >/dev/null 2>&1
+  log_boot "Kernel tweaks applied"
 else
   log_boot "Kernel tweaks SKIPPED"
 fi
 
-# === RAM Optimizer ===
+# RAM Optimizer
 if [ "$ENABLE_RAM_OPTIMIZER" = "1" ]; then
   log_boot "Applying RAM optimizer..."
-  backup_ram
   sh "$MODDIR/frosty.sh" ram_optimizer >/dev/null 2>&1
+  log_boot "RAM optimizer applied"
 else
   log_boot "RAM optimizer SKIPPED"
 fi
 
-# === Kill log processes ===
+# Kill log processes
 if [ "$ENABLE_LOG_KILLING" = "1" ]; then
   log_boot "Killing log processes..."
   sh "$MODDIR/frosty.sh" kill_logs >/dev/null 2>&1
@@ -210,7 +81,7 @@ else
   log_boot "Log killing SKIPPED"
 fi
 
-# === Kill Google Tracking ===
+# Kill Google Tracking
 if [ "$ENABLE_KILL_TRACKING" = "1" ]; then
   log_boot "Blocking Google tracking..."
   sh "$MODDIR/frosty.sh" kill_tracking >/dev/null 2>&1
@@ -219,134 +90,29 @@ else
   log_boot "Kill tracking SKIPPED"
 fi
 
-# === GMS Freezing ===
-# Apply GMS freezing if any category is enabled
+# GMS freeze
 has_frozen_cats=0
-for _cat in DISABLE_TELEMETRY DISABLE_BACKGROUND DISABLE_LOCATION DISABLE_CONNECTIVITY \
-            DISABLE_CLOUD DISABLE_PAYMENTS DISABLE_WEARABLES DISABLE_GAMES; do
+for _cat in DISABLE_TELEMETRY DISABLE_BACKGROUND DISABLE_LOCATION DISABLE_CONNECTIVITY DISABLE_CLOUD DISABLE_PAYMENTS DISABLE_WEARABLES DISABLE_GAMES; do
   eval _val=\$$_cat
   [ "$_val" = "1" ] && { has_frozen_cats=1; break; }
 done
 if [ "$has_frozen_cats" = "1" ]; then
-  log_boot "GMS categories enabled — applying freeze..."
-  chmod +x "$MODDIR/frosty.sh"
-  "$MODDIR/frosty.sh" freeze >/dev/null 2>&1
+  log_boot "GMS categories enabled - applying freeze..."
+  sh "$MODDIR/frosty.sh" freeze >/dev/null 2>&1
 else
   log_boot "No GMS categories enabled, skipping GMS freeze"
 fi
 
-# === GMS Doze ===
+# GMS Doze
 if [ "$ENABLE_GMS_DOZE" = "1" ]; then
   log_boot "Applying GMS Doze..."
   chmod +x "$MODDIR/gms_doze.sh"
   "$MODDIR/gms_doze.sh" apply >/dev/null 2>&1
-
-  _GMS="com.google.android.gms"
-
-  # Partitions that may carry sysconfig or deviceidle XMLs with GMS whitelist entries
-  _ALL_PARTITIONS="/india /my_bigball /my_carrier /my_company /my_engineering /my_heytap \
-                  /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock \
-                  /odm /product /system /system_ext /vendor"
-
-  _PARTITIONS=""
-
-  _GMS_PATTERNS="allow-in-power-save.*${_GMS//[\.]/\\.} \
-                 allow-in-data-usage-save.*${_GMS//[\.]/\\.} \
-                 <wl[^>]*>[[:space:]]*${_GMS//[\.]/\\.}[[:space:]]*</wl>"
-
-  _GREP_PATTERN=""
-
-  # Filter partitions by existence
-  for _p in $_ALL_PARTITIONS;do
-    [ -d "$_p" ] || continue
-    _PARTITIONS="${_PARTITIONS:+$_PARTITIONS }/${_p#/}"
-  done
-
-  # Convert _GMS_PATTERNS to _GREP_PATTERN
-  for _pattern in $_GMS_PATTERNS; do
-    _GREP_PATTERN="${_GREP_PATTERN:+$_GREP_PATTERN|}$_pattern"
-  done
-
-  # Per-file bind mount fallback — handles first boot (patched XMLs just created above)
-  _overlay_worked="YES"
-  for _p in $_PARTITIONS; do
-    [ -d "$_p" ] || continue
-    for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
-      [ -d "$_dir" ] || continue
-      for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
-        [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
-          _overlay_worked="NO"
-          break
-        }
-      done
-    done
-  done
-
-  if [ "$_overlay_worked" = "NO" ]; then
-    log_boot "GMS sysconfig not patched — applying per-file fallback..."
-    _mounted=0 _failed=0 _skip=0
-    _file_list=$(find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null)
-
-    if [ -z "$_file_list" ]; then
-      log_boot "[INFO] No patched XMLs yet (first enable — will work after next reboot)"
-    fi
-
-    for _src in $_file_list; do
-      _dst="${_src#$MODDIR}"
-      [ ! -f "$_dst" ] && _dst="${_dst#/system}"
-      if [ ! -f "$_dst" ]; then
-        _alt=$(readlink -f "$_dst" 2>/dev/null)
-        [ -n "$_alt" ] && [ -f "$_alt" ] && _dst="$_alt"
-      fi
-      if [ -f "$_dst" ]; then
-        _ctx=$(stat -c %C "$_dst" 2>/dev/null)
-        [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
-        if mount --bind "$_src" "$_dst" 2>/dev/null; then
-          _mounted=$((_mounted + 1))
-          log_boot "[OK] Bind mounted: $_dst"
-        else
-          _failed=$((_failed + 1))
-          log_boot "[FAIL] Bind mount: $_dst"
-        fi
-      else
-        _skip=$((_skip + 1))
-        log_boot "[SKIP] Not found: $(echo "$_src" | sed "s|$MODDIR||")"
-      fi
-    done
-
-    log_boot "Per-file fallback: $_mounted mounted, $_failed failed, $_skip skipped"
-
-    if [ "$_mounted" -gt 0 ]; then
-      _still_unpatched="NO"
-      for _p in $_PARTITIONS; do
-        [ -d "$_p" ] || continue
-        for _dir in "$_p/etc" "$_p/oplus" "$_p/oppo"; do
-          [ -d "$_dir" ] || continue
-          for xml in $(find "$_dir" -type f -name "*.xml" -depth -maxdepth 2 2>/dev/null); do
-            [ -f "$xml" ] && grep -qE "$_GREP_PATTERN" "$xml" 2>/dev/null && {
-              _still_unpatched="YES"
-              log_boot "[WARN] GMS entry still in: $xml"
-              break
-            }
-          done
-        done
-      done
-      if [ "$_still_unpatched" = "NO" ]; then
-        log_boot "[GOOD] GMS sysconfig patched via per-file fallback"
-        dumpsys deviceidle whitelist -"$_GMS" >/dev/null 2>&1
-        cmd deviceidle except-idle-whitelist -"$_GMS" >/dev/null 2>&1
-        log_boot "[OK] Removed GMS from runtime whitelist"
-      fi
-    fi
-  else
-    log_boot "GMS sysconfig already patched — no fallback needed"
-  fi
-  unset _overlay_worked _cp _src _dst _alt _mounted _failed _skip _file_list _ctx _still_unpatched
 else
   log_boot "GMS Doze SKIPPED"
 fi
 
-# === Deep Doze ===
+# Deep Doze
 if [ "$ENABLE_DEEP_DOZE" = "1" ]; then
   log_boot "Applying Deep Doze..."
   chmod +x "$MODDIR/deep_doze.sh"
@@ -355,7 +121,7 @@ else
   log_boot "Deep Doze SKIPPED"
 fi
 
-# === Battery Saver Tuner ===
+# Battery Saver Tuner
 if [ "$ENABLE_BATTERY_SAVER" = "1" ]; then
   log_boot "Applying Battery Saver Tuner..."
   sh "$MODDIR/frosty.sh" bss_apply >/dev/null 2>&1
@@ -365,5 +131,4 @@ else
 fi
 
 log_boot "Boot complete at $(date '+%Y-%m-%d %H:%M:%S')"
-
 exit 0
