@@ -285,18 +285,19 @@ apply() {
   done
   log_doze "Disabled $admin_count device admin receiver(s)"
 
+  local _wl_removed="" _syswl_removed="" _patched=""
   for pkg in $_PKGS_TO_PATCH "$GMS_PKG";do
     pkg="${pkg#\*}"
     log_doze "Patching \"$pkg\"..."
 
     # 3. Runtime whitelist removal
-    dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1
-    log_doze "[OK] Removed from user whitelist"
+    dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1 && \
+      _wl_removed="${_wl_removed:+$_wl_removed, }$pkg"
 
     local sys_out=$(cmd deviceidle sys-whitelist -"$GMS_PKG" 2>&1)
     case "$sys_out" in
-      *[Uu]nknown*|*[Ee]rror*) log_doze "[INFO] sys-whitelist not available" ;;
-      *) log_doze "[OK] sys-whitelist: ${sys_out:-executed}" ;;
+      *[Uu]nknown*|*[Ee]rror*) ;;
+      *) _syswl_removed="${_syswl_removed:+$_syswl_removed, }$pkg" ;;
     esac
     
     # Best-effort: try except-idle removal (only affects user tier of except-idle,
@@ -307,9 +308,16 @@ apply() {
         grep -q "<wl n=\"${pkg//[\.]/\\.}\"" /data/system/deviceidle.xml 2>/dev/null; then
       sed -i "/<wl n=\"${pkg//[\.]/\\.}\"/d" /data/system/deviceidle.xml
       restorecon /data/system/deviceidle.xml 2>/dev/null
-      log_doze "[OK] Removed persistent <wl> from deviceidle.xml"
+      _patched="${_patched:+$_patched, }$pkg"
     fi
   done
+
+  log_doze "[INFO] Removed from user whitelist:"
+  log_doze "$_wl_removed"
+  log_doze "[INFO] Removed from sys-whitelist:"
+  log_doze "$_syswl_removed"
+  log_doze "[INFO] Removed persistent <wl> from deviceidle.xml:"
+  log_doze "$_patched"
 
   # GMS loses allow-in-power-save via sysconfig, so the OS is now allowed to
   # kill its processes during idle. Warm it back up here so Camera, PayPal, and
