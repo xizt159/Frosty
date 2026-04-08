@@ -1,5 +1,6 @@
-# FROSTY Kernel Tweaks
-# Format: /path/to/kernel/file|value
+### Frosty — Kernel Tweaks
+### Format: /path/to/kernel/file|value
+### Applied when Kernel Tweaks is enabled. Backed up to backup/kernel_values.txt before writing.
 
 # SCHEDULER
 /proc/sys/kernel/perf_cpu_time_max_percent|2

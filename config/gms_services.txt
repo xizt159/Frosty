@@ -1,8 +1,8 @@
-# FROSTY - Complete GMS Services List
+### Frosty — GMS Services (complete list)
+### Format: gms.service/package.name|category
+### Note: should not be touched!
 
-
-# TELEMETRY - Ads, Tracking, Analytics, Reporting
-
+# TELEMETRY — Ads, Tracking, Analytics, Reporting
 com.google.android.gms/com.google.android.gms.ads.identifier.service.AdvertisingIdNotificationService|telemetry
 com.google.android.gms/com.google.android.gms.ads.identifier.service.AdvertisingIdService|telemetry
 com.google.android.gms/com.google.android.gms.ads.AdRequestBrokerService|telemetry
@@ -67,8 +67,7 @@ com.google.android.gms/com.google.android.gms.focus.FocusAndroidService|telemetr
 com.google.mainline.telemetry/com.google.mainline.telemetry.TelemetryService|telemetry
 
 
-# BACKGROUND - Updates, Font sync, MDM
-
+# BACKGROUND — Updates, Font sync, MDM
 com.google.android.gms/com.google.android.gms.update.SystemUpdateGcmTaskService|background
 com.google.android.gms/com.google.android.gms.update.SystemUpdateService|background
 com.google.android.gms/com.google.android.gms.update.UpdateFromSdCardService|background
@@ -85,8 +84,7 @@ com.android.vending/com.google.android.finsky.instantapps.InstantAppsLoggingServ
 com.google.android.gms/com.google.android.finsky.instantapps.InstantAppsLoggingService|background
 
 
-# LOCATION - Location, Geofence, Places, Activity Recognition
-
+# LOCATION — Location, Geofence, Places, Activity Recognition
 com.google.android.gms/com.google.android.gms.location.activity.ActivityRecognitionService|location
 com.google.android.gms/com.google.android.location.internal.server.HardwareArProviderService|location
 com.google.android.gms/com.google.android.location.fused.FusedLocationService|location
@@ -116,8 +114,7 @@ com.google.android.gms/com.google.android.location.wearable.WearableLocationServ
 com.google.android.gms/com.google.android.location.fused.wearable.GmsWearableListenerService|location
 com.google.android.gms/com.google.android.gms.auth.be.appcert.AppCertService|location
 
-# CONNECTIVITY - Nearby, Cast, Discovery, Quick Share
-
+# CONNECTIVITY — Nearby, Cast, Discovery, Quick Share
 com.google.android.gms/com.google.android.gms.nearby.discovery.service.DiscoveryService|connectivity
 com.google.android.gms/com.google.android.gms.nearby.bootstrap.service.NearbyBootstrapService|connectivity
 com.google.android.gms/com.google.android.gms.nearby.connection.service.NearbyConnectionsAndroidService|connectivity
@@ -150,8 +147,7 @@ com.google.android.gms/com.google.android.gms.mobiledataplan.service.MobileDataP
 com.google.android.gms/com.google.android.gms.fido.fido2.pollux.CableAuthenticatorService|connectivity
 
 
-# CLOUD - Auth, Sync, Backup, Autofill, Security, Check-in
-
+# CLOUD — Auth, Sync, Backup, Autofill, Security, Check-in
 com.google.android.gms/com.google.android.gms.chimera.GmsIntentOperationService|cloud
 com.google.android.gms/com.google.android.gms.chimera.PersistentBoundBrokerService|cloud
 com.google.android.gms/com.google.android.gms.chimera.GmsIntentOperationService_AuthAccountIsolated|cloud
@@ -197,8 +193,7 @@ com.google.android.gms/com.google.android.gms.kids.chimera.KidsServiceProxy|clou
 com.google.android.gms/com.google.android.gms.personalsafety.service.PersonalSafetyService|cloud
 
 
-# PAYMENTS - Wallet, Google Pay, NFC
-
+# PAYMENTS — Wallet, Google Pay, NFC
 com.google.android.gms/com.google.android.gms.tapandpay.gcmtask.TapAndPayGcmTaskService|payments
 com.google.android.gms/com.google.android.gms.tapandpay.globalactions.QuickAccessWalletService|payments
 com.google.android.gms/com.google.android.gms.tapandpay.globalactions.WalletQuickAccessWalletService|payments
@@ -217,8 +212,7 @@ com.google.android.gms/com.google.android.gms.wallet.service.WalletGoogleService
 com.google.android.gms/com.google.android.gms.wallet.notifications.WalletNotificationsService|payments
 
 
-# WEARABLES - Wear OS, Google Fit
-
+# WEARABLES — Wear OS, Google Fit
 com.google.android.gms/com.google.android.gms.wearable.service.WearableService|wearables
 com.google.android.gms/com.google.android.gms.wearable.service.WearableControlService|wearables
 com.google.android.gms/com.google.android.gms.wearable.service.ListenerService|wearables
@@ -248,8 +242,7 @@ com.google.android.gms/com.google.android.gms.fitness.sync.FitnessSyncAdapterSer
 com.google.android.gms/com.google.android.gms.fitness.sync.SyncGcmTaskService|wearables
 
 
-# GAMES - Play Games
-
+# GAMES — Play Games
 com.google.android.gms/com.google.android.gms.games.chimera.GamesSignInIntentServiceProxy|games
 com.google.android.gms/com.google.android.gms.games.chimera.GamesSyncServiceNotificationProxy|games
 com.google.android.gms/com.google.android.gms.games.chimera.GamesUploadServiceProxy|games

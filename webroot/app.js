@@ -1541,16 +1541,19 @@
   // ── Init ──
 
   async function init() {
+    showLoading(t('io_loading'));
+
+    await initLang();
+
     if (!API.available()) {
       $('app').innerHTML =
         '<div class="card" style="margin-top:60px;text-align:center;padding:30px">' +
         '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
         '<h2 style="font-size:1rem;margin-bottom:6px">' + t('ksu_unavailable_title') + '</h2>' +
         '<p style="color:var(--text-dim);font-size:.82rem">' + t('ksu_unavailable_desc') + '</p></div>';
+      hideLoading();
       return;
     }
-
-    await initLang();
 
     bind();
 
@@ -1564,6 +1567,8 @@
       wlPkgs = wl.packages || [];
       updateWlCount();
     } catch (e) {}
+
+    hideLoading();
   }
 
 
