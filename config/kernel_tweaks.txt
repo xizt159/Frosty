@@ -1,5 +1,6 @@
-# FROSTY Kernel Tweaks
+# Frosty - Kernel Tweaks
 # Format: /path/to/kernel/file|value
+# Applied when Kernel Tweaks is enabled. Backed up to backup/kernel_values.txt before writing.
 
 # SCHEDULER
 /proc/sys/kernel/perf_cpu_time_max_percent|2
@@ -32,15 +33,10 @@
 /proc/sys/vm/dirty_ratio|20
 /proc/sys/vm/dirty_expire_centisecs|500
 /proc/sys/vm/dirty_writeback_centisecs|500
-/proc/sys/vm/laptop_mode|5
 /proc/sys/vm/stat_interval|15
 /proc/sys/vm/vfs_cache_pressure|80
 /proc/sys/vm/oom_dump_tasks|0
 /proc/sys/vm/block_dump|0
-/proc/sys/vm/compaction_proactiveness|0
-
-# NETWORK
-/proc/sys/net/ipv4/tcp_low_latency|1
 
 # DEBUG
 /proc/sys/debug/exception-trace|0
@@ -53,13 +49,18 @@
 /proc/sys/kernel/printk_ratelimit|1
 /proc/sys/kernel/printk_ratelimit_burst|5
 
-# STUNE (Snapdragon only)
-/dev/stune/top-app/schedtune.prefer_idle|0
-/dev/stune/top-app/schedtune.boost|0
-
 # RAMDUMPS
 /sys/module/subsystem_restart/parameters/enable_mini_ramdumps|0
 /sys/module/subsystem_restart/parameters/enable_ramdumps|0
 
 # MMC
 /sys/module/mmc_core/parameters/use_spi_crc|0
+
+# TCP KEEPALIVE
+/proc/sys/net/ipv4/tcp_keepalive_time|600
+/proc/sys/net/ipv4/tcp_keepalive_intvl|20
+/proc/sys/net/ipv4/tcp_keepalive_probes|5
+
+# INOTIFY
+/proc/sys/fs/inotify/max_user_watches|262144
+/proc/sys/fs/inotify/max_user_instances|512

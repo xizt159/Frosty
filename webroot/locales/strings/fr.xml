@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
   <string name="menu_io">Importer / Exporter</string>
   <string name="menu_lang">Langue</string>
   <string name="menu_about">À propos</string>
@@ -22,11 +21,27 @@
   <string name="sec_doze">Mode Doze</string>
   <string name="tgl_gms_doze">GMS Doze</string>
   <string name="tgl_gms_doze_desc">Permet au système d'optimiser la batterie des GMS · Peut retarder les notifications</string>
+<string name="tgl_cad">Doze d\'App Personnalisé</string>
+  <string name="tgl_cad_desc">Retire les applications sélectionnées de la liste d\'exclusion d\'économie d\'énergie (Doze)</string>
+  <string name="cad_btn">▶ Gérer les apps</string>
+  <string name="cad_title">Doze d\'App Personnalisé</string>
+  <string name="cad_notice">Les apps sélectionnées seront retirées de la liste d\'exclusion Doze pour que le système puisse les optimiser. Seules les apps contournant l\'optimisation de batterie sont affichées.</string>
+  <string name="cad_search">Rechercher une application...</string>
+  <string name="cad_loading">Chargement...</string>
+  <string name="cad_empty">Aucune application trouvée</string>
+  <string name="cad_sep_added">Déjà ajoutées</string>
+  <string name="cad_warn_gms">GMS Doze s\'en charge déjà. Utilisez l\'interrupteur GMS Doze à la place.</string>
+  <string name="cad_warn_system">⚠ Ce paquet est requis par le système et ne peut pas être ajouté</string>
+  <string name="loading_applying_cad">Application de Doze d\'App Personnalisé...</string>
+  <string name="loading_reverting_cad">Restauration de Doze d\'App Personnalisé...</string>
+  <string name="log_cad_applied">Doze d\'App Personnalisé appliqué</string>
+  <string name="log_cad_reverted">Doze d\'App Personnalisé annulé</string>
+  <string name="log_cad_reapplied">Doze d\'App Personnalisé réappliqué</string>
   <string name="tgl_deep_doze">Deep Doze</string>
   <string name="tgl_deep_doze_desc">Restreint drastiquement l'activité en arrière-plan de toutes les applications</string>
   <string name="lvl_moderate">Modéré</string>
   <string name="lvl_maximum">Maximum</string>
-  <string name="wl_btn">Liste blanche (Whitelist) Doze</string>
+  <string name="wl_btn">▶ Liste blanche (Whitelist) Doze</string>
   <string name="sec_gms">Catégories GMS</string>
   <string name="cat_telemetry">Télémétrie (Telemetry)</string>
   <string name="cat_telemetry_tag">Sûr · Publicités, analyses, pistage</string>

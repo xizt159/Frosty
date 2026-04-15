@@ -381,6 +381,14 @@ input[type=text] { font: inherit; color: inherit; }
 }
 .bss-cfg-btn:active { transform: scale(0.97); background: rgba(204,188,240,0.2); }
 
+
+/* ── Custom App Doze Extras ── */
+.cad-extras {
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: all 0.4s var(--spring); margin-top: 0;
+}
+.cad-extras.on { max-height: 60px; opacity: 1; margin-top: 10px; overflow: visible; }
+
 /* ── BSS Modal ── */
 .bss-modal { max-height: 88vh; }
 .bss-opt-list {
@@ -554,9 +562,9 @@ input[type=text] { font: inherit; color: inherit; }
   transition: transform 0.4s var(--spring);
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-#wl-modal .modal, #bss-modal .modal { transition: none; }
-#wl-modal, #bss-modal { transition: none; }
-#wl-modal .modal { height: 85vh; }
+#wl-modal .modal, #bss-modal .modal, #cad-modal .modal { transition: none; }
+#wl-modal, #bss-modal, #cad-modal { transition: none; }
+#wl-modal .modal, #cad-modal .modal { height: 85vh; }
 
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 10px; }
 .modal-head h3 { font-size: 1rem; font-weight: 700; }

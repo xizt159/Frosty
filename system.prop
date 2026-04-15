@@ -1,4 +1,4 @@
-# FROSTY - System Properties
+# Frosty - System Properties
 # Logging and debugging disable for battery savings
 
 # EGL & Graphics
@@ -35,9 +35,6 @@ ro.logd.size=0
 log.redirect-stdio=false
 rw.logger=0
 
-# Network
-net.ipv4.tcp_no_metrics_save=1
-
 # Media
 media.stagefright.log-uri=0
 vidc.debug.level=0
@@ -70,9 +67,6 @@ persist.ims.disableIMSLogs=0
 # WiFi Direct
 persist.debug.wfd.enable=0
 persist.sys.wfd.virtual=0
-
-# Bluetooth
-vendor.fm.a2dp.conc.disabled=true
 
 # QMI
 persist.data.qmi.adb_logmask=0
@@ -148,8 +142,6 @@ dalvik.vm.checkjni=false
 # RIL / Modem power saving
 ro.ril.disable.power.collapse=0
 ro.ril.power_collapse=1
-ro.config.hw_fast_dormancy=1
-ro.config.hw_power_saving=1
 
 # Misc
 config.disable_rtt=true

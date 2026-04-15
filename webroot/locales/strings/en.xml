@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
   <string name="menu_io">Import / Export</string>
   <string name="menu_lang">Language</string>
   <string name="menu_about">About</string>
@@ -22,11 +21,27 @@
   <string name="sec_doze">Doze</string>
   <string name="tgl_gms_doze">GMS Doze</string>
   <string name="tgl_gms_doze_desc">Lets Android optimize GMS battery · May delay notifications</string>
+  <string name="tgl_cad">Custom App Doze</string>
+  <string name="tgl_cad_desc">Removes selected apps from Android's Doze power-save exemption list</string>
+  <string name="cad_btn">▶ Manage Apps</string>
+  <string name="cad_title">Custom App Doze</string>
+  <string name="cad_notice">Selected apps will be removed from Android's Doze exemption list so the OS can optimize them. Only apps currently bypassing battery optimization are shown.</string>
+  <string name="cad_search">Search apps...</string>
+  <string name="cad_loading">Loading...</string>
+  <string name="cad_empty">No apps found</string>
+  <string name="cad_sep_added">Already added</string>
+  <string name="cad_warn_gms">GMS Doze already handles this. Use the GMS Doze toggle instead.</string>
+  <string name="cad_warn_system">⚠ This package is required by the system and cannot be added</string>
+  <string name="loading_applying_cad">Applying Custom App Doze...</string>
+  <string name="loading_reverting_cad">Reverting Custom App Doze...</string>
+  <string name="log_cad_applied">Custom App Doze applied</string>
+  <string name="log_cad_reverted">Custom App Doze reverted</string>
+  <string name="log_cad_reapplied">Custom App Doze re-applied</string>
   <string name="tgl_deep_doze">Deep Doze</string>
   <string name="tgl_deep_doze_desc">Restricts background activity for all apps</string>
   <string name="lvl_moderate">Moderate</string>
   <string name="lvl_maximum">Maximum</string>
-  <string name="wl_btn">App Doze Whitelist</string>
+  <string name="wl_btn">▶ App Doze Whitelist</string>
   <string name="sec_gms">GMS Categories</string>
   <string name="cat_telemetry">Telemetry</string>
   <string name="cat_telemetry_tag">Safe · Ads, analytics</string>

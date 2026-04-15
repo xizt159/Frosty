@@ -1,0 +1,312 @@
+#!/system/bin/sh
+# Frosty - Custom App Doze
+
+MODDIR="${0%/*}"
+[ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+
+LOGDIR="$MODDIR/logs"
+APP_DOZE_LOG="$LOGDIR/app_doze.log"
+USER_PREFS="$MODDIR/config/user_prefs"
+PATCHES_FILE="$MODDIR/config/doze_patches.txt"
+CAD_OVERLAYS_FILE="$MODDIR/config/cad_overlays.txt"
+
+ENABLE_CUSTOM_APP_DOZE=0
+[ -f "$USER_PREFS" ] && . "$USER_PREFS"
+
+_PARTITION_ROOTS="
+  /india /my_bigball /my_carrier /my_company /my_engineering /my_heytap
+  /my_manifest /my_preload /my_product /my_region /my_reserve /my_stock
+  /odm /product /system /system_ext /vendor
+  /system/odm /system/product /system/system_ext /system/vendor
+"
+
+# Packages that must never be processed
+_BLOCKED="android com.android.systemui com.android.phone com.android.settings \
+          com.android.shell com.android.bluetooth com.android.nfc \
+          com.google.android.gms"
+
+mkdir -p "$LOGDIR"
+log_app() { echo "[$(date '+%H:%M:%S')] $1" >> "$APP_DOZE_LOG"; }
+
+_is_blocked() {
+  local pkg="$1"
+  for b in $_BLOCKED; do [ "$pkg" = "$b" ] && return 0; done
+  return 1
+}
+
+_load_packages() {
+  [ ! -f "$PATCHES_FILE" ] && return
+  sed 's/###.*//;s/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$'
+}
+
+scan() {
+  local installed
+  installed=$(pm list packages 2>/dev/null | cut -d: -f2)
+  [ -z "$installed" ] && return
+
+  {
+    # deviceidle whitelist
+    dumpsys deviceidle 2>/dev/null \
+      | grep -E '^    [a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$' \
+      | tr -d ' '
+
+    # AppOps bulk query: single command returning all packages with the op set to allow
+    cmd appops query-op IGNORE_BATTERY_OPTIMIZATIONS allow 2>/dev/null \
+      | grep -oE '[a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+'
+
+    # sysconfig/permissions XMLs - needed by patch_xml() to generate overlays.
+    {
+      for _base in $_PARTITION_ROOTS; do
+        [ -d "$_base" ] || continue
+        for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+          [ -d "$_dir" ] || continue
+          find "$_dir" -maxdepth 2 -type f -name "*.xml" 2>/dev/null
+        done
+      done
+      [ -d /apex ] && find /apex -maxdepth 5 -type f -name "*.xml" \
+        \( -path "*/etc/sysconfig/*" -o -path "*/etc/permissions/*" \) 2>/dev/null
+    } | while IFS= read -r xml; do
+        real=$(readlink -f "$xml" 2>/dev/null); [ -z "$real" ] && real="$xml"
+        echo "$real"
+      done | sort -u | while IFS= read -r real; do
+        grep -oE 'allow-in-power-save[^>]* package="[^"]*"' "$real" 2>/dev/null \
+          | grep -oE 'package="[^"]*"' | cut -d'"' -f2
+      done
+
+  } | sort -u | while IFS= read -r pkg; do
+    [ -z "$pkg" ] && continue
+    echo "$installed" | grep -qx "$pkg" && echo "$pkg"
+  done
+}
+
+patch_xml() {
+  local pkgs="$1"
+  [ -z "$pkgs" ] && return 0
+  [ -f "$CAD_OVERLAYS_FILE" ] && {
+    local existing
+    existing=$(grep -c '^[^#]' "$CAD_OVERLAYS_FILE" 2>/dev/null || echo 0)
+    log_app "[OK] $existing XML overlay(s) already present - skipping rescan"
+    return 0
+  }
+
+  local grep_pat="" sed_pat=""
+  for pkg in $pkgs; do
+    local escaped
+    escaped=$(echo "$pkg" | sed 's/\./\\./g')
+    grep_pat="${grep_pat:+$grep_pat|}allow-in-power-save[^>]*${escaped}"
+    sed_pat="${sed_pat}/allow-in-power-save[^>]*${escaped}/d;"
+  done
+
+  log_app "Scanning for XML power-save exemptions..."
+  local count=0 scanned=0 _seen=""
+
+  for _base in $_PARTITION_ROOTS; do
+    [ -d "$_base" ] || continue
+    for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+      [ -d "$_dir" ] || continue
+      for xml in $(find "$_dir" -maxdepth 2 -type f -name "*.xml" 2>/dev/null); do
+        local real
+        real=$(readlink -f "$xml" 2>/dev/null); [ -z "$real" ] && real="$xml"
+        case "$_seen" in *"|$real|"*) continue ;; esac
+        _seen="${_seen}|$real|"
+        scanned=$((scanned + 1))
+        grep -qE "$grep_pat" "$real" 2>/dev/null || continue
+
+        local relative="${real#/}"
+        case "$relative" in
+          system/product/*)    relative="product/${relative#system/product/}" ;;
+          system/system_ext/*) relative="system_ext/${relative#system/system_ext/}" ;;
+          system/vendor/*)     relative="vendor/${relative#system/vendor/}" ;;
+          system/odm/*)        relative="odm/${relative#system/odm/}" ;;
+        esac
+        case "$relative" in
+          system/*|product/*|vendor/*|odm/*|system_ext/*) ;;
+          my_product/*|my_heytap/*|my_region/*|my_bigball/*|my_carrier/*|\
+          my_company/*|my_engineering/*|my_manifest/*|my_preload/*|\
+          my_reserve/*|my_stock/*|india/*) ;;
+          *) relative="system/$relative" ;;
+        esac
+
+        local dest="$MODDIR/$relative"
+        mkdir -p "$(dirname "$dest")"
+        if cp -af "$real" "$dest" 2>/dev/null; then
+          sed -i "$sed_pat" "$dest"
+          if [ ! -f "$CAD_OVERLAYS_FILE" ]; then
+            { echo "# Frosty - CAD XML Overlays (autogenerated)"
+              echo "# Do not edit manually"
+              echo ""
+            } > "$CAD_OVERLAYS_FILE"
+          fi
+          echo "$dest" >> "$CAD_OVERLAYS_FILE"
+          log_app "[OK] Patched XML: $real -> $relative"
+          count=$((count + 1))
+        else
+          log_app "[FAIL] Cannot copy: $real"
+        fi
+      done
+    done
+  done
+
+  if [ "$count" -eq 0 ]; then
+    rm -f "$CAD_OVERLAYS_FILE" 2>/dev/null
+    log_app "[INFO] No XML exemptions found in $scanned files (AppOps/role-based only)"
+  else
+    log_app "[OK] $count XML overlay(s) from $scanned scanned - reboot to mount"
+    mkdir -p "$MODDIR/tmp"
+    touch "$MODDIR/tmp/cad_needs_reboot" 2>/dev/null
+  fi
+}
+
+remove_xml() {
+  if [ -f "$CAD_OVERLAYS_FILE" ]; then
+    local count=0
+    while IFS= read -r file; do
+      case "$file" in '###'*|'#'*|'') continue ;; esac
+      [ -f "$file" ] && rm -f "$file" && count=$((count + 1))
+    done < "$CAD_OVERLAYS_FILE"
+    rm -f "$CAD_OVERLAYS_FILE"
+    log_app "[OK] Removed $count XML overlay(s)"
+  fi
+  rm -f "$MODDIR/tmp/cad_needs_reboot" 2>/dev/null
+  for _root in system product vendor odm system_ext \
+               my_product my_heytap my_region my_bigball my_carrier \
+               my_company my_engineering my_manifest my_preload \
+               my_reserve my_stock india; do
+    [ -d "$MODDIR/$_root" ] && find "$MODDIR/$_root" -type d -empty -delete 2>/dev/null
+  done
+}
+
+apply() {
+  echo "Frosty v${MODVER:-?} - Custom App Doze (APPLY) - $(date '+%Y-%m-%d %H:%M:%S')" > "$APP_DOZE_LOG"
+  mkdir -p "$MODDIR/tmp"
+  [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] && { log_app "[SKIP] Custom App Doze disabled"; return 0; }
+
+  local pkgs
+  pkgs=$(_load_packages)
+  if [ -z "$pkgs" ]; then
+    log_app "[INFO] No packages configured - nothing to do"
+    return 0
+  fi
+
+  log_app "Configured packages:"
+  for pkg in $pkgs; do log_app "  $pkg"; done
+  log_app ""
+
+  patch_xml "$pkgs"
+  log_app ""
+
+  local count=0 skip=0
+  for pkg in $pkgs; do
+    if _is_blocked "$pkg"; then
+      log_app "[SKIP] $pkg - blocked package"
+      skip=$((skip + 1))
+      continue
+    fi
+
+    local tiers=""
+
+    dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1
+    tiers="${tiers} user-wl"
+
+    local sys_out
+    sys_out=$(cmd deviceidle sys-whitelist -"$pkg" 2>&1)
+    case "$sys_out" in *[Uu]nknown*|*[Ee]rror*) ;; *) tiers="${tiers} sys-wl" ;; esac
+
+    cmd deviceidle except-idle-whitelist -"$pkg" >/dev/null 2>&1
+    tiers="${tiers} except-idle-wl"
+
+    if [ -f /data/system/deviceidle.xml ] && \
+       grep -q "<wl n=\"$pkg\"" /data/system/deviceidle.xml 2>/dev/null; then
+      sed -i "/<wl n=\"$pkg\"/d" /data/system/deviceidle.xml
+      restorecon /data/system/deviceidle.xml 2>/dev/null
+      tiers="${tiers} xml-wl"
+    fi
+
+    if cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS ignore 2>/dev/null; then
+      tiers="${tiers} appops"
+    fi
+
+    log_app "[OK] $pkg - applied to:$tiers"
+    count=$((count + 1))
+  done
+
+  log_app ""
+  log_app "Summary: $count optimized, $skip skipped"
+}
+
+revert() {
+  echo "Frosty v${MODVER:-?} - Custom App Doze (REVERT) - $(date '+%Y-%m-%d %H:%M:%S')" > "$APP_DOZE_LOG"
+
+  remove_xml
+
+  local pkgs
+  pkgs=$(_load_packages)
+  if [ -z "$pkgs" ]; then
+    log_app "[INFO] No packages configured - nothing to revert"
+    return 0
+  fi
+
+  local count=0
+  for pkg in $pkgs; do
+    _is_blocked "$pkg" && continue
+    dumpsys deviceidle whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle sys-whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle except-idle-whitelist +"$pkg" >/dev/null 2>&1
+    cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS default 2>/dev/null
+    log_app "[OK] Restored: $pkg"
+    count=$((count + 1))
+  done
+
+  log_app ""
+  log_app "Summary: $count packages restored - reboot for XML overlay removal"
+}
+
+list_pkgs() {
+  [ -f "$PATCHES_FILE" ] || { echo '{"status":"ok","packages":[]}'; return; }
+  local pkgs out="" first=1
+  pkgs=$(sed 's/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$')
+  while IFS= read -r p; do
+    [ -z "$p" ] && continue
+    [ "$first" = "1" ] && first=0 || out="${out},"
+    out="${out}\"${p}\""
+  done <<EOF
+$pkgs
+EOF
+  printf '{"status":"ok","packages":[%s]}\n' "$out"
+}
+
+add_pkg() {
+  local pkg="$1"
+  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
+  mkdir -p "$MODDIR/config"
+  if [ ! -f "$PATCHES_FILE" ]; then
+    { echo "# Frosty - Custom App Doze"
+      echo "# Apps listed here are removed from the Doze power-save whitelist."
+      echo "# Add package names one per line. Lines starting with # are comments."
+      echo ""
+    } > "$PATCHES_FILE"
+  fi
+  grep -qx "$pkg" "$PATCHES_FILE" 2>/dev/null || echo "$pkg" >> "$PATCHES_FILE"
+  echo '{"status":"ok"}'
+}
+
+remove_pkg() {
+  local pkg="$1"
+  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
+  [ -f "$PATCHES_FILE" ] || { echo '{"status":"ok"}'; return; }
+  local escaped
+  escaped=$(printf '%s' "$pkg" | sed 's/\./\\./g')
+  sed -i "/^${escaped}$/d" "$PATCHES_FILE"
+  echo '{"status":"ok"}'
+}
+
+case "$1" in
+  apply)   apply ;;
+  revert)  revert ;;
+  scan)    scan ;;
+  list)    list_pkgs ;;
+  add)     add_pkg "$2" ;;
+  remove)  remove_pkg "$2" ;;
+esac
+exit 0

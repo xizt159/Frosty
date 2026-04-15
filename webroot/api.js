@@ -5,7 +5,6 @@ var API = (function () {
 
   var MODDIR      = '/data/adb/modules/Frosty';
   var PREFS       = MODDIR + '/config/user_prefs';
-  var WHITELIST   = MODDIR + '/config/doze_whitelist.txt';
   var LOG_DIR     = MODDIR + '/logs';
 
   var cbCounter = 0;
@@ -71,7 +70,8 @@ var API = (function () {
     bss_force_bg_check:         'BSS_FORCE_BG_CHECK',
     bss_sensors_disabled:       'BSS_SENSORS_DISABLED',
     bss_gps_mode:               'BSS_GPS_MODE',
-    bss_datasaver:              'BSS_DATASAVER'
+    bss_datasaver:              'BSS_DATASAVER',
+    custom_app_doze:            'ENABLE_CUSTOM_APP_DOZE'
   };
   var CAT_MAP = {
     telemetry:    'DISABLE_TELEMETRY',
@@ -146,22 +146,23 @@ var API = (function () {
   }
 
   function parseOutput(raw, mode) {
+  var m, m2;
     if (mode === 'freeze') {
-      var m = raw.match(/Disabled:\s*(\d+).*?Re-enabled:\s*(\d+).*?Failed:\s*(\d+)/);
-      return {
-        status: 'ok',
-        disabled: m ? parseInt(m[1]) : 0,
-        enabled:  m ? parseInt(m[2]) : 0,
-        failed:   m ? parseInt(m[3]) : 0,
-        raw: raw
+      m = raw.match(/Disabled:\s*(\d+)[\s\S]*?Re-enabled:\s*(\d+)[\s\S]*?Failed:\s*(\d+)/);
+    return {
+      status: 'ok',
+      disabled: m ? parseInt(m[1]) : 0,
+      enabled:  m ? parseInt(m[2]) : 0,
+      failed:   m ? parseInt(m[3]) : 0,
+      raw: raw
       };
-    } else {
-      var m2 = raw.match(/Re-enabled:\s*(\d+).*?Failed:\s*(\d+)/);
+      } else {
+      m2 = raw.match(/Re-enabled:\s*(\d+)[\s\S]*?Failed:\s*(\d+)/);
       return {
-        status:  'ok',
-        enabled: m2 ? parseInt(m2[1]) : 0,
-        failed:  m2 ? parseInt(m2[2]) : 0,
-        raw: raw
+      status:  'ok',
+      enabled: m2 ? parseInt(m2[1]) : 0,
+      failed:  m2 ? parseInt(m2[2]) : 0,
+      raw: raw
       };
     }
   }
@@ -270,36 +271,17 @@ var API = (function () {
 
   // ── Whitelist ──
 
-  async function ensureWhitelist() {
-    await exec('mkdir -p "' + MODDIR + '/config"; [ -f "' + WHITELIST + '" ] || touch "' + WHITELIST + '"');
-  }
-
   async function getWhitelist() {
-    await ensureWhitelist();
-    var cmd = 'installed=$(pm list packages 2>/dev/null | cut -d: -f2); ' +
-      'while IFS= read -r line; do ' +
-      'pkg=$(echo "$line" | sed "s/#.*//;s/[[:space:]]//g"); ' +
-      '[ -z "$pkg" ] && continue; ' +
-      'echo "$installed" | grep -qx "$pkg" && echo "$pkg"; ' +
-      'done < "' + WHITELIST + '"';
-    var raw = await run(cmd);
-    var pkgs = raw ? raw.split('\n').filter(function (l) { return l.trim(); }) : [];
-    return { status: 'ok', packages: pkgs };
+    var raw = await run('sh ' + MODDIR + '/frosty.sh wl_list 2>/dev/null');
+    try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
   }
 
   async function addWhitelist(pkg) {
-    await ensureWhitelist();
-    var safePkg = esc(pkg);
-    var cmd = 'grep -qx "' + safePkg + '" "' + WHITELIST + '" 2>/dev/null || echo "' + safePkg + '" >> "' + WHITELIST + '"';
-    await run(cmd);
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_add \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function removeWhitelist(pkg) {
-    await ensureWhitelist();
-    var escaped = esc(pkg).replace(/\./g, '\\.');
-    await exec('sed -i "/^' + escaped + '$/d" "' + WHITELIST + '"');
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_remove \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   // ── Logs ──
@@ -342,6 +324,47 @@ var API = (function () {
     await run('sh ' + MODDIR + '/frosty.sh share_backup "' + filePath + '" 2>&1');
   }
 
+  // ── Custom App Doze ──
+
+  async function applyCustomAppDoze() {
+    await run('sh ' + MODDIR + '/app_doze.sh apply 2>&1');
+    return { status: 'ok' };
+  }
+
+  async function revertCustomAppDoze() {
+    await run('sh ' + MODDIR + '/app_doze.sh revert 2>&1');
+    return { status: 'ok' };
+  }
+
+  async function getCustomDozeList() {
+    var raw = await run('sh ' + MODDIR + '/app_doze.sh list 2>/dev/null');
+    try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
+  }
+
+  async function addCustomDoze(pkg) {
+    return await runJSON('sh ' + MODDIR + '/app_doze.sh add \'' + esc(pkg) + '\' 2>/dev/null');
+  }
+
+  async function removeCustomDoze(pkg) {
+    return await runJSON('sh ' + MODDIR + '/app_doze.sh remove \'' + esc(pkg) + '\' 2>/dev/null');
+  }
+
+  async function getNotOptimizedApps() {
+    // Delegates to app_doze.sh scan — shell handles all partition paths,
+    // etc/sysconfig, etc/permissions, runtime whitelist, and cmd power APIs.
+    var raw = await run('sh ' + MODDIR + '/app_doze.sh scan 2>/dev/null');
+    var pkgs = raw ? raw.split('\n').filter(function(l) { return l.trim(); }) : [];
+    return { status: 'ok', packages: pkgs };
+  }
+
+  async function checkCadNeedsReboot() {
+    var result = await run(
+      '[ -f "' + MODDIR + '/tmp/cad_needs_reboot" ] && echo "1" || echo "0"'
+    );
+    return result.trim() === '1';
+  }
+
+
   return {
     MODDIR,
     available, exec, run,
@@ -355,6 +378,8 @@ var API = (function () {
     applyKernelTweaks, revertKernelTweaks,
     applyBlur, killLogs, applyKillTracking, revertKillTracking, toggleSystemProps,
     getWhitelist, addWhitelist, removeWhitelist,
+    getCustomDozeList, addCustomDoze, removeCustomDoze,
+    applyCustomAppDoze, revertCustomAppDoze, getNotOptimizedApps, checkCadNeedsReboot,
     appendLog,
     nativeListPackages, nativeGetPackagesInfo,
     listBackups, exportSettings, importSettings, shareBackup

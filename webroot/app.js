@@ -19,6 +19,26 @@
   var wlIconObserver = null;
   var wlIconCache = new Map();
 
+  var cadAllApps = [];
+  var cadPkgs = [];
+  var cadSearch = '';
+  var cadLoaded = false;
+  var cadRendered = 0;       // FIX: batch rendering counter (was missing)
+  var cadFiltered = [];
+  var cadScrolling = false;
+  var cadIconObserver = null;
+
+  var CAD_BLOCKED = {
+    'com.google.android.gms': 'cad_warn_gms',
+    'android': 'cad_warn_system',
+    'com.android.systemui': 'cad_warn_system',
+    'com.android.phone': 'cad_warn_system',
+    'com.android.settings': 'cad_warn_system',
+    'com.android.shell': 'cad_warn_system',
+    'com.android.bluetooth': 'cad_warn_system',
+    'com.android.nfc': 'cad_warn_system'
+  };
+
   // ── i18n ───
   var _strings = {};
   var _lang = 'en';
@@ -42,6 +62,7 @@
     kill_tracking: 'tgl_tracking',
     ram_optimizer: 'tgl_ram_optimizer',
     gms_doze: 'tgl_gms_doze', deep_doze: 'tgl_deep_doze', battery_saver: 'tgl_bss',
+    custom_app_doze: 'tgl_cad',
     telemetry: 'cat_telemetry', background: 'cat_background',
     location: 'cat_location', connectivity: 'cat_connectivity',
     cloud: 'cat_cloud', payments: 'cat_payments',
@@ -153,7 +174,6 @@
 
 
 
-
   var $ = function (id) { return document.getElementById(id); };
 
   function esc(s) {
@@ -256,6 +276,13 @@
     setChk('t-ram-optimizer', p.ram_optimizer);
     setChk('t-gms-doze', p.gms_doze);
     setChk('t-deep-doze', p.deep_doze);
+    setChk('t-custom-app-doze', p.custom_app_doze);
+
+    var cadx = $('cad-extras');
+    if (cadx) {
+      if (p.custom_app_doze) cadx.classList.add('on');
+      else cadx.classList.remove('on');
+    }
 
     var ddx = $('dd-extras');
     if (ddx) {
@@ -375,6 +402,19 @@
           updateLoading(t('loading_reverting_ram'));
           await API.revertRamOptimizer();
           logAction(t('log_ram_reverted'), 'ok');
+        }
+      } else if (key === 'custom_app_doze') {
+        if (nv) {
+          updateLoading(t('loading_applying_cad'));
+          await API.applyCustomAppDoze();
+          logAction(t('log_cad_applied'), 'ok');
+          var cadReboot = await API.checkCadNeedsReboot();
+          if (cadReboot) log(t('log_reboot_effect'), 'warn');
+        } else {
+          updateLoading(t('loading_reverting_cad'));
+          await API.revertCustomAppDoze();
+          logAction(t('log_cad_reverted'), 'ok');
+          log(t('log_reboot_effect'), 'warn');
         }
       } else if (key === 'battery_saver') {
         if (nv) {
@@ -542,7 +582,7 @@
     try {
       // Step 1: Turn ON all prefs
       await yieldFrame(t('loading_enabling_toggles'));
-      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'gms_doze', 'deep_doze', 'battery_saver'];
+      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'gms_doze', 'custom_app_doze', 'deep_doze', 'battery_saver'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 1);
       }
@@ -595,17 +635,22 @@
       var rram = await API.applyRamOptimizer();
       if (rram.status === 'ok') logAction(t('log_ram_applied'), 'ok');
 
-      // Step 9: Apply GMS Doze
+      // Step 10: Apply GMS Doze
       await yieldFrame(t('loading_applying_gms_doze'));
       await API.applyGmsDoze();
       logAction(t('log_gms_doze_applied'), 'ok');
 
-      // Step 10: Apply Deep Doze
+      // Step 10b: Apply Custom App Doze
+      await yieldFrame(t('loading_applying_cad'));
+      await API.applyCustomAppDoze();
+      logAction(t('log_cad_applied'), 'ok');
+
+      // Step 11: Apply Deep Doze
       await yieldFrame(t('loading_applying_deep_doze'));
       await API.applyDeepDoze();
       logAction(t('log_deep_doze_applied'), 'ok');
 
-      // Step 11: Apply Battery Saver profile
+      // Step 12: Apply Battery Saver profile
       await yieldFrame(t('loading_applying_bss'));
       await API.applyBatterySaver();
       logAction(t('log_bss_applied'), 'ok');
@@ -632,7 +677,7 @@
     try {
       // Step 1: Turn OFF all prefs
       await yieldFrame(t('loading_disabling_toggles'));
-      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'gms_doze', 'deep_doze', 'battery_saver'];
+      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'gms_doze', 'custom_app_doze', 'deep_doze', 'battery_saver'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 0);
       }
@@ -680,22 +725,27 @@
       var rram2 = await API.revertRamOptimizer();
       if (rram2.status === 'ok') logAction(t('log_ram_reverted'), 'ok');
 
-      // Step 8: Revert GMS Doze
+      // Step 9: Revert GMS Doze
       await yieldFrame(t('loading_reverting_gms_doze'));
       await API.revertGmsDoze();
       logAction(t('log_gms_doze_reverted'), 'ok');
 
-      // Step 9: Revert Deep Doze
+      // Step 9b: Revert Custom App Doze
+      await yieldFrame(t('loading_reverting_cad'));
+      await API.revertCustomAppDoze();
+      logAction(t('log_cad_reverted'), 'ok');
+
+      // Step 10: Revert Deep Doze
       await yieldFrame(t('loading_reverting_deep_doze'));
       await API.revertDeepDoze();
       logAction(t('log_deep_doze_reverted'), 'ok');
 
-      // Step 10: Revert Battery Saver
+      // Step 11: Revert Battery Saver
       await yieldFrame(t('loading_reverting_bss'));
       await API.revertBatterySaver();
       logAction(t('log_bss_reverted'), 'ok');
 
-      toast(t('toast_reverted'), 'ok');
+      toast(t('toast_stocked'), 'ok');
       log(t('log_reboot_effect'), 'warn');
       await loadPrefs();
     } catch (e) {
@@ -730,11 +780,14 @@
 
   function closeWhitelist() {
     $('wl-modal').classList.remove('open');
+    if (wlIconObserver) { wlIconObserver.disconnect(); wlIconObserver = null; }
   }
 
   function renderWlLoading() {
     var list = $('wl-list');
-    if (list) list.innerHTML = '<div class="wl-empty">' + t('wl_loading') + '</div>';
+    if (!list) return;
+    list.innerHTML = '<div class="wl-empty">' + t('wl_loading') + '</div>';
+    list.style.pointerEvents = 'none';
   }
 
   async function loadWlPkgs() {
@@ -851,6 +904,7 @@
   function renderWl() {
     var list = $('wl-list');
     if (!list) return;
+    list.style.pointerEvents = '';
 
     if (wlFiltered.length === 0) {
       list.innerHTML = '<div class="wl-empty">' + t('wl_empty') + '</div>';
@@ -901,8 +955,10 @@
       var img = document.createElement('img');
       img.className = 'wl-ico';
       img.decoding = 'async';
+      img.dataset.pkg = app.pkg;
       img.dataset.src = 'ksu://icon/' + app.pkg;
-      img.onerror = function () { this.style.visibility = 'hidden'; };
+      img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
+      img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
 
       var infoDiv = document.createElement('div');
       infoDiv.className = 'wl-app';
@@ -1018,11 +1074,12 @@
             img.className = 'wl-ico';
             img.decoding = 'async';
             img.dataset.pkg = pkg;
-            if (wlIconCache && wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
+            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
               img.src = wlIconCache.get(pkg);
             } else {
               img.dataset.src = 'ksu://icon/' + pkg;
-              img.onerror = function () { this.style.visibility = 'hidden'; };
+              img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
+              img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
               if (wlIconObserver) wlIconObserver.observe(img);
             }
 
@@ -1070,13 +1127,339 @@
     if (el) el.textContent = wlPkgs.length;
   }
 
+
+  // ══════════════════════════════
+  //  CUSTOM APP DOZE
+  // ══════════════════════════════
+  function openCustomAppDoze() {
+    $('cad-modal').classList.add('open');
+    renderCadLoading();
+    setTimeout(function () {
+      if (!cadLoaded) {
+        loadCadPkgs().then(function () {
+          return loadCadApps();
+        }).then(function () {
+          cadFiltered = getCadFiltered();
+          renderCad();
+        }).catch(function () {
+          cadFiltered = getCadFiltered();
+          renderCad();
+        });
+      } else {
+        loadCadPkgs().then(function () {
+          cadFiltered = getCadFiltered();
+          renderCad();
+        }).catch(function () {
+          cadFiltered = getCadFiltered();
+          renderCad();
+        });
+      }
+    }, 50);
+  }
+
+  function closeCustomAppDoze() {
+    $('cad-modal').classList.remove('open');
+    if (cadIconObserver) { cadIconObserver.disconnect(); cadIconObserver = null; }
+  }
+
+  function renderCadLoading() {
+    var list = $('cad-list');
+    if (!list) return;
+    list.innerHTML = '<div class="wl-empty">' + t('cad_loading') + '</div>';
+    list.style.pointerEvents = 'none';
+  }
+
+  async function loadCadPkgs() {
+    try {
+      var res = await API.getCustomDozeList();
+      cadPkgs = res.packages || [];
+      updateCadCount();
+    } catch (e) { cadPkgs = []; }
+  }
+
+  async function loadCadApps() {
+    cadAllApps = [];
+    try {
+      var res = await API.getNotOptimizedApps();
+      var notOpt = res.packages || [];
+
+      var merged = {};
+      notOpt.forEach(function(p) { merged[p] = true; });
+      cadPkgs.forEach(function(p) { merged[p] = true; });
+
+      var all = Object.keys(merged).sort();
+
+      // Get app labels via nativeGetPackagesInfo
+      var infos = API.nativeGetPackagesInfo(all);
+      var infoMap = {};
+      for (var k = 0; k < infos.length; k++) infoMap[infos[k].packageName] = infos[k];
+
+      cadAllApps = all.map(function(pkg) {
+        var info = infoMap[pkg];
+        return {
+          pkg: pkg,
+          label: info ? (info.appLabel || pkg) : pkg,
+          system: false
+        };
+      });
+
+      cadAllApps.sort(function(a, b) {
+        return a.label.toLowerCase().localeCompare(b.label.toLowerCase());
+      });
+      cadLoaded = true;
+    } catch (e) {
+      // Fallback: just show already-added packages
+      cadAllApps = cadPkgs.map(function(p) { return { pkg: p, label: p, system: false }; });
+      cadLoaded = true;
+    }
+  }
+
+  function getCadFiltered() {
+    return cadAllApps.filter(function(a) {
+      if (cadSearch) {
+        var q = cadSearch.toLowerCase();
+        return a.label.toLowerCase().indexOf(q) !== -1 || a.pkg.toLowerCase().indexOf(q) !== -1;
+      }
+      return true;
+    });
+  }
+
+  function setupCadIconObserver() {
+    if (cadIconObserver) cadIconObserver.disconnect();
+    cadIconObserver = new IntersectionObserver(function(entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) {
+          var img = entries[i].target;
+          var pkg = img.dataset.pkg;
+          var src = img.dataset.src;
+          if (src) {
+            if (wlIconCache.has(pkg)) {
+              var cached = wlIconCache.get(pkg);
+              if (cached !== 'err') img.src = cached;
+              else img.style.visibility = 'hidden';
+            } else { img.src = src; }
+            img.removeAttribute('data-src');
+          }
+          cadIconObserver.unobserve(img);
+        }
+      }
+    }, { root: $('cad-list'), rootMargin: '500px 0px' });
+  }
+
+  function renderCad() {
+    var list = $('cad-list');
+    if (!list) return;
+    list.style.pointerEvents = '';
+
+    if (cadFiltered.length === 0) {
+      list.innerHTML = '<div class="wl-empty">' + t('cad_empty') + '</div>';
+      return;
+    }
+
+    cadRendered = 0;
+    list.scrollTop = 0;
+    list.innerHTML = '';
+    setupCadIconObserver();
+
+    var hasChecked = cadFiltered.some(function(a) { return cadPkgs.indexOf(a.pkg) !== -1; });
+    appendCadBatch(40, hasChecked);
+  }
+
+  function appendCadBatch(count, addSeparator) {
+    var list = $('cad-list');
+    if (!list || cadRendered >= cadFiltered.length) return;
+
+    var end = Math.min(cadRendered + count, cadFiltered.length);
+    var frag = document.createDocumentFragment();
+    var separatorAdded = list.querySelector('.wl-sep') !== null;
+
+    for (var i = cadRendered; i < end; i++) {
+      var app = cadFiltered[i];
+      var isCad = cadPkgs.indexOf(app.pkg) !== -1;
+
+      if (addSeparator && !separatorAdded && !isCad && i > 0) {
+        var prevIsCad = cadPkgs.indexOf(cadFiltered[i-1].pkg) !== -1;
+        if (prevIsCad) {
+          var sep = document.createElement('div');
+          sep.className = 'wl-sep';
+          sep.textContent = t('wl_sep_other') || 'Other apps';
+          frag.appendChild(sep);
+          separatorAdded = true;
+        }
+      }
+
+      var row = document.createElement('div');
+      row.className = 'wl-item' + (isCad ? ' active' : '');
+      row.dataset.pkg = app.pkg;
+
+      var img = document.createElement('img');
+      img.className = 'wl-ico';
+      img.decoding = 'async';
+      img.dataset.pkg = app.pkg;
+      img.dataset.src = 'ksu://icon/' + app.pkg;
+      img.onload = function() { wlIconCache.set(this.dataset.pkg, this.src); };
+      img.onerror = function() { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'wl-app';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'wl-name';
+      nameSpan.textContent = app.label;
+      infoDiv.appendChild(nameSpan);
+      if (app.label !== app.pkg) {
+        var pkgSpan = document.createElement('span');
+        pkgSpan.className = 'wl-pkg';
+        pkgSpan.textContent = app.pkg;
+        infoDiv.appendChild(pkgSpan);
+      }
+
+      var chk = document.createElement('span');
+      chk.className = 'wl-chk';
+      chk.textContent = isCad ? '✓' : '';
+
+      row.appendChild(img);
+      row.appendChild(infoDiv);
+      row.appendChild(chk);
+      frag.appendChild(row);
+    }
+
+    list.appendChild(frag);
+
+    var newImgs = list.querySelectorAll('img[data-src]');
+    for (var j = 0; j < newImgs.length; j++) cadIconObserver.observe(newImgs[j]);
+
+    cadRendered = end;
+  }
+
+  function onCadScroll() {
+    if (cadScrolling) return;
+    cadScrolling = true;
+    requestAnimationFrame(function () {
+      var list = $('cad-list');
+      if (!list || cadRendered >= cadFiltered.length) {
+        cadScrolling = false;
+        return;
+      }
+      var scrollBottom = list.scrollTop + list.clientHeight;
+      var threshold = list.scrollHeight - 300;
+      if (scrollBottom >= threshold) {
+        appendCadBatch(25, true);
+      }
+      cadScrolling = false;
+    });
+  }
+
+  async function toggleCadApp(pkg) {
+    // Safety check
+    if (CAD_BLOCKED[pkg]) {
+      toast(t(CAD_BLOCKED[pkg]), 'warn');
+      return;
+    }
+
+    var isCad = cadPkgs.indexOf(pkg) !== -1;
+    try {
+      if (isCad) {
+        await API.removeCustomDoze(pkg);
+        cadPkgs = cadPkgs.filter(function(p) { return p !== pkg; });
+      } else {
+        await API.addCustomDoze(pkg);
+        cadPkgs.push(pkg);
+      }
+      updateCadCount();
+      cadFiltered = getCadFiltered();
+
+      var list = $('cad-list');
+      if (list) {
+        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
+        for (var i = 0; i < rows.length; i++) {
+          if (isCad) {
+            rows[i].classList.remove('active');
+            rows[i].querySelector('.wl-chk').textContent = '';
+          } else {
+            rows[i].classList.add('active');
+            rows[i].querySelector('.wl-chk').textContent = '✓';
+          }
+        }
+        var sep = list.querySelector('.wl-sep');
+        if (isCad) {
+          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
+          if (sep && topRows.length > 1) {
+            for (var j = 0; j < topRows.length; j++) {
+              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                topRows[j].remove(); break;
+              }
+            }
+          }
+          var remaining = list.querySelectorAll('.wl-item.active');
+          if (sep && remaining.length === 0) sep.remove();
+        } else {
+          var appData = null;
+          for (var k = 0; k < cadFiltered.length; k++) {
+            if (cadFiltered[k].pkg === pkg) { appData = cadFiltered[k]; break; }
+          }
+          if (appData) {
+            var newRow = document.createElement('div');
+            newRow.className = 'wl-item active';
+            newRow.dataset.pkg = pkg;
+
+            var img2 = document.createElement('img');
+            img2.className = 'wl-ico'; img2.decoding = 'async'; img2.dataset.pkg = pkg;
+            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
+              img2.src = wlIconCache.get(pkg);
+            } else {
+              img2.dataset.src = 'ksu://icon/' + pkg;
+              img2.onload = function() { wlIconCache.set(this.dataset.pkg, this.src); };
+              img2.onerror = function() { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
+              if (cadIconObserver) cadIconObserver.observe(img2);
+            }
+
+            var infoDiv2 = document.createElement('div'); infoDiv2.className = 'wl-app';
+            var ns2 = document.createElement('span'); ns2.className = 'wl-name'; ns2.textContent = appData.label;
+            infoDiv2.appendChild(ns2);
+            if (appData.label !== appData.pkg) {
+              var ps2 = document.createElement('span'); ps2.className = 'wl-pkg'; ps2.textContent = appData.pkg;
+              infoDiv2.appendChild(ps2);
+            }
+            var chk2 = document.createElement('span'); chk2.className = 'wl-chk'; chk2.textContent = '✓';
+
+            newRow.appendChild(img2); newRow.appendChild(infoDiv2); newRow.appendChild(chk2);
+
+            if (!sep) {
+              sep = document.createElement('div');
+              sep.className = 'wl-sep';
+              sep.textContent = t('wl_sep_other') || 'Other apps';
+              list.insertBefore(sep, list.firstChild);
+            }
+            list.insertBefore(newRow, sep);
+          }
+        }
+      }
+    } catch (e) {
+      toast(tf('log_load_failed', e.message), 'err');
+    }
+  }
+
+  function updateCadCount() {
+    var el = $('cad-count');
+    if (el) el.textContent = cadPkgs.length;
+  }
+
+  var cadSearchTimer = null;
+  function debouncedCadSearch(val) {
+    cadSearch = val;
+    if (cadSearchTimer) clearTimeout(cadSearchTimer);
+    cadSearchTimer = setTimeout(function() {
+      cadFiltered = getCadFiltered();
+      renderCad();
+    }, 150);
+  }
+
   // ── Polling ──
 
   function startPolling() {
     stopPolling();
-    // Skip poll if an operation is in progress
     pollTimer = setInterval(function () {
-      if (!busy) loadPrefs();
+      if (!busy && document.visibilityState === 'visible') loadPrefs();
     }, 8000);
   }
 
@@ -1226,6 +1609,33 @@
     loadIOList();
   }
 
+  // Back Button Handler
+  var _MODAL_ORDER = [
+    { id: 'cad-modal',           close: function() { closeCustomAppDoze(); } },
+    { id: 'wl-modal',            close: function() { closeWhitelist(); } },
+    { id: 'bss-modal',           close: function() { closeBssModal(); } },
+    { id: 'about-modal',         close: function() { $('about-modal').classList.remove('open'); } },
+    { id: 'io-modal',            close: function() { $('io-modal').classList.remove('open'); } },
+    { id: 'lang-modal',          close: function() { $('lang-modal').classList.remove('open'); } },
+    { id: 'lang-confirm-backdrop', close: function() { $('lang-confirm-backdrop').classList.remove('open'); } }
+  ];
+
+  function _closeTopModal() {
+    for (var i = 0; i < _MODAL_ORDER.length; i++) {
+      var m = document.getElementById(_MODAL_ORDER[i].id);
+      if (m && m.classList.contains('open')) {
+        _MODAL_ORDER[i].close();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Push a history entry whenever a modal opens so popstate fires on back press
+  function _pushModalHistory() {
+    history.pushState({ frostyModal: true }, '');
+  }
+
   function bind() {
     $('btn-freeze').addEventListener('click', applyFreeze);
     $('btn-stock').addEventListener('click', applyStock);
@@ -1253,7 +1663,7 @@
     $('lvl-max').addEventListener('click', function () { setDozeLevel('maximum'); });
 
     // ── Battery Saver Tuner ──
-    $('bss-open').addEventListener('click', openBssModal);
+    $('bss-open').addEventListener('click', function() { _pushModalHistory(); openBssModal(); });
     $('bss-close').addEventListener('click', closeBssModal);
     $('bss-modal').addEventListener('click', function (e) {
       if (e.target === this) closeBssModal();
@@ -1275,13 +1685,28 @@
       })(_gi);
     }
 
+    // ── Custom App Doze ──
+    $('cad-open').addEventListener('click', function() { _pushModalHistory(); openCustomAppDoze(); });
+    $('cad-close').addEventListener('click', closeCustomAppDoze);
+    $('cad-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeCustomAppDoze();
+    });
+    $('cad-search').addEventListener('input', function () {
+      debouncedCadSearch(this.value);
+    });
+    $('cad-list').addEventListener('click', function (e) {
+      var item = e.target.closest('.wl-item');
+      if (item && item.dataset.pkg) toggleCadApp(item.dataset.pkg);
+    });
+    $('cad-list').addEventListener('scroll', onCadScroll, { passive: true });
+    $('t-custom-app-doze').addEventListener('change', function () { togglePref('custom_app_doze'); });
+
     // ── Whitelist ──
-    $('wl-open').addEventListener('click', openWhitelist);
+    $('wl-open').addEventListener('click', function() { _pushModalHistory(); openWhitelist(); });
     $('wl-close').addEventListener('click', closeWhitelist);
     $('wl-modal').addEventListener('click', function (e) {
       if (e.target === this) closeWhitelist();
     });
-
 
     $('wl-search').addEventListener('input', function () {
       debouncedSearch(this.value);
@@ -1331,6 +1756,7 @@
     // ── About ──
     $('menu-about').addEventListener('click', function () {
       dropdown.classList.remove('open');
+      _pushModalHistory();
       openAbout();
     });
     $('about-close').addEventListener('click', function () {
@@ -1348,6 +1774,7 @@
     // ── Import / Export ──
     $('menu-io').addEventListener('click', function () {
       dropdown.classList.remove('open');
+      _pushModalHistory();
       openIO();
     });
     $('io-close').addEventListener('click', function () {
@@ -1374,6 +1801,7 @@
     // ── Language ──
     $('menu-lang').addEventListener('click', function () {
       dropdown.classList.remove('open');
+      _pushModalHistory();
       openLang();
     });
     $('lang-close').addEventListener('click', function () {
@@ -1381,6 +1809,12 @@
     });
     $('lang-modal').addEventListener('click', function (e) {
       if (e.target === this) this.classList.remove('open');
+    });
+
+    // Back handler: close topmost modal on back press
+    window.addEventListener('popstate', function (e) {
+      if (_closeTopModal()) {
+      }
     });
 
     // ── Activity Log ──
@@ -1415,6 +1849,7 @@
       if (rp.kill_tracking)  _steps.push('loading_applying_tracking');
       if (hasAnyCat)         _steps.push('loading_freezing_services');
       if (rp.gms_doze)         _steps.push('loading_applying_gms_doze');
+      if (rp.custom_app_doze)  _steps.push('loading_applying_cad');
       if (rp.deep_doze)        _steps.push('loading_applying_deep_doze');
       if (rp.battery_saver)    _steps.push('loading_applying_bss');
       var _total = _steps.length, _cur = 0;
@@ -1482,6 +1917,14 @@
           logAction(t('log_gms_doze_applied'), 'ok');
         }
 
+        if (rp.custom_app_doze) {
+          await stepLoad('loading_applying_cad');
+          await API.applyCustomAppDoze();
+          logAction(t('log_cad_applied'), 'ok');
+          var cadReboot2 = await API.checkCadNeedsReboot();
+          if (cadReboot2) log(t('log_reboot_effect'), 'warn');
+        }
+
         if (rp.deep_doze) {
           await stepLoad('loading_applying_deep_doze');
           await API.applyDeepDoze();
@@ -1541,16 +1984,18 @@
   // ── Init ──
 
   async function init() {
+    showLoading(t('io_loading'));
+    await initLang();
+
     if (!API.available()) {
       $('app').innerHTML =
         '<div class="card" style="margin-top:60px;text-align:center;padding:30px">' +
         '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
         '<h2 style="font-size:1rem;margin-bottom:6px">' + t('ksu_unavailable_title') + '</h2>' +
         '<p style="color:var(--text-dim);font-size:.82rem">' + t('ksu_unavailable_desc') + '</p></div>';
+      hideLoading();
       return;
     }
-
-    await initLang();
 
     bind();
 
@@ -1564,6 +2009,14 @@
       wlPkgs = wl.packages || [];
       updateWlCount();
     } catch (e) {}
+
+    try {
+      var cad = await API.getCustomDozeList();
+      cadPkgs = cad.packages || [];
+      updateCadCount();
+    } catch (e) {}
+
+    hideLoading();
   }
 
 
@@ -1579,7 +2032,7 @@
     var appEl = null;
 
     function isModalOpen() {
-      var ids = ['wl-modal', 'bss-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
+      var ids = ['wl-modal', 'cad-modal', 'bss-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
       for (var i = 0; i < ids.length; i++) {
         var m = document.getElementById(ids[i]);
         if (m && m.classList.contains('open')) return true;
@@ -1627,7 +2080,6 @@
     }, { passive: true });
   })();
   document.addEventListener('DOMContentLoaded', function () {
-    // Remove [unresolved] so body fades in cleanly after styles are ready
     document.body.removeAttribute('unresolved');
     init();
   });
