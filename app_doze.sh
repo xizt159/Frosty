@@ -152,7 +152,7 @@ patch_xml() {
     rm -f "$CAD_OVERLAYS_FILE" 2>/dev/null
     log_app "[INFO] No XML exemptions found in $scanned files (AppOps/role-based only)"
   else
-    log_app "[OK] $count XML overlay(s) from $scanned scanned - reboot to mount"
+    log_app "[OK] $count XML(s) overlaid from $scanned scanned - reboot to mount"
     mkdir -p "$MODDIR/tmp"
     touch "$MODDIR/tmp/cad_needs_reboot" 2>/dev/null
   fi
