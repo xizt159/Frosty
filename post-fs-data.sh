@@ -51,13 +51,13 @@ if [ "$ENABLE_GMS_DOZE" = "1" ]; then
     fi
   fi
 
-  # Bind mount fallback for patched sysconfig XMLs — must happen before system_server
+  # Bind mount fallback for patched sysconfig XMLs - must happen before system_server
   # starts. On first boot after enabling, patched XMLs don't exist yet (created later
   # by gms_doze.sh in service.sh); they'll be mounted from the next boot.
   find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
     _dst="${_src#$MODDIR}"
     # For known separate partitions, the path is already correct and must NOT be
-    # resolved through the /system/<partition> symlink — doing so causes stale
+    # resolved through the /system/<partition> symlink - doing so causes stale
     # bind mounts that stack across boots on devices where these are separate mount points.
     case "$_dst" in
       /product/*|/vendor/*|/odm/*|/system_ext/*) ;;

@@ -112,24 +112,32 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: logs
-    attributes:
-      label: Relevant logs
-      description: Attach logs from `/data/adb/modules/Frosty/logs/`. Remove any personal info before posting.
-      render: shell
-
   - type: markdown
     attributes:
       value: |
-        **Other installed modules**
-        Run the following command in Termux or any terminal app, then copy the output and paste it in the field below.
+        **Frosty logs** *(optional but highly recommended)*
+        Run the following command in Termux or any terminal app:
         ```sh
-        result=$(su -c "ls /data/adb/modules" | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g'); echo "$result"
+        VER=$(su -c "grep '^version=' /data/adb/modules/Frosty/module.prop | cut -d= -f2" 2>/dev/null)
+        OUT="/sdcard/Frosty_${VER:-unknown}_$(date +%Y%m%d_%H%M%S).txt"
+        su -c '
+        D=/data/adb/modules/Frosty
+        L=$(ls "$D/logs/"*.log 2>/dev/null)
+        [ -z "$L" ] && echo "No logs found" >&2 && exit 1
+        echo "Installed modules:"
+        i=1; for m in $(ls /data/adb/modules 2>/dev/null); do echo "  $i. $m"; i=$((i+1)); done
+        echo ""
+        echo "File list:"
+        for f in $L; do echo "  $(basename "$f")"; done
+        echo ""
+        for f in $L; do echo "====$(basename "$f")===="; cat "$f"; echo ""; done
+        ' > "$OUT" && echo "Saved: $OUT" || echo "Error: grant storage permission in Termux first"
         ```
-  - type: input
-    id: modules
+        Then attach the `Frosty_*.txt` file found in the root of your internal storage below (click the attach file button).
+
+  - type: textarea
+    id: logs
     attributes:
-      label: Other installed modules
-      description: Paste the output of the command above (optional but helpful for conflict diagnosis)
-      placeholder: e.g. Frosty, LSPosed, PlayIntegrityFix
+      label: Frosty logs
+      description: Attach the exported Frosty_*.txt file here, or paste relevant log content directly. Remove any personal info before posting.
+      placeholder: Drag and drop the Frosty_*.txt file here, or paste log content...

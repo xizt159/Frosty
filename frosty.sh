@@ -8,7 +8,7 @@ MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 LOGDIR="$MODDIR/logs"
 SERVICES_LOG="$LOGDIR/services.log"
 RAM_LOG="$LOGDIR/ram.log"
-TWEAKS_LOG="$LOGDIR/tweaks.log"
+TWEAKS_LOG="$LOGDIR/kernel_tweaks.log"
 PROPS_LOG="$LOGDIR/props.log"
 BS_LOG="$LOGDIR/battery_saver.log"
 GMS_LIST="$MODDIR/config/gms_services.txt"
@@ -341,8 +341,9 @@ apply_ram_optimizer() {
     log_ram "[OK] RAM backup saved"
   fi
 
+  local kcount=0 kfail=0
+
   if [ -f "$RAM_TWEAKS" ]; then
-    local kcount=0 kfail=0
     while IFS= read -r _line; do
       case "$_line" in ''|'#'*) continue ;; esac
       _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
@@ -351,14 +352,13 @@ apply_ram_optimizer() {
       local _old=$(cat "$_path" 2>/dev/null)
       chmod +w "$_path" 2>/dev/null
       if printf '%s\n' "$_val" > "$_path" 2>/dev/null; then
-        log_ram "[OK] $(basename "$_path"): $_old → $_val"
+        log_ram "[OK] $(basename "$_path"): $_old -> $_val"
         kcount=$((kcount + 1))
       else
         log_ram "[FAIL] $(basename "$_path")"
         kfail=$((kfail + 1))
       fi
     done < "$RAM_TWEAKS"
-    log_ram "[OK] RAM tweaks applied ($kcount ok, $kfail failed)"
   fi
 
   local total_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
@@ -372,23 +372,52 @@ apply_ram_optimizer() {
   else
     extra_free=8192
   fi
-  log_ram "[OK] RAM: $((${total_kb:-0} / 1024))MB - extra_free=${extra_free}KB"
 
   if [ -f /proc/sys/vm/extra_free_kbytes ]; then
     if ! grep -q "^extra_free_kbytes=" "$RAM_BACKUP" 2>/dev/null; then
       printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)" >> "$RAM_BACKUP"
     fi
     local _old_efk=$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)
-    printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null && \
-      log_ram "[OK] extra_free_kbytes: $_old_efk → $extra_free" || log_ram "[FAIL] extra_free_kbytes"
+    if printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null; then
+      log_ram "[OK] extra_free_kbytes: $_old_efk -> $extra_free"
+      kcount=$((kcount + 1))
+    else
+      log_ram "[FAIL] extra_free_kbytes"
+      kfail=$((kfail + 1))
+    fi
   fi
 
   local sdk=$(getprop ro.build.version.sdk 2>/dev/null)
   if [ "${sdk:-0}" -ge 30 ] 2>/dev/null; then
-    content call --uri content://settings/config --method PUT_value \
-      --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null && \
-      log_ram "[OK] usap_pool_enabled = true" || log_ram "[FAIL] usap_pool_enabled"
+    if content call --uri content://settings/config --method PUT_value \
+      --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null; then
+      log_ram "[OK] usap_pool_enabled = true"
+      kcount=$((kcount + 1))
+    else
+      log_ram "[FAIL] usap_pool_enabled"
+      kfail=$((kfail + 1))
+    fi
   fi
+
+  # Memory compaction: lets Android compact background app memory rather than evicting them outright, improving app resume times under memory pressure.
+  if device_config put activity_manager use_compaction true 2>/dev/null; then
+    log_ram "[OK] use_compaction = true"
+    kcount=$((kcount + 1))
+  fi
+
+  # App freezer: freeze background app processes when idle instead of killing them, dramatically improving cold-start times for recently used apps.
+  if device_config put activity_manager_native_boot use_freezer true 2>/dev/null; then
+    log_ram "[OK] use_freezer = true"
+    kcount=$((kcount + 1))
+  fi
+
+  # Reduce alarm wakeups during idle - batches non-critical alarms more aggressively.
+  if device_config put alarm_manager save_battery_on_idle true 2>/dev/null; then
+    log_ram "[OK] alarm save_battery_on_idle = true"
+    kcount=$((kcount + 1))
+  fi
+
+  log_ram "[OK] RAM: $((${total_kb:-0} / 1024))MB - $kcount applied, $kfail failed"
   echo '{"status":"ok"}'
 }
 
@@ -414,6 +443,11 @@ revert_ram_optimizer() {
 
   content call --uri content://settings/config --method DELETE_value \
     --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
+
+  device_config delete activity_manager use_compaction 2>/dev/null
+  device_config delete activity_manager_native_boot use_freezer 2>/dev/null
+  device_config delete alarm_manager save_battery_on_idle 2>/dev/null
+
   log_ram "[OK] RAM optimizer reverted"
   echo "{\"status\":\"ok\"}"
 }
@@ -470,7 +504,7 @@ apply_kernel() {
       if [ "$_old" = "$_val" ]; then
         log_tweak "[OK] $_name = $_val (unchanged)"
       else
-        log_tweak "[OK] $_name: $_old → $_val"
+        log_tweak "[OK] $_name: $_old -> $_val"
       fi
       count=$((count + 1))
     else
@@ -504,7 +538,7 @@ apply_kernel() {
         printf '%s\n' "$_algo" > "$_tcp_cc" 2>/dev/null
         log_tweak ""
         log_tweak "# TCP CONGESTION"
-        log_tweak "[OK] tcp_congestion_control: $_old_cc → $_algo"
+        log_tweak "[OK] tcp_congestion_control: $_old_cc -> $_algo"
         count=$((count + 1)); break ;;
       esac
     done
@@ -527,7 +561,7 @@ revert_kernel() {
       _cur=$(cat "$path" 2>/dev/null | tr '\n' ' ' | sed 's/ *$//')
       chmod +w "$path" 2>/dev/null
       if printf '%s\n' "$val" > "$path" 2>/dev/null; then
-        log_tweak "[OK] $name: $_cur → $val (restored)"
+        log_tweak "[OK] $name: $_cur -> $val (restored)"
         count=$((count + 1))
       else
         log_tweak "[FAIL] $name"
@@ -571,7 +605,7 @@ apply_battery_saver() {
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power_sticky 1 2>/dev/null
 
-  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+  echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
   {
     echo "[$(date '+%H:%M:%S')] [OK] Applied:"
     echo "$constants" | tr ',' '\n' | while IFS= read -r _entry; do
@@ -586,7 +620,7 @@ revert_battery_saver() {
   settings put global low_power_sticky 0 2>/dev/null
   settings put global low_power_sticky_auto_disable_enabled 0 2>/dev/null
   settings put global low_power 0 2>/dev/null
-  [ -s "$BS_LOG" ] || echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
+  echo "Frosty v${MODVER:-?} - Battery Saver - $(date '+%Y-%m-%d %H:%M:%S')" > "$BS_LOG"
   echo "[$(date '+%H:%M:%S')] [OK] Reverted" >> "$BS_LOG"
   echo '{"status":"ok"}'
 }
@@ -645,6 +679,10 @@ kill_logs() {
   echo 1 > /proc/sys/kernel/printk_ratelimit 2>/dev/null
   echo 1 > /proc/sys/kernel/printk_ratelimit_burst 2>/dev/null
 
+  # Disable PSS memory profiling at app launch - eliminates the sampling overhead that ActivityManagerService incurs on every app start.
+  device_config put activity_manager disable_app_profiler_pss_profiling true 2>/dev/null
+  device_config put activity_manager activity_start_pss_defer 300000 2>/dev/null
+
   echo "{\"status\":\"ok\",\"killed\":$k}"
 }
 
@@ -690,6 +728,42 @@ revert_tracking() {
   echo '{"status":"ok"}'
 }
 
+wl_list() {
+  local wl="$MODDIR/config/doze_whitelist.txt"
+  [ -f "$wl" ] || { echo '{"status":"ok","packages":[]}'; return; }
+  local installed=$(pm list packages 2>/dev/null | cut -d: -f2)
+  printf '{"status":"ok","packages":['
+  local first=1
+  while IFS= read -r line; do
+    local pkg=$(echo "$line" | sed 's/#.*//;s/[[:space:]]//g')
+    [ -z "$pkg" ] && continue
+    echo "$installed" | grep -qx "$pkg" || continue
+    [ "$first" = "1" ] && first=0 || printf ','
+    printf '"%s"' "$pkg"
+  done < "$wl"
+  printf ']}\n'
+}
+
+wl_add() {
+  local pkg="$1"
+  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
+  local wl="$MODDIR/config/doze_whitelist.txt"
+  mkdir -p "$MODDIR/config"
+  [ -f "$wl" ] || touch "$wl"
+  grep -qx "$pkg" "$wl" 2>/dev/null || echo "$pkg" >> "$wl"
+  echo '{"status":"ok"}'
+}
+
+wl_remove() {
+  local pkg="$1"
+  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
+  local wl="$MODDIR/config/doze_whitelist.txt"
+  [ -f "$wl" ] || { echo '{"status":"ok"}'; return; }
+  local escaped=$(printf '%s' "$pkg" | sed 's/\./\\./g')
+  sed -i "/^${escaped}$/d" "$wl"
+  echo '{"status":"ok"}'
+}
+
 case "$1" in
   freeze)             freeze_services ;;
   stock)              stock_services ;;
@@ -709,5 +783,8 @@ case "$1" in
   import)             restore_settings "$2" ;;
   list_backups)       list_backups ;;
   share_backup)       share_backup "$2" ;;
+  wl_list)            wl_list ;;
+  wl_add)             wl_add "$2" ;;
+  wl_remove)          wl_remove "$2" ;;
 esac
 exit 0

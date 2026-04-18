@@ -146,8 +146,9 @@ var API = (function () {
   }
 
   function parseOutput(raw, mode) {
+    var m, m2;
     if (mode === 'freeze') {
-      var m = raw.match(/Disabled:\s*(\d+).*?Re-enabled:\s*(\d+).*?Failed:\s*(\d+)/);
+      m = raw.match(/Disabled:\s*(\d+)[\s\S]*?Re-enabled:\s*(\d+)[\s\S]*?Failed:\s*(\d+)/);
       return {
         status: 'ok',
         disabled: m ? parseInt(m[1]) : 0,
@@ -156,7 +157,7 @@ var API = (function () {
         raw: raw
       };
     } else {
-      var m2 = raw.match(/Re-enabled:\s*(\d+).*?Failed:\s*(\d+)/);
+      m2 = raw.match(/Re-enabled:\s*(\d+)[\s\S]*?Failed:\s*(\d+)/);
       return {
         status:  'ok',
         enabled: m2 ? parseInt(m2[1]) : 0,
@@ -270,36 +271,17 @@ var API = (function () {
 
   // ── Whitelist ──
 
-  async function ensureWhitelist() {
-    await exec('mkdir -p "' + MODDIR + '/config"; [ -f "' + WHITELIST + '" ] || touch "' + WHITELIST + '"');
-  }
-
   async function getWhitelist() {
-    await ensureWhitelist();
-    var cmd = 'installed=$(pm list packages 2>/dev/null | cut -d: -f2); ' +
-      'while IFS= read -r line; do ' +
-      'pkg=$(echo "$line" | sed "s/#.*//;s/[[:space:]]//g"); ' +
-      '[ -z "$pkg" ] && continue; ' +
-      'echo "$installed" | grep -qx "$pkg" && echo "$pkg"; ' +
-      'done < "' + WHITELIST + '"';
-    var raw = await run(cmd);
-    var pkgs = raw ? raw.split('\n').filter(function (l) { return l.trim(); }) : [];
-    return { status: 'ok', packages: pkgs };
+    var raw = await run('sh ' + MODDIR + '/frosty.sh wl_list 2>/dev/null');
+    try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
   }
 
   async function addWhitelist(pkg) {
-    await ensureWhitelist();
-    var safePkg = esc(pkg);
-    var cmd = 'grep -qx "' + safePkg + '" "' + WHITELIST + '" 2>/dev/null || echo "' + safePkg + '" >> "' + WHITELIST + '"';
-    await run(cmd);
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_add \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function removeWhitelist(pkg) {
-    await ensureWhitelist();
-    var escaped = esc(pkg).replace(/\./g, '\\.');
-    await exec('sed -i "/^' + escaped + '$/d" "' + WHITELIST + '"');
-    return { status: 'ok' };
+    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_remove \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   // ── Logs ──

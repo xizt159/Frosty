@@ -97,7 +97,6 @@ fi
 print_banner
 
 # Language Selection
-
 _detect_lang() {
   local loc
   loc=$(getprop persist.sys.locale 2>/dev/null)
@@ -317,7 +316,6 @@ s() {
     ar:save_default)  echo "  ✓ تم تطبيق الإعداد الافتراضي (كل شيء معطل)" ;;
      *:save_default)  echo "  ✓ Default config applied (everything off)" ;;
 
-
     # INSTALLATION COMPLETE
     fr:done_title)    echo "✅  Installation Terminée" ;;
     de:done_title)    echo "✅  Installation Abgeschlossen" ;;
@@ -493,5 +491,4 @@ ui_print ""
 print_section "$(s stay_frosty)"
 ui_print ""
 
-rm -rf "$MODPATH/README.md" "$MODPATH/readme" "$MODPATH/LICENSE" \
-  "$MODPATH/CHANGELOG.md" "$MODPATH/update.json" "$MODPATH"/.git*
+rm -rf "$MODPATH/README.md" "$MODPATH/readme" "$MODPATH/LICENSE" "$MODPATH/CHANGELOG.md" "$MODPATH/update.json" "$MODPATH"/.git*

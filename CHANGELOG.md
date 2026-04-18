@@ -1,5 +1,54 @@
 # Changelog
-# I am not responsible for any unofficial or tampered versions of my module distributed outside this repository.
+## I am not responsible for any unofficial or tampered versions of my module distributed outside this repository.
+
+
+## [3.7] - 2026-04-15
+### New Feature: Custom App Doze
+Remove any app from Android's Doze power-save exemption list, the same mechanism GMS Doze uses for GMS, now available for any package.
+- **Toggle + app picker in WebUI**: Shows only apps currently bypassing battery optimization (i.e. actually present in the Doze whitelist). Apps already handled by GMS Doze are blocked from being added here to avoid conflicts.
+- **`post-fs-data.sh` patching**: `<wl>` entries are removed and `<un-wl>` entries injected into `deviceidle.xml` before `system_server` starts, so the framework never exempts the selected apps on boot. Disabling the feature automatically cleans up all injected entries.
+- **Runtime apply**: `app_doze.sh` removes selected packages from all three whitelist tiers (`dumpsys deviceidle whitelist`, `cmd deviceidle sys-whitelist`, `except-idle-whitelist`) and clears any persistent `<wl>` entries from `deviceidle.xml`.
+- **Safety blocklist**: `com.google.android.gms` and core system packages are silently blocked with a visible warning in the UI - GMS is handled by its own dedicated toggle.
+- **Fully integrated with Import/Export**: `doze_patches.txt` is base64-encoded into the backup JSON alongside the whitelist and restored on import.
+- **Preserved on reinstall**: `doze_patches.txt` is backed up and restored automatically during module updates, same as the Doze whitelist.
+### Deep Doze: Fixes
+- **Fixed `moderate` mode effectiveness**: Bucket was regressed from `rare` to `frequent` in the previous refactor. `frequent` barely restricts background work. Both levels now use `rare` bucket.
+- **Fixed screen monitor not running in `moderate` mode**: The wakelock killer via screen monitor was only started in `maximum` mode. `moderate` had no active overnight cleanup at all. Screen monitor now starts for both levels. Behavior: 5 minutes after screen-off, background apps holding wakelocks are force-stopped. Screen-on resumes normal multitasking without any intervention.
+- **Restored `get_screen_state()` display fallback**: The `dumpsys display mScreenState=` and `Display Power: state=` detection paths were removed in the previous refactor, leaving only `dumpsys power mWakefulness=` which is less reliable on some ROMs. All three detection methods are now present in priority order.
+- **WAKE_LOCK deny remains maximum-only**: Moderate mode restricts background activity via standby buckets and the screen monitor without denying wakelocks, preserving more graceful multitasking behavior.
+### RAM Optimizer: New device_config Tweaks
+- **`activity_manager use_compaction true`**: Enables Android's built-in memory compaction. Background app memory pages are compacted in-place rather than evicting the app, improving resume speed under memory pressure. On by default on Pixel hardware.
+- **`activity_manager_native_boot use_freezer true`**: Enables the cgroup freezer for background apps. Frozen processes use zero CPU, state is preserved for instant resume. More efficient than priority adjustment.
+- **`alarm_manager save_battery_on_idle true`**: Batches non-critical alarms more aggressively during idle, reducing unnecessary wakeups.
+### Kill Logs: New device_config Tweaks
+- **`activity_manager disable_app_profiler_pss_profiling true`**: Disables PSS memory sampling triggered by ActivityManagerService on every app launch. Eliminates a CPU spike at startup with no user-visible effect.
+- **`activity_manager activity_start_pss_defer 300000`**: Defers remaining PSS collection 5 minutes post-launch. 
+### WebUI Improvements: 
+- Implemented back navigation support matching [KernelSU-Next commit 2cd86fb](https://github.com/KernelSU-Next/KernelSU-Next/commit/2cd86fb790bad40c365cd5e85fb95feb0b79f844).
+- **Fixed language not loaded when KSU API is unavailable**: Language is now initialized first so the error displays correctly in the user's language.
+### GMS Doze: Critical Fixes
+- **Fixed overlay files for `product/`, `vendor/`, `odm/`, `system_ext/` stored at wrong path**: Now stored directly at `$MODDIR/<partition>/...` instead of `$MODDIR/system/<partition>/...`.
+- **Fixed GMS doze undoing itself sometimes on boot**: `post-fs-data.sh` cleanup code now correctly placed in the `else` branch.
+- **Fixed `remove_xml()` leaving empty directories behind for non-system partitions**.
+- Fixed the XML overlay counter in GMS Doze status logging counting blank lines and comment lines as valid overlays.
+### Other Changes and Fixes
+- **Fixed kernel tweak log headers missing `#` prefix**.
+- **Fixed kernel tweak variable typo `$_line` vs `$line` in `service.sh`**: Removed duplicate implementation; `service.sh` now delegates to `frosty.sh apply_kernel`.
+- **Fixed whitelist icon caching**: `img.dataset.pkg` was never set; added binding plus `onload`/`onerror` handlers.
+- **Fixed whitelist `IntersectionObserver` leaking after modal close**.
+- **Fixed Kill Logs causing SELinux audit wakeups**: Empty stub files replaced with valid shell scripts.
+- **Fixed BSS modal placed after `<script>` tags in `index.html`**.
+- **Removed 100+ lines of duplicate code from `service.sh`**.
+- **Fixed Deep Doze wakelock killer running `dumpsys activity processes` per-package**: Now dumped once before the loop.
+- **Safer screen monitor PID handling**: `kill -0` check before sending signal.
+- **Removed swappiness and process limit overrides from RAM Optimizer**: Conflicts with OEM LMK/ZRAM tuning.
+- **TCP keepalive tuning**: Reduces dead connection detection from ~2.2 hours to ~12 minutes.
+- **inotify limits raised**: `max_user_watches` to 262144, `max_user_instances` to 512.
+- **Kernel log audit suppression**: `dmesg -n 1` and printk rate limiting in `kill_logs()`.
+- **`MODVER` now read before any filesystem operations in all scripts**.
+- **Variable declarations consolidated at file top in `service.sh`**.
+- **Execution order corrected in `deep_doze.sh`**.
+- **Removed "What's Available" section in installer**.
 
 ## [3.6] - 2026-03-21
 ### GMS Doze: Rework

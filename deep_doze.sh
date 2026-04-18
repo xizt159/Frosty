@@ -20,10 +20,11 @@ log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
 
 ensure_whitelist() {
   if [ ! -f "$WHITELIST_FILE" ]; then
-    {
-      echo "### Frosty — Doze Whitelist"
+  {
+      echo "### Frosty - Doze Whitelist"
       echo "### Apps listed here are excluded from Deep Doze restrictions."
       echo "### Add package names one per line. Lines starting with # are comments."
+      echo ""
     } > "$WHITELIST_FILE"
     log_deep "Created empty whitelist"
   fi
@@ -63,23 +64,28 @@ revert_doze_constants() {
 
 restrict_apps() {
   local level="$1"
-  local bucket="rare"
-  [ "$level" = "moderate" ] && bucket="frequent"
-
   log_deep "Restricting apps ($level)..."
   local count=0 skip=0
+
   for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
     [ -z "$pkg" ] && continue
-    if is_whitelisted "$pkg"; then continue; fi
+    is_whitelisted "$pkg" && continue
+
+    # Skip apps currently in the foreground
     local cur=$(am get-standby-bucket "$pkg" 2>/dev/null | tail -1 | tr -d '[:space:]')
     case "$cur" in
       5|active|ACTIVE) skip=$((skip + 1)); continue ;;
     esac
+
+    # rare bucket: Android significantly throttles background jobs, alarms, and network access.
+    am set-standby-bucket "$pkg" rare 2>/dev/null
+
+    # maximum only: also deny wakelocks so apps cannot prevent deep sleep
     [ "$level" = "maximum" ] && appops set "$pkg" WAKE_LOCK deny 2>/dev/null
-    am set-standby-bucket "$pkg" "$bucket" 2>/dev/null
+
     count=$((count + 1))
   done
-  log_deep "[OK] Restricted $count apps to $bucket bucket (skipped $skip active)"
+  log_deep "[OK] Restricted $count apps to rare bucket (skipped $skip active)"
 }
 
 unrestrict_apps() {
@@ -101,12 +107,14 @@ kill_wakelocks() {
   dumpsys power 2>/dev/null | grep -E "PARTIAL_WAKE_LOCK|FULL_WAKE_LOCK" > "$tmpfile"
   dumpsys activity processes 2>/dev/null > "$procfile"
 
-  while read -r line; do
-    local pkg=$(echo "$line" | grep -oE "packageName=[^ ]+" | cut -d= -f2 | tr -d ',')
+  while IFS= read -r line; do
+    local pkg
+    pkg=$(echo "$line" | grep -oE "packageName=[^ ]+" | cut -d= -f2 | tr -d ',')
     [ -z "$pkg" ] && continue
     is_whitelisted "$pkg" && continue
 
-    local proc_state=$(grep -A2 "packageList=.*$pkg" "$procfile" | grep -oE "procState=[A-Z_]+" | head -1 | cut -d= -f2)
+    local proc_state
+    proc_state=$(grep -A2 "packageList=.*$pkg" "$procfile" | grep -oE "procState=[A-Z_]+" | head -1 | cut -d= -f2)
     case "$proc_state" in
       TOP|BOUND_TOP|BOUND_FG_SERVICE|FG_SERVICE) continue ;;
     esac
@@ -118,7 +126,6 @@ kill_wakelocks() {
 }
 
 unrestrict_alarms() {
-  log_deep "Removing alarm restrictions..."
   for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
     [ -z "$pkg" ] && continue
     appops set "$pkg" SCHEDULE_EXACT_ALARM allow 2>/dev/null
@@ -128,6 +135,14 @@ unrestrict_alarms() {
 }
 
 get_screen_state() {
+  # Try dumpsys display first (more reliable on most ROMs)
+  local state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
+  [ -n "$state" ] && { echo "$state"; return; }
+
+  state=$(dumpsys display 2>/dev/null | grep -m1 "Display Power: state=" | sed 's/.*state=//;s/ .*//')
+  [ -n "$state" ] && { echo "$state"; return; }
+
+  # Fallback: power wakefulness
   local wake=$(dumpsys power 2>/dev/null | grep -m1 "mWakefulness=" | cut -d= -f2 | tr -d ' ')
   case "$wake" in
     Awake) echo "ON" ;;
@@ -140,20 +155,31 @@ start_screen_monitor() {
   (
     trap 'exit 0' TERM INT
     while true; do
-      state=$(get_screen_state)
+      local state=$(get_screen_state)
+
       if [ "$state" = "ON" ] || [ -z "$state" ]; then
         sleep 90
         continue
       fi
 
+      # Screen is off - wait 5 minutes then kill background wakelock holders
+      log_deep "Screen off - wakelock killer armed (5min)"
       sleep 300
-      [ "$(get_screen_state)" = "OFF" ] && kill_wakelocks
 
-      while [ "$(get_screen_state)" = "OFF" ]; do sleep 180; done
+      if [ "$(get_screen_state)" != "ON" ]; then
+        log_deep "Running wakelock killer..."
+        kill_wakelocks
+      fi
+
+      # Wait until screen turns back on before re-arming
+      while [ "$(get_screen_state)" != "ON" ]; do
+        sleep 180
+      done
+      log_deep "Screen on - monitor re-armed"
     done
   ) &
   echo $! > "$MONITOR_PID_FILE"
-  log_deep "[OK] Monitor started (PID $!)"
+  log_deep "[OK] Screen monitor started (PID $!)"
 }
 
 stop_screen_monitor() {
@@ -174,10 +200,11 @@ freeze_deep_doze() {
   apply_doze_constants
   restrict_apps "$DEEP_DOZE_LEVEL"
 
+  # Screen monitor runs on BOTH levels: after 5 minutes screen-off it kills background wakelock holders.
   if [ "$DEEP_DOZE_LEVEL" = "maximum" ]; then
     kill_wakelocks
-    start_screen_monitor
   fi
+  start_screen_monitor
 }
 
 stock_deep_doze() {
@@ -191,6 +218,6 @@ stock_deep_doze() {
 
 case "$1" in
   freeze) freeze_deep_doze ;;
-  stock) stock_deep_doze ;;
+  stock)  stock_deep_doze ;;
 esac
 exit 0

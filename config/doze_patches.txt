@@ -1,4 +1,4 @@
-### Frosty — Doze Patches
+### Frosty - Doze Patches
 ### Apps listed here will no longer bypass Doze mode and will remain optimized.
 ### Add package names one per line. Lines starting with # are comments.
 
