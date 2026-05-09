@@ -131,4 +131,8 @@ else
 fi
 
 log_boot "Boot complete at $(date '+%Y-%m-%d %H:%M:%S')"
+
+if ls $MODDIR/tmp/*_needs_reboot >/dev/null 2>&1; then
+  log_boot "Please reboot to apply all changes"
+fi
 exit 0
