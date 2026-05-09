@@ -143,7 +143,7 @@ _apply_xml_overlays() {
 
         # Remove overlays once
         if ! $_cleared; then
-          log_app "[INFO] Found unpatched XML(s) - removing existing overlays"
+          [ -f "$OVERLAYS_FILE" ] && log_app "[INFO] Found unpatched XML(s) - removing existing overlays"
           _remove_overlays
           _cleared=true
         fi
