@@ -20,12 +20,10 @@ log_deep() { echo "[$(date '+%H:%M:%S')] $1" >> "$DEEP_DOZE_LOG"; }
 
 ensure_whitelist() {
   if [ ! -f "$WHITELIST_FILE" ]; then
-  {
-      echo "### Frosty - Doze Whitelist"
-      echo "### Apps listed here are excluded from Deep Doze restrictions."
-      echo "### Add package names one per line. Lines starting with # are comments."
-      echo ""
-    } > "$WHITELIST_FILE"
+    echo "# Frosty - Doze Whitelist" > "$WHITELIST_FILE"
+    echo "# Apps listed here are excluded from Deep Doze restrictions." >> "$WHITELIST_FILE"
+    echo "# Add package names one per line. Lines starting with # are comments." >> "$WHITELIST_FILE"
+    echo "" >> "$WHITELIST_FILE"
     log_deep "Created empty whitelist"
   fi
 }
@@ -57,8 +55,8 @@ apply_doze_constants() {
 
 revert_doze_constants() {
   settings delete global device_idle_constants 2>/dev/null
-  dumpsys deviceidle disable 2>/dev/null
-  settings put global app_standby_enabled 0 2>/dev/null
+  dumpsys deviceidle enable 2>/dev/null
+  settings delete global app_standby_enabled 2>/dev/null
   settings delete global adaptive_battery_management_enabled 2>/dev/null
 }
 
@@ -72,7 +70,8 @@ restrict_apps() {
     is_whitelisted "$pkg" && continue
 
     # Skip apps currently in the foreground
-    local cur=$(am get-standby-bucket "$pkg" 2>/dev/null | tail -1 | tr -d '[:space:]')
+    local cur
+    cur=$(am get-standby-bucket "$pkg" 2>/dev/null | tail -1 | tr -d '[:space:]')
     case "$cur" in
       5|active|ACTIVE) skip=$((skip + 1)); continue ;;
     esac
@@ -104,6 +103,7 @@ kill_wakelocks() {
   local killed=0
   local tmpfile="$MODDIR/tmp/wakelocks.txt"
   local procfile="$MODDIR/tmp/processes.txt"
+  trap 'rm -f "$tmpfile" "$procfile"' EXIT TERM
   dumpsys power 2>/dev/null | grep -E "PARTIAL_WAKE_LOCK|FULL_WAKE_LOCK" > "$tmpfile"
   dumpsys activity processes 2>/dev/null > "$procfile"
 
@@ -136,14 +136,16 @@ unrestrict_alarms() {
 
 get_screen_state() {
   # Try dumpsys display first (more reliable on most ROMs)
-  local state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
+  local state
+  state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
   [ -n "$state" ] && { echo "$state"; return; }
 
   state=$(dumpsys display 2>/dev/null | grep -m1 "Display Power: state=" | sed 's/.*state=//;s/ .*//')
   [ -n "$state" ] && { echo "$state"; return; }
 
   # Fallback: power wakefulness
-  local wake=$(dumpsys power 2>/dev/null | grep -m1 "mWakefulness=" | cut -d= -f2 | tr -d ' ')
+  local wake
+  wake=$(dumpsys power 2>/dev/null | grep -m1 "mWakefulness=" | cut -d= -f2 | tr -d ' ')
   case "$wake" in
     Awake) echo "ON" ;;
     Asleep|Dozing|Dreaming) echo "OFF" ;;
@@ -155,7 +157,8 @@ start_screen_monitor() {
   (
     trap 'exit 0' TERM INT
     while true; do
-      local state=$(get_screen_state)
+      local state
+      state=$(get_screen_state)
 
       if [ "$state" = "ON" ] || [ -z "$state" ]; then
         sleep 90
@@ -184,7 +187,8 @@ start_screen_monitor() {
 
 stop_screen_monitor() {
   if [ -f "$MONITOR_PID_FILE" ]; then
-    local pid=$(cat "$MONITOR_PID_FILE" 2>/dev/null)
+    local pid
+    pid=$(cat "$MONITOR_PID_FILE" 2>/dev/null)
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
       kill "$pid" 2>/dev/null
     fi

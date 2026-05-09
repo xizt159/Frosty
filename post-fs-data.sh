@@ -6,101 +6,66 @@ MODDIR="${0%/*}"
 
 [ -f "$MODDIR/config/user_prefs" ] && . "$MODDIR/config/user_prefs"
 
-DIXML="/data/system/deviceidle.xml"
-GMS_PKG="com.google.android.gms"
+_DIXML="/data/system/deviceidle.xml"
 
-_GMS_GREP="allow-in-power-save.*com\.google\.android\.gms|allow-in-data-usage-save.*com\.google\.android\.gms"
-
-if [ "$ENABLE_GMS_DOZE" = "1" ]; then
-  if [ -f "$DIXML" ]; then
-    _tmp="${DIXML}.frosty.tmp"
-    cp -af "$DIXML" "$_tmp" 2>/dev/null
-    _changed=0
-
-    if grep -q '<un n="' "$_tmp" 2>/dev/null; then
-      sed -i '/<un n="/d' "$_tmp"
-      _changed=1
-    fi
-
-    if grep -q '\\n' "$_tmp" 2>/dev/null; then
-      sed -i 's/\\n//g' "$_tmp"
-      _changed=1
-    fi
-
-    if grep -q "<wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
-      sed -i "/<wl n=\"$GMS_PKG\"/d" "$_tmp"
-      _changed=1
-    fi
-
-    if ! grep -q "<un-wl n=\"$GMS_PKG\"" "$_tmp" 2>/dev/null; then
-      sed -i '/<\/config>/d' "$_tmp"
-      echo "<un-wl n=\"$GMS_PKG\" />" >> "$_tmp"
-      echo "</config>" >> "$_tmp"
-      _changed=1
-    fi
-
-    if [ "$_changed" -eq 1 ] && grep -q '</config>' "$_tmp" 2>/dev/null; then
-      cat "$_tmp" > "$DIXML"
-      restorecon "$DIXML" 2>/dev/null
-    fi
-    rm -f "$_tmp" 2>/dev/null
-
-    if grep -q "<wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
-      sed -i "/<wl n=\"$GMS_PKG\"/d" "$DIXML"
-      restorecon "$DIXML" 2>/dev/null
-    fi
-  fi
-
-  # Bind mount fallback for patched sysconfig XMLs - must happen before system_server
-  # starts. On first boot after enabling, patched XMLs don't exist yet (created later
-  # by gms_doze.sh in service.sh); they'll be mounted from the next boot.
-  find "$MODDIR" -path "*/sysconfig/*.xml" -type f 2>/dev/null | while IFS= read -r _src; do
+_OVERLAYS="$MODDIR/config/doze_xml_overlays.txt"
+if [ -f "$_OVERLAYS" ]; then
+  while IFS= read -r _src; do
+    case "$_src" in '#'*|'') continue ;; esac
+    [ -f "$_src" ] || continue
+    [ -s "$_src" ] || continue
+    grep -q '</' "$_src" 2>/dev/null || continue
     _dst="${_src#$MODDIR}"
-    # For known separate partitions, the path is already correct and must NOT be
-    # resolved through the /system/<partition> symlink - doing so causes stale
-    # bind mounts that stack across boots on devices where these are separate mount points.
     case "$_dst" in
-      /product/*|/vendor/*|/odm/*|/system_ext/*) ;;
+      /product/*|/vendor/*|/odm/*|/system_ext/*|\
+      /my_product/*|/my_heytap/*|/my_region/*|/my_bigball/*|/my_carrier/*|\
+      /my_company/*|/my_engineering/*|/my_manifest/*|/my_preload/*|\
+      /my_reserve/*|/my_stock/*|/india/*) ;;
       *) [ ! -f "$_dst" ] && _dst="${_dst#/system}" ;;
     esac
     [ ! -f "$_dst" ] && continue
-    grep -qE "$_GMS_GREP" "$_dst" 2>/dev/null || continue
     _ctx=$(stat -c %C "$_dst" 2>/dev/null)
     [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
     mount --bind "$_src" "$_dst" 2>/dev/null
-  done
+  done < "$_OVERLAYS"
+fi
+unset _OVERLAYS _src _dst _ctx
 
-  # Patch conflicting modules that re-add GMS to power-save whitelists
-  find /data/adb/modules -path "*/sysconfig/*.xml" -type f 2>/dev/null |
-  while IFS= read -r _xml; do
-    case "$_xml" in "$MODDIR/"*) continue ;; esac
-    if grep -qE "$_GMS_GREP" "$_xml" 2>/dev/null; then
-      sed -i '/allow-in-power-save.*com\.google\.android\.gms/d;/allow-in-data-usage-save.*com\.google\.android\.gms/d' "$_xml"
-    fi
-  done
+_CAD_PATCHES="$MODDIR/config/doze_patches.txt"
 
-else
-  if [ -f "$DIXML" ]; then
-    _changed=0
-    if grep -q '<un n="' "$DIXML" 2>/dev/null; then
-      sed -i '/<un n="/d' "$DIXML"
-      _changed=1
+if [ -f "$_DIXML" ] && grep -q '<un-wl ' "$_DIXML" 2>/dev/null; then
+  sed -i '/<un-wl /d' "$_DIXML"
+  restorecon "$_DIXML" 2>/dev/null
+fi
+
+if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ] && [ -f "$_CAD_PATCHES" ] && [ -f "$_DIXML" ]; then
+  _cad_pkgs=$(sed 's/###.*//;s/#.*//;s/[[:space:]]//g' "$_CAD_PATCHES" 2>/dev/null | grep -v '^$')
+  if [ -n "$_cad_pkgs" ]; then
+    _tmp="${_DIXML}.cad.tmp"
+    cp -af "$_DIXML" "$_tmp" 2>/dev/null
+
+    for _pkg in $_cad_pkgs; do
+      sed -i "/<wl n=\"$_pkg\"/d" "$_tmp" 2>/dev/null
+    done
+    sed -i '/<\/config>/d' "$_tmp"
+
+    {
+      for _pkg in $_cad_pkgs; do
+        echo "<un-wl n=\"$_pkg\" />"
+      done
+      echo "</config>"
+    } >> "$_tmp"
+
+    if grep -q '</config>' "$_tmp" 2>/dev/null; then
+      cat "$_tmp" > "$_DIXML"
+      restorecon "$_DIXML" 2>/dev/null
     fi
-    if grep -q '\\n' "$DIXML" 2>/dev/null; then
-      sed -i 's/\\n//g' "$DIXML"
-      _changed=1
-    fi
-    if grep -q "<un-wl n=\"$GMS_PKG\"" "$DIXML" 2>/dev/null; then
-      sed -i "/<un-wl n=\"$GMS_PKG\"/d" "$DIXML"
-      _changed=1
-    fi
-    [ "$_changed" -eq 1 ] && restorecon "$DIXML" 2>/dev/null
+    rm -f "$_tmp" 2>/dev/null
   fi
 fi
 
-unset DIXML GMS_PKG _GMS_GREP _changed _tmp _xml _src _dst _ctx
+unset _DIXML _CAD_PATCHES _cad_pkgs _pkg _tmp
 
-# Blur Disable
 if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
   resetprop -n disableBlurs true
   resetprop -n enable_blurs_on_windows 0
@@ -109,7 +74,6 @@ if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
   resetprop -n ro.surface_flinger.supports_background_blur 0
 fi
 
-# Log Binary Stubs
 INITDIR="$MODDIR/system/etc/init"
 BINDIR="$MODDIR/system/bin"
 
@@ -141,14 +105,7 @@ if [ "$ENABLE_LOG_KILLING" = "1" ]; then
     chmod 755 "$BINDIR/$bin"
   done
 else
-  if [ -d "$INITDIR" ]; then
-    rm -f "$INITDIR"/*.rc
-    rmdir "$INITDIR" 2>/dev/null
-  fi
-  if [ -d "$BINDIR" ]; then
-    rm -f "$BINDIR"/*
-    rmdir "$BINDIR" 2>/dev/null
-  fi
+  rm -rf "$INITDIR" "$BINDIR"
   rmdir "$MODDIR/system/etc" 2>/dev/null
-  [ -d "$MODDIR/system" ] && [ -z "$(ls -A "$MODDIR/system" 2>/dev/null)" ] && rmdir "$MODDIR/system" 2>/dev/null
+  rmdir "$MODDIR/system" 2>/dev/null
 fi

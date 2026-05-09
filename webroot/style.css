@@ -73,16 +73,15 @@ input[type=text], .log-box {
   -webkit-user-select: text;
 }
 
-.scroll-clip { position: absolute; inset: 0; overflow: hidden; }
+.scroll-clip { position: absolute; inset: 0; }
 #app {
   position: absolute;
-  top: 0; bottom: 0; left: 0;
-  width: calc(100% + 20px);
+  inset: 0;
   overflow-y: auto; overflow-x: hidden;
   padding-bottom: calc(var(--safe-bottom) + 4px);
-  padding-right: 20px;
   box-sizing: border-box;
 }
+body:has(.modal-overlay.open) #app { overflow-y: hidden; }
 
 [unresolved] { opacity: 0; }
 body { transition: opacity 0.3s var(--smooth); }
@@ -269,7 +268,7 @@ input[type=text] { font: inherit; color: inherit; }
   border-radius: var(--radius);
   margin: 16px 20px; padding: 15px; 
   box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  content-visibility: auto; contain-intrinsic-size: 0 400px;
+  content-visibility: auto; contain-intrinsic-size: auto 400px;
 }
 .card-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 16px; color: var(--on-surface); letter-spacing: 0.3px;}
 .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -380,6 +379,14 @@ input[type=text] { font: inherit; color: inherit; }
   transition: all 0.2s var(--spring);
 }
 .bss-cfg-btn:active { transform: scale(0.97); background: rgba(204,188,240,0.2); }
+
+
+/* ── Custom App Doze Extras ── */
+.cad-extras {
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: all 0.4s var(--spring); margin-top: 0;
+}
+.cad-extras.on { max-height: 60px; opacity: 1; margin-top: 10px; overflow: visible; }
 
 /* ── BSS Modal ── */
 .bss-modal { max-height: 88vh; }
@@ -554,9 +561,9 @@ input[type=text] { font: inherit; color: inherit; }
   transition: transform 0.4s var(--spring);
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-#wl-modal .modal, #bss-modal .modal { transition: none; }
-#wl-modal, #bss-modal { transition: none; }
-#wl-modal .modal { height: 85vh; }
+#wl-modal .modal, #bss-modal .modal, #cad-modal .modal { transition: none; }
+#wl-modal, #bss-modal, #cad-modal { transition: none; }
+#wl-modal .modal, #cad-modal .modal { height: 85vh; }
 
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 10px; }
 .modal-head h3 { font-size: 1rem; font-weight: 700; }

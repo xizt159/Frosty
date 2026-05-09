@@ -5,7 +5,6 @@ var API = (function () {
 
   var MODDIR      = '/data/adb/modules/Frosty';
   var PREFS       = MODDIR + '/config/user_prefs';
-  var WHITELIST   = MODDIR + '/config/doze_whitelist.txt';
   var LOG_DIR     = MODDIR + '/logs';
 
   var cbCounter = 0;
@@ -51,8 +50,6 @@ var API = (function () {
 
   function esc(s) { return String(s).replace(/'/g, "'\\''"); }
 
-  // ── Preference maps ──
-
   var PREF_MAP = {
     kernel_tweaks:   'ENABLE_KERNEL_TWEAKS',
     system_props:    'ENABLE_SYSTEM_PROPS',
@@ -60,7 +57,6 @@ var API = (function () {
     log_killing:     'ENABLE_LOG_KILLING',
     kill_tracking:   'ENABLE_KILL_TRACKING',
     ram_optimizer:   'ENABLE_RAM_OPTIMIZER',
-    gms_doze:        'ENABLE_GMS_DOZE',
     deep_doze:       'ENABLE_DEEP_DOZE',
     deep_doze_level: 'DEEP_DOZE_LEVEL',
     battery_saver:              'ENABLE_BATTERY_SAVER',
@@ -71,7 +67,17 @@ var API = (function () {
     bss_force_bg_check:         'BSS_FORCE_BG_CHECK',
     bss_sensors_disabled:       'BSS_SENSORS_DISABLED',
     bss_gps_mode:               'BSS_GPS_MODE',
-    bss_datasaver:              'BSS_DATASAVER'
+    bss_datasaver:              'BSS_DATASAVER',
+    custom_app_doze:            'ENABLE_CUSTOM_APP_DOZE',
+    screen_off_opt:             'ENABLE_SCREEN_OFF_OPT',
+    soo_kill_wifi:              'SOO_KILL_WIFI',
+    soo_kill_bt:                'SOO_KILL_BT',
+    soo_kill_data:              'SOO_KILL_DATA',
+    soo_kill_location:          'SOO_KILL_LOCATION',
+    soo_conn_delay:            'SOO_CONN_DELAY',
+    soo_restore_on_unlock:      'SOO_RESTORE_ON_UNLOCK',
+    soo_kill_cache:             'SOO_KILL_CACHE',
+    soo_cache_delay:            'SOO_CACHE_DELAY'
   };
   var CAT_MAP = {
     telemetry:    'DISABLE_TELEMETRY',
@@ -85,7 +91,7 @@ var API = (function () {
   };
 
   async function getPrefs() {
-    var prefRaw  = await run('cat ' + PREFS + ' 2>/dev/null');
+    var prefRaw = await run('cat ' + PREFS + ' 2>/dev/null');
 
     var vals = {};
     if (prefRaw) {
@@ -102,12 +108,21 @@ var API = (function () {
     var BSS_DEFAULT_1 = {
       bss_soundtrigger_disabled: 1, bss_fullbackup_deferred: 1, bss_keyvaluebackup_deferred: 1, bss_sensors_disabled: 1
     };
+    var SOO_DEFAULTS = {
+      soo_restore_on_unlock: 1, soo_conn_delay: 5
+    };
     var prefs = {};
     for (var pk in PREF_MAP) {
       var envKey = PREF_MAP[pk];
-      if (pk === 'deep_doze_level') { prefs[pk] = vals[envKey] || 'moderate'; }
-      else if (BSS_DEFAULT_1[pk] !== undefined) { prefs[pk] = vals[envKey] !== undefined && vals[envKey] !== '' ? parseInt(vals[envKey]) : 1; }
-      else prefs[pk] = parseInt(vals[envKey]) || 0;
+      if (pk === 'deep_doze_level') {
+        prefs[pk] = vals[envKey] || 'moderate';
+      } else if (BSS_DEFAULT_1[pk] !== undefined) {
+        prefs[pk] = vals[envKey] !== undefined && vals[envKey] !== '' ? parseInt(vals[envKey]) : 1;
+      } else if (SOO_DEFAULTS[pk] !== undefined) {
+        prefs[pk] = vals[envKey] !== undefined && vals[envKey] !== '' ? parseInt(vals[envKey]) : SOO_DEFAULTS[pk];
+      } else {
+        prefs[pk] = parseInt(vals[envKey]) || 0;
+      }
     }
 
     var cats = {};
@@ -130,8 +145,6 @@ var API = (function () {
     await run(cmd);
     return { status: 'ok' };
   }
-
-  // ── Actions ──
 
   async function applyFreeze() {
     var raw = await run('sh ' + MODDIR + '/frosty.sh freeze 2>&1');
@@ -167,28 +180,12 @@ var API = (function () {
     }
   }
 
-  // ── Category immediate apply/revert ──
-
   async function freezeCategory(category) {
     return await runJSON('sh ' + MODDIR + '/frosty.sh freeze_category \'' + esc(category) + '\' 2>/dev/null');
   }
   async function unfreezeCategory(category) {
     return await runJSON('sh ' + MODDIR + '/frosty.sh unfreeze_category \'' + esc(category) + '\' 2>/dev/null');
   }
-
-  // ── GMS Doze ──
-
-  async function applyGmsDoze() {
-    await run('sh ' + MODDIR + '/gms_doze.sh apply 2>&1');
-    return { status: 'ok' };
-  }
-
-  async function revertGmsDoze() {
-    await run('sh ' + MODDIR + '/gms_doze.sh revert 2>&1');
-    return { status: 'ok' };
-  }
-
-  // ── Deep Doze ──
 
   async function applyDeepDoze() {
     await run('sh ' + MODDIR + '/deep_doze.sh freeze 2>&1');
@@ -200,8 +197,6 @@ var API = (function () {
     return { status: 'ok' };
   }
 
-  // ── RAM Optimizer ──
-
   async function applyRamOptimizer() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh ram_optimizer 2>/dev/null');
   }
@@ -210,8 +205,6 @@ var API = (function () {
     return await runJSON('sh ' + MODDIR + '/frosty.sh ram_restore 2>/dev/null');
   }
 
-  // ── Kernel Tweaks ──
-
   async function applyKernelTweaks() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh apply_kernel 2>/dev/null');
   }
@@ -219,8 +212,6 @@ var API = (function () {
   async function revertKernelTweaks() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh revert_kernel 2>/dev/null');
   }
-
-  // ── Blur ──
 
   async function applyBlur() {
     var cmd = '. "' + PREFS + '"; ' +
@@ -237,8 +228,6 @@ var API = (function () {
     return await runJSON(cmd);
   }
 
-  // ── Battery Saver ──
-
   async function applyBatterySaver() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh bss_apply 2>/dev/null');
   }
@@ -247,13 +236,13 @@ var API = (function () {
     return await runJSON('sh ' + MODDIR + '/frosty.sh bss_revert 2>/dev/null');
   }
 
-  // ── Log Killing ──
-
   async function killLogs() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh kill_logs 2>/dev/null');
   }
 
-  // ── Kill Tracking ──
+  async function revertKillLogs() {
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_kill_logs 2>/dev/null');
+  }
 
   async function applyKillTracking() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh kill_tracking 2>/dev/null');
@@ -263,13 +252,9 @@ var API = (function () {
     return await runJSON('sh ' + MODDIR + '/frosty.sh revert_tracking 2>/dev/null');
   }
 
-  // ── System Props toggle ──
-
   async function toggleSystemProps() {
     return await runJSON('sh ' + MODDIR + '/frosty.sh apply_sysprops 2>/dev/null');
   }
-
-  // ── Whitelist ──
 
   async function getWhitelist() {
     var raw = await run('sh ' + MODDIR + '/frosty.sh wl_list 2>/dev/null');
@@ -284,14 +269,54 @@ var API = (function () {
     return await runJSON('sh ' + MODDIR + '/frosty.sh wl_remove \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
-  // ── Logs ──
+  async function applyCustomAppDoze() {
+    await run('sh ' + MODDIR + '/app_doze.sh apply 2>&1');
+    return { status: 'ok' };
+  }
+
+  async function revertCustomAppDoze() {
+    await run('sh ' + MODDIR + '/app_doze.sh revert 2>&1');
+    return { status: 'ok' };
+  }
+
+  async function getCustomDozeList() {
+    var raw = await run('sh ' + MODDIR + '/app_doze.sh list 2>/dev/null');
+    try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
+  }
+
+  async function addCustomDoze(pkg) {
+    return await runJSON('sh ' + MODDIR + '/app_doze.sh add \'' + esc(pkg) + '\' 2>/dev/null');
+  }
+
+  async function removeCustomDoze(pkg) {
+    return await runJSON('sh ' + MODDIR + '/app_doze.sh remove \'' + esc(pkg) + '\' 2>/dev/null');
+  }
+
+  async function getNotOptimizedApps() {
+    var raw = await run('sh ' + MODDIR + '/app_doze.sh scan 2>/dev/null');
+    var pkgs = raw ? raw.split('\n').filter(function(l) { return l.trim(); }) : [];
+    return { status: 'ok', packages: pkgs };
+  }
+
+  async function checkCadNeedsReboot() {
+    var result = await run(
+      '[ -f "' + MODDIR + '/tmp/cad_needs_reboot" ] && echo "1" || echo "0"'
+    );
+    return result.trim() === '1';
+  }
+
+  async function applyScreenOffOpt() {
+    return await runJSON('sh ' + MODDIR + '/frosty.sh soo_apply 2>/dev/null');
+  }
+
+  async function revertScreenOffOpt() {
+    return await runJSON('sh ' + MODDIR + '/frosty.sh soo_revert 2>/dev/null');
+  }
 
   function appendLog(msg) {
     var safeMsg = String(msg).replace(/['"\\`$]/g, '').substring(0, 200);
     exec('echo "[$(date +"%Y-%m-%d %H:%M:%S")] [webui] ' + safeMsg + '" >> "' + LOG_DIR + '/action.log"');
   }
-
-  // ── Native KSU APIs ──
 
   function nativeListPackages(type) {
     try { return JSON.parse(ksu.listPackages(type || 'user')); }
@@ -330,13 +355,15 @@ var API = (function () {
     getPrefs, setPref,
     applyFreeze, applyStock,
     freezeCategory, unfreezeCategory,
-    applyGmsDoze, revertGmsDoze,
     applyDeepDoze, revertDeepDoze,
     applyBatterySaver, revertBatterySaver,
     applyRamOptimizer, revertRamOptimizer,
     applyKernelTweaks, revertKernelTweaks,
-    applyBlur, killLogs, applyKillTracking, revertKillTracking, toggleSystemProps,
+    applyBlur, killLogs, revertKillLogs, applyKillTracking, revertKillTracking, toggleSystemProps,
     getWhitelist, addWhitelist, removeWhitelist,
+    getCustomDozeList, addCustomDoze, removeCustomDoze,
+    applyCustomAppDoze, revertCustomAppDoze, getNotOptimizedApps, checkCadNeedsReboot,
+    applyScreenOffOpt, revertScreenOffOpt,
     appendLog,
     nativeListPackages, nativeGetPackagesInfo,
     listBackups, exportSettings, importSettings, shareBackup

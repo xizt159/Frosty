@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-    <meta name="theme-color" content="#141218">
-    <title>Frosty</title>
-    <link rel="stylesheet" href="/internal/insets.css">
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body unresolved style="overflow:hidden;position:fixed;inset:0;">
-    <div id="toast-wrap"></div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#141218">
+  <title>Frosty</title>
+  <link rel="stylesheet" href="/internal/insets.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body unresolved style="overflow:hidden;position:fixed;inset:0;">
+  <div id="toast-wrap"></div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
@@ -137,170 +137,115 @@
             <span class="act-ico">🔥</span><span data-i18n="btn_revert">Revert All</span>
           </button>
         </div>
-        <div class="reapply-row">
-          <button class="act-btn reapply ripple" id="btn-reapply">
-            <span class="act-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-            <span data-i18n="btn_reapply">Force Reapply Settings</span>
+      </div>
+    </header>
+
+    <!-- Theme Actions Panel (Chill, Heat, Cosmic) -->
+    <div class="actions">
+      <button class="act-btn freeze ripple" id="btn-freeze">
+        <span class="act-ico">🧊</span><span data-i18n="btn_freeze">Enable All</span>
+      </button>
+      <button class="act-btn stock ripple" id="btn-stock">
+        <span class="act-ico">🔥</span><span data-i18n="btn_revert">Revert All</span>
+      </button>
+    </div>
+    <div class="reapply-row">
+      <button class="act-btn reapply ripple" id="btn-reapply">
+        <span class="act-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        <span data-i18n="btn_reapply">Force Reapply Settings</span>
+      </button>
+    </div>
+
+    <!-- System Tweaks -->
+    <section class="card">
+      <h2 class="card-title"><span>⚡ </span><span data-i18n="sec_tweaks">System Tweaks</span></h2>
+      <div class="tgl-row ripple" data-key="kernel_tweaks">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_kernel">Kernel Tweaks</span>
+          <span class="tgl-desc" data-i18n="tgl_kernel_desc">Speeds up task switching, reduces CPU wakeups</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-kernel"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="tgl-row ripple" data-key="system_props">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_sysprops">System Props</span>
+          <span class="tgl-desc" data-i18n="tgl_sysprops_desc">Disables debug logging, saves battery & RAM</span>
+          <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-sysprops"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="tgl-row ripple" data-key="ram_optimizer">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_ram_optimizer">RAM Optimizer</span>
+          <span class="tgl-desc" data-i18n="tgl_ram_optimizer_desc">Limits cached and empty background processes, tunes zram swap behavior for more free RAM</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-ram-optimizer"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="tgl-row ripple" data-key="blur_disable">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_blur">Disable Blur</span>
+          <span class="tgl-desc" data-i18n="tgl_blur_desc">Reduces GPU load, smoother on weaker devices</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-blur"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="tgl-row ripple" data-key="log_killing">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_logs">Kill Logs</span>
+          <span class="tgl-desc" data-i18n="tgl_logs_desc">Stops background loggers, frees RAM</span>
+          <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-logs"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="tgl-row ripple" data-key="kill_tracking">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_tracking">Kill Google Tracking</span>
+          <span class="tgl-desc" data-i18n="tgl_tracking_desc">Disables GMS analytics, Clearcut telemetry, Phenotype polling and ad tracking at the app layer</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-tracking"><span class="tgl-sl"></span></label>
+      </div>
+    </section>
+
+    <!-- Doze -->
+    <section class="card">
+      <h2 class="card-title"><span>💤 </span><span data-i18n="sec_doze">Doze</span></h2>
+      <div class="divider"></div>
+      <div class="tgl-row ripple" data-key="custom_app_doze">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_cad">Custom App Doze</span>
+          <span class="tgl-desc" data-i18n="tgl_cad_desc">Removes selected apps from Android's Doze power-save exemption list</span>
+          <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-custom-app-doze"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cad-extras" id="cad-extras">
+        <button class="wl-btn ripple" id="cad-open">
+          <span data-i18n="cad_btn">▶ Manage Apps</span>
+          <span class="wl-count" id="cad-count">0</span>
+        </button>
+      </div>
+      <div class="divider"></div>
+      <div class="tgl-row ripple" data-key="deep_doze">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_deep_doze">Deep Doze</span>
+          <span class="tgl-desc" data-i18n="tgl_deep_doze_desc">Restricts background activity for all apps</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-deep-doze"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="dd-extras" id="dd-extras">
+        <div class="level-row">
+          <button class="lvl-btn ripple" data-level="moderate" id="lvl-mod">
+            <span class="lvl-ico">☘️</span>
+            <span class="lvl-name" data-i18n="lvl_moderate">Moderate</span>
+          </button>
+          <button class="lvl-btn ripple" data-level="maximum" id="lvl-max">
+            <span class="lvl-ico">⚡</span>
+            <span class="lvl-name" data-i18n="lvl_maximum">Maximum</span>
           </button>
         </div>
-
-        <!-- System Tweaks -->
-        <section class="card">
-          <h2 class="card-title"><span>⚡ </span><span data-i18n="sec_tweaks">System Tweaks</span></h2>
-          <div class="tgl-row ripple" data-key="kernel_tweaks">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_kernel">Kernel Tweaks</span>
-              <span class="tgl-desc" data-i18n="tgl_kernel_desc">Speeds up task switching, reduces CPU wakeups</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-kernel"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="tgl-row ripple" data-key="system_props">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_sysprops">System Props</span>
-              <span class="tgl-desc" data-i18n="tgl_sysprops_desc">Disables debug logging, saves battery & RAM</span>
-              <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-sysprops"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="tgl-row ripple" data-key="ram_optimizer">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_ram_optimizer">RAM Optimizer</span>
-              <span class="tgl-desc" data-i18n="tgl_ram_optimizer_desc">Limits cached and empty background processes, tunes zram swap behavior for more free RAM</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-ram-optimizer"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="tgl-row ripple" data-key="blur_disable">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_blur">Disable Blur</span>
-              <span class="tgl-desc" data-i18n="tgl_blur_desc">Reduces GPU load, smoother on weaker devices</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-blur"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="tgl-row ripple" data-key="log_killing">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_logs">Kill Logs</span>
-              <span class="tgl-desc" data-i18n="tgl_logs_desc">Stops background loggers, frees RAM</span>
-              <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-logs"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="tgl-row ripple" data-key="kill_tracking">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_tracking">Kill Google Tracking</span>
-              <span class="tgl-desc" data-i18n="tgl_tracking_desc">Disables GMS analytics, Clearcut telemetry, Phenotype polling and ad tracking at the app layer</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-tracking"><span class="tgl-sl"></span></label>
-          </div>
-        </section>
-
-        <!-- Doze -->
-        <section class="card">
-          <h2 class="card-title"><span>💤 </span><span data-i18n="sec_doze">Doze</span></h2>
-          <div class="tgl-row ripple" data-key="gms_doze">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_gms_doze">GMS Doze</span>
-              <span class="tgl-desc" data-i18n="tgl_gms_doze_desc">Lets Android optimize GMS battery · May delay notifications</span>
-              <span class="reboot-tag" data-i18n="reboot_req">⚠ Reboot required</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-gms-doze"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="divider"></div>
-          <div class="tgl-row ripple" data-key="deep_doze">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_deep_doze">Deep Doze</span>
-              <span class="tgl-desc" data-i18n="tgl_deep_doze_desc">Restricts background activity for all apps</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-deep-doze"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="dd-extras" id="dd-extras">
-            <div class="level-row">
-              <button class="lvl-btn ripple" data-level="moderate" id="lvl-mod">
-                <span class="lvl-ico">☘️</span>
-                <span class="lvl-name" data-i18n="lvl_moderate">Moderate</span>
-              </button>
-              <button class="lvl-btn ripple" data-level="maximum" id="lvl-max">
-                <span class="lvl-ico">⚡</span>
-                <span class="lvl-name" data-i18n="lvl_maximum">Maximum</span>
-              </button>
-            </div>
-            <button class="wl-btn ripple" id="wl-open">
-              <span data-i18n="wl_btn">📋 App Doze Whitelist</span>
-              <span class="wl-count" id="wl-count">0</span>
-            </button>
-          </div>
-          <div class="divider"></div>
-          <div class="tgl-row ripple" data-key="battery_saver">
-            <div class="tgl-info">
-              <span class="tgl-name" data-i18n="tgl_bss">Battery Saver Tuner</span>
-              <span class="tgl-desc" data-i18n="tgl_bss_desc">Tune Android's built-in battery saver behavior</span>
-            </div>
-            <label class="tgl"><input type="checkbox" id="t-bss"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="bss-extras" id="bss-extras">
-            <button class="bss-cfg-btn ripple" id="bss-open">
-              <span>⚙️</span>
-              <span data-i18n="bss_configure">Configure Options</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- GMS Categories -->
-        <section class="card">
-          <h2 class="card-title"><span>🧊 </span><span data-i18n="sec_gms">GMS Categories</span></h2>
-          <div class="cat-row ripple" data-cat="telemetry">
-            <div class="cat-left"><span class="cat-ico">📊</span><div class="cat-info"><span class="cat-name" data-i18n="cat_telemetry">Telemetry</span><span class="cat-tag safe" data-i18n="cat_telemetry_tag">Safe · Ads, analytics</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-telemetry"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="background">
-            <div class="cat-left"><span class="cat-ico">🔄</span><div class="cat-info"><span class="cat-name" data-i18n="cat_background">Background</span><span class="cat-tag safe" data-i18n="cat_background_tag">Safe · Updates, MDM</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-background"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="location">
-            <div class="cat-left"><span class="cat-ico">📍</span><div class="cat-info"><span class="cat-name" data-i18n="cat_location">Location</span><span class="cat-tag warn" data-i18n="cat_location_tag">Breaks Maps, GPS</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-location"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="connectivity">
-            <div class="cat-left"><span class="cat-ico">📡</span><div class="cat-info"><span class="cat-name" data-i18n="cat_connectivity">Connectivity</span><span class="cat-tag warn" data-i18n="cat_connectivity_tag">Breaks Cast, Quick Share</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-connectivity"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="cloud">
-            <div class="cat-left"><span class="cat-ico">☁️</span><div class="cat-info"><span class="cat-name" data-i18n="cat_cloud">Cloud</span><span class="cat-tag warn" data-i18n="cat_cloud_tag">Breaks Sign-in, Autofill</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-cloud"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="payments">
-            <div class="cat-left"><span class="cat-ico">💳</span><div class="cat-info"><span class="cat-name" data-i18n="cat_payments">Payments</span><span class="cat-tag warn" data-i18n="cat_payments_tag">Breaks Google Pay</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-payments"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="wearables">
-            <div class="cat-left"><span class="cat-ico">⌚</span><div class="cat-info"><span class="cat-name" data-i18n="cat_wearables">Wearables</span><span class="cat-tag warn" data-i18n="cat_wearables_tag">Breaks Wear OS, Fit</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-wearables"><span class="tgl-sl"></span></label>
-          </div>
-          <div class="cat-row ripple" data-cat="games">
-            <div class="cat-left"><span class="cat-ico">🎮</span><div class="cat-info"><span class="cat-name" data-i18n="cat_games">Games</span><span class="cat-tag warn" data-i18n="cat_games_tag">Breaks Play Games</span></div></div>
-            <label class="tgl"><input type="checkbox" id="t-games"><span class="tgl-sl"></span></label>
-          </div>
-        </section>
-
-        <!-- Activity Log -->
-        <section class="card">
-          <div class="card-title-row">
-            <h2 class="card-title"><span>📄 </span><span data-i18n="sec_log">Activity Log</span></h2>
-            <div style="display:flex;gap:6px">
-              <button class="log-action-btn ripple" id="log-copy-btn" title="Copy log">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-              </button>
-              <button class="log-action-btn ripple" id="log-clear-btn" title="Clear log">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="log-wrap">
-            <div class="log-box" id="log-box" data-i18n-empty="log_empty" data-empty="No activity yet"></div>
-            <button class="log-expand-btn" id="log-expand-btn" title="Expand">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-            </button>
-          </div>
-        </section>
+        <button class="wl-btn ripple" id="wl-open">
+          <span data-i18n="wl_btn">▶ App Doze Whitelist</span>
+          <span class="wl-count" id="wl-count">0</span>
+        </button>
       </div>
     </div><!-- /.scroll-clip -->
 
@@ -315,10 +260,125 @@
           <button class="lw-btn lw-btn-keep ripple" id="lc-btn-keep"></button>
           <button class="lw-btn ripple" id="lc-btn-en">🇬🇧 English</button>
         </div>
+        <label class="tgl"><input type="checkbox" id="t-bss"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="bss-extras" id="bss-extras">
+        <button class="bss-cfg-btn ripple" id="bss-open">
+          <span>⚙️</span>
+          <span data-i18n="bss_configure">Configure Options</span>
+        </button>
+      </div>
+      <div class="divider"></div>
+      <div class="tgl-row ripple" data-key="screen_off_opt">
+        <div class="tgl-info">
+          <span class="tgl-name" data-i18n="tgl_soo">Screen Off Optimization</span>
+          <span class="tgl-desc" data-i18n="tgl_soo_desc">Disables selected connections and kills listed apps after a screen-off delay. Restores on unlock.</span>
+        </div>
+        <label class="tgl"><input type="checkbox" id="t-screen-off-opt"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="bss-extras" id="soo-extras">
+        <button class="bss-cfg-btn ripple" id="soo-open">
+          <span>⚙️</span>
+          <span data-i18n="soo_configure">Configure Options</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- GMS Categories -->
+    <section class="card">
+      <h2 class="card-title"><span>🧊 </span><span data-i18n="sec_gms">GMS Categories</span></h2>
+      <div class="cat-row ripple" data-cat="telemetry">
+        <div class="cat-left"><span class="cat-ico">📊</span><div class="cat-info"><span class="cat-name" data-i18n="cat_telemetry">Telemetry</span><span class="cat-tag safe" data-i18n="cat_telemetry_tag">Safe · Ads, analytics</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-telemetry"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="background">
+        <div class="cat-left"><span class="cat-ico">🔄</span><div class="cat-info"><span class="cat-name" data-i18n="cat_background">Background</span><span class="cat-tag safe" data-i18n="cat_background_tag">Safe · Updates, MDM</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-background"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="location">
+        <div class="cat-left"><span class="cat-ico">📍</span><div class="cat-info"><span class="cat-name" data-i18n="cat_location">Location</span><span class="cat-tag warn" data-i18n="cat_location_tag">Breaks Maps, GPS</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-location"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="connectivity">
+        <div class="cat-left"><span class="cat-ico">📡</span><div class="cat-info"><span class="cat-name" data-i18n="cat_connectivity">Connectivity</span><span class="cat-tag warn" data-i18n="cat_connectivity_tag">Breaks Cast, Quick Share</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-connectivity"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="cloud">
+        <div class="cat-left"><span class="cat-ico">☁️</span><div class="cat-info"><span class="cat-name" data-i18n="cat_cloud">Cloud</span><span class="cat-tag warn" data-i18n="cat_cloud_tag">Breaks Sign-in, Autofill</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-cloud"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="payments">
+        <div class="cat-left"><span class="cat-ico">💳</span><div class="cat-info"><span class="cat-name" data-i18n="cat_payments">Payments</span><span class="cat-tag warn" data-i18n="cat_payments_tag">Breaks Google Pay</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-payments"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="wearables">
+        <div class="cat-left"><span class="cat-ico">⌚</span><div class="cat-info"><span class="cat-name" data-i18n="cat_wearables">Wearables</span><span class="cat-tag warn" data-i18n="cat_wearables_tag">Breaks Wear OS, Fit</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-wearables"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="cat-row ripple" data-cat="games">
+        <div class="cat-left"><span class="cat-ico">🎮</span><div class="cat-info"><span class="cat-name" data-i18n="cat_games">Games</span><span class="cat-tag warn" data-i18n="cat_games_tag">Breaks Play Games</span></div></div>
+        <label class="tgl"><input type="checkbox" id="t-games"><span class="tgl-sl"></span></label>
+      </div>
+    </section>
+
+    <!-- Activity Log -->
+    <section class="card">
+      <div class="card-title-row">
+        <h2 class="card-title"><span>📄 </span><span data-i18n="sec_log">Activity Log</span></h2>
+        <div style="display:flex;gap:6px">
+          <button class="log-action-btn ripple" id="log-copy-btn" title="Copy log">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+          <button class="log-action-btn ripple" id="log-clear-btn" title="Clear log">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="log-wrap">
+        <div class="log-box" id="log-box" data-i18n-empty="log_empty" data-empty="No activity yet"></div>
+        <button class="log-expand-btn" id="log-expand-btn" title="Expand">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  </div><!-- /.scroll-clip -->
+
+  <!-- Language Confirm Modal -->
+  <div class="modal-overlay centered" id="lang-confirm-backdrop">
+    <div class="modal lang-welcome-modal">
+      <div class="lc-flag" id="lc-flag"></div>
+      <div class="lc-header" id="lc-header"></div>
+      <div class="lc-lang-name" id="lc-lang-name"></div>
+      <div class="lc-question" id="lc-question"></div>
+      <div class="lw-btns">
+        <button class="lw-btn lw-btn-keep ripple" id="lc-btn-keep"></button>
+        <button class="lw-btn ripple" id="lc-btn-en">🇬🇧 English</button>
       </div>
     </div>
+  </div>
 
-    <!-- BSS Modal -->
+  
+  <!-- Custom App Doze Modal -->
+  <div class="modal-overlay" id="cad-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>📱 <span data-i18n="cad_title">Custom App Doze</span></h3>
+        <button class="modal-x ripple" id="cad-close">✕</button>
+      </div>
+      <div class="modal-notice">
+        <span>ℹ️</span>
+        <span data-i18n="cad_notice">Selected apps will be removed from Android's Doze exemption list so the OS can optimize them. Only apps currently bypassing battery optimization are shown.</span>
+      </div>
+      <div class="modal-controls">
+        <input type="text" class="modal-search" placeholder="Search apps..." data-i18n-ph="cad_search" id="cad-search">
+      </div>
+      <div class="modal-list" id="cad-list"></div>
+    </div>
+  </div>
+
+  <!-- BSS Modal -->
     <div class="modal-overlay" id="bss-modal">
       <div class="modal bss-modal">
         <div class="modal-head">
@@ -397,7 +457,7 @@
               <div class="bss-mode-dot"></div>
               <div class="bss-mode-info">
                 <span class="bss-mode-name" data-i18n="bss_gps_2">All off (screen off)</span>
-                <span class="bss-mode-desc" data-i18n="bss_gps_hint_2">Every location provider — GPS, Wi-Fi, and cell tower — stops when the screen goes off. Weather widgets, maps, and fitness trackers stop updating in the background.</span>
+                <span class="bss-mode-desc" data-i18n="bss_gps_hint_2">Every location provider - GPS, Wi-Fi, and cell tower - stops when the screen goes off. Weather widgets, maps, and fitness trackers stop updating in the background.</span>
               </div>
             </div>
             <div class="bss-mode-row" id="bss-gps-3" data-gps="3">
@@ -425,8 +485,44 @@
       </div>
     </div>
 
-      <script src="api.js"></script>
-      <script src="app.js"></script>
+
+  <!-- Screen Off Optimization Modal -->
+  <div class="modal-overlay" id="soo-modal" style="transition:none">
+    <div class="modal bss-modal" style="transition:none">
+      <div class="modal-head">
+        <h3>🌙 <span data-i18n="soo_modal_title">Screen Off Options</span></h3>
+        <button class="modal-x ripple" id="soo-close">✕</button>
+      </div>
+      <div class="bss-opt-list">
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_wifi">Disable Wi-Fi</span><span class="bss-opt-desc" data-i18n="soo_opt_wifi_desc">Turns off Wi-Fi after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-wifi"><span class="tgl-sl"></span></label></div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_bt">Disable Bluetooth</span><span class="bss-opt-desc" data-i18n="soo_opt_bt_desc">Turns off Bluetooth after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-bt"><span class="tgl-sl"></span></label></div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_data">Disable mobile data</span><span class="bss-opt-desc" data-i18n="soo_opt_data_desc">Turns off mobile data after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-data"><span class="tgl-sl"></span></label></div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_location">Disable location</span><span class="bss-opt-desc" data-i18n="soo_opt_location_desc">Turns off all location providers after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-location"><span class="tgl-sl"></span></label></div>
+        <div class="bss-opt-row">
+          <div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_conn_delay">Connections off delay</span><span class="bss-opt-desc" data-i18n="soo_opt_conn_delay_desc">Minutes after screen-off before disabling connections</span></div>
+          <select id="soo-conn-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:8px;padding:8px 10px;font-size:0.85rem;font-weight:700;min-width:70px">
+            <option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="200">200 min</option>
+          </select>
+        </div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_restore">Restore on unlock</span><span class="bss-opt-desc" data-i18n="soo_opt_restore_desc">Re-enables all connections that were disabled when the screen turns back on</span></div><label class="tgl"><input type="checkbox" id="soo-t-restore"><span class="tgl-sl"></span></label></div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_kill_cache">Clear cached apps</span><span class="bss-opt-desc" data-i18n="soo_opt_kill_cache_desc">Kills all background processes (like Android does when low on memory). Calms apps left open via home button without force-stopping them.</span></div><label class="tgl"><input type="checkbox" id="soo-t-kill-cache"><span class="tgl-sl"></span></label></div>
+        <div id="soo-cache-extras" style="overflow:hidden;max-height:0;transition:max-height 0.25s ease">
+          <div class="bss-opt-row" style="padding-top:0">
+            <div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_cache_delay">Cache clear delay</span><span class="bss-opt-desc" data-i18n="soo_opt_cache_delay_desc">Minutes after screen-off before clearing cached apps</span></div>
+            <select id="soo-cache-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:8px;padding:8px 10px;font-size:0.85rem;font-weight:700;min-width:70px">
+              <option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="200">200 min</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="bss-actions">
+        <button class="bss-apply-btn ripple" id="soo-apply"><span data-i18n="soo_apply">Apply &amp; Close</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="app.js"></script>
 
   </body>
 </html>
