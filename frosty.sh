@@ -911,42 +911,6 @@ soo_revert() {
   echo '{"status":"ok"}'
 }
 
-wl_list() {
-  local wl="$MODDIR/config/doze_whitelist.txt"
-  [ -f "$wl" ] || { echo '{"status":"ok","packages":[]}'; return; }
-  local installed=$(pm list packages 2>/dev/null | cut -d: -f2)
-  printf '{"status":"ok","packages":['
-  local first=1
-  while IFS= read -r line; do
-    local pkg=$(echo "$line" | sed 's/#.*//;s/[[:space:]]//g')
-    [ -z "$pkg" ] && continue
-    echo "$installed" | grep -qx "$pkg" || continue
-    [ "$first" = "1" ] && first=0 || printf ','
-    printf '"%s"' "$pkg"
-  done < "$wl"
-  printf ']}\n'
-}
-
-wl_add() {
-  local pkg="$1"
-  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
-  local wl="$MODDIR/config/doze_whitelist.txt"
-  mkdir -p "$MODDIR/config"
-  [ -f "$wl" ] || touch "$wl"
-  grep -qx "$pkg" "$wl" 2>/dev/null || echo "$pkg" >> "$wl"
-  echo '{"status":"ok"}'
-}
-
-wl_remove() {
-  local pkg="$1"
-  [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
-  local wl="$MODDIR/config/doze_whitelist.txt"
-  [ -f "$wl" ] || { echo '{"status":"ok"}'; return; }
-  local escaped=$(printf '%s' "$pkg" | sed 's/\./\\./g')
-  sed -i "/^${escaped}$/d" "$wl"
-  echo '{"status":"ok"}'
-}
-
 case "$1" in
   freeze)             freeze_services ;;
   stock)              stock_services ;;
