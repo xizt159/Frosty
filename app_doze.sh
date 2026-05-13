@@ -106,7 +106,9 @@ _apply_xml_overlays() {
     done
   fi
 
-  rm -f "$MODDIR/tmp/doze_xml_needs_reboot" "$MODDIR/tmp/cad_needs_reboot" 2>/dev/null
+  _reboot_file="$MODDIR/tmp/cad_needs_reboot"
+
+  rm -f "$_reboot_file" 2>/dev/null
 
   if [ "$any" -eq 0 ] || [ -z "$grep_pat" ]; then
     _remove_overlays
@@ -167,8 +169,8 @@ _apply_xml_overlays() {
   done
 
   if [ "$count" -gt 0 ]; then
-    mkdir -p "$MODDIR/tmp"
-    touch "$MODDIR/tmp/doze_xml_needs_reboot" "$MODDIR/tmp/cad_needs_reboot" 2>/dev/null
+    mkdir -p "$(dirname "$_reboot_file")"
+    touch "$_reboot_file" 2>/dev/null
   fi
 }
 
