@@ -832,7 +832,7 @@ kill_tracking() {
   echo '{"status":"ok"}'
 }
 
-revert_tracking() {
+revert_kill_tracking() {
   settings put global gmscorestat_enabled 1 >/dev/null 2>&1
   settings put global play_store_panel_logging_enabled 1 >/dev/null 2>&1
   settings put global clearcut_enabled 1 >/dev/null 2>&1
@@ -900,42 +900,42 @@ wl_remove() {
 }
 
 # Screen-Off Optimization
-soo_apply() {
+apply_soo() {
   chmod +x "$MODDIR/screen_off_opt.sh" 2>/dev/null
   sh "$MODDIR/screen_off_opt.sh" start 2>/dev/null
   echo '{"status":"ok"}'
 }
 
-soo_revert() {
+revert_soo() {
   sh "$MODDIR/screen_off_opt.sh" stop 2>/dev/null
   echo '{"status":"ok"}'
 }
 
 case "$1" in
-  freeze)             freeze_services ;;
-  stock)              stock_services ;;
-  apply_sysprops)     apply_system_props ;;
-  apply_kernel)       apply_kernel ;;
-  revert_kernel)      revert_kernel ;;
-  freeze_category)    freeze_category "$2" ;;
-  unfreeze_category)  unfreeze_category "$2" ;;
-  ram_optimizer)      apply_ram_optimizer ;;
-  ram_restore)        revert_ram_optimizer ;;
-  bss_apply)          apply_battery_saver ;;
-  bss_revert)         revert_battery_saver ;;
-  kill_logs)          kill_logs ;;
-  revert_kill_logs)   revert_kill_logs ;;
-  kill_tracking)      kill_tracking ;;
-  revert_tracking)    revert_tracking ;;
-  export)             backup_settings ;;
-  import)             restore_settings "$2" ;;
-  list_backups)       list_backups ;;
-  share_backup)       share_backup "$2" ;;
-  wl_list)            wl_list ;;
-  wl_add)             wl_add "$2" ;;
-  wl_remove)          wl_remove "$2" ;;
-  soo_apply)          soo_apply ;;
-  soo_revert)         soo_revert ;;
+  freeze)           freeze_services ;;
+  stock)            stock_services ;;
+  apply_sysprops)   apply_system_props ;;
+  apply_kernel)     apply_kernel ;;
+  revert_kernel)    revert_kernel ;;
+  freeze_category)  freeze_category "$2" ;;
+  unfreeze_category unfreeze_category "$2" ;;
+  apply_ram)        apply_ram_optimizer ;;
+  revert_ram)       revert_ram_optimizer ;;
+  apply_bss)        apply_battery_saver ;;
+  revert_bss)       revert_battery_saver ;;
+  kill_logs)        kill_logs ;;
+  revert_logs)      revert_kill_logs ;;
+  kill_tracking)    kill_tracking ;;
+  revert_tracking)  revert_kill_tracking ;;
+  apply_soo)        apply_soo ;;
+  revert_soo)       revert_soo ;;
+  export)           backup_settings ;;
+  import)           restore_settings "$2" ;;
+  list_backups)     list_backups ;;
+  share_backup)     share_backup "$2" ;;
+  wl_list)          wl_list ;;
+  wl_add)           wl_add "$2" ;;
+  wl_remove)        wl_remove "$2" ;;
   *)  echo '{"status":"error","message":"unknown action"}'; exit 1 ;;
 esac
 exit 0
