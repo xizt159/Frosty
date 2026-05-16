@@ -74,7 +74,7 @@ var API = (function () {
     soo_kill_bt:                'SOO_KILL_BT',
     soo_kill_data:              'SOO_KILL_DATA',
     soo_kill_location:          'SOO_KILL_LOCATION',
-    soo_conn_delay:            'SOO_CONN_DELAY',
+    soo_conn_delay:             'SOO_CONN_DELAY',
     soo_restore_on_unlock:      'SOO_RESTORE_ON_UNLOCK',
     soo_kill_cache:             'SOO_KILL_CACHE',
     soo_cache_delay:            'SOO_CACHE_DELAY'
@@ -198,11 +198,11 @@ var API = (function () {
   }
 
   async function applyRamOptimizer() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh ram_optimizer 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh apply_ram 2>/dev/null');
   }
 
   async function revertRamOptimizer() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh ram_restore 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_ram 2>/dev/null');
   }
 
   async function applyKernelTweaks() {
@@ -229,11 +229,11 @@ var API = (function () {
   }
 
   async function applyBatterySaver() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh bss_apply 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh apply_bss 2>/dev/null');
   }
 
   async function revertBatterySaver() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh bss_revert 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_bss 2>/dev/null');
   }
 
   async function killLogs() {
@@ -241,7 +241,7 @@ var API = (function () {
   }
 
   async function revertKillLogs() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_kill_logs 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_logs 2>/dev/null');
   }
 
   async function applyKillTracking() {
@@ -257,16 +257,16 @@ var API = (function () {
   }
 
   async function getWhitelist() {
-    var raw = await run('sh ' + MODDIR + '/frosty.sh wl_list 2>/dev/null');
+    var raw = await run('sh ' + MODDIR + '/frosty.sh list_wl 2>/dev/null');
     try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
   }
 
   async function addWhitelist(pkg) {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_add \'' + esc(pkg) + '\' 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh add_wl \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function removeWhitelist(pkg) {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_remove \'' + esc(pkg) + '\' 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh remove_wl \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function applyCustomAppDoze() {
@@ -306,11 +306,11 @@ var API = (function () {
   }
 
   async function applyScreenOffOpt() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh soo_apply 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh apply_soo 2>/dev/null');
   }
 
   async function revertScreenOffOpt() {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh soo_revert 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh revert_soo 2>/dev/null');
   }
 
   function appendLog(msg) {

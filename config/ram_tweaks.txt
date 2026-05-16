@@ -1,7 +1,8 @@
 # Frosty - RAM Tweaks
 # Format: /path/to/kernel/file|value
 # Applied when RAM Optimizer is enabled. Backed up to backup/ram_values.txt before writing.
-# Note: some tweaks are set dynamically in frosty.sh based on device RAM.
+# Note: Some tweaks are set dynamically in frosty.sh based on device RAM.
+# Note: Should not be touched.
 
 # ZRAM / SWAP
 /proc/sys/vm/page-cluster|1

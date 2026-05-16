@@ -61,7 +61,7 @@ fi
 
 if [ "$ENABLE_RAM_OPTIMIZER" = "1" ]; then
   log_boot "Applying RAM optimizer..."
-  sh "$MODDIR/frosty.sh" ram_optimizer >/dev/null 2>&1
+  sh "$MODDIR/frosty.sh" apply_ram >/dev/null 2>&1
   log_boot "RAM optimizer applied"
 else
   log_boot "RAM optimizer SKIPPED"
@@ -115,7 +115,7 @@ fi
 
 if [ "$ENABLE_BATTERY_SAVER" = "1" ]; then
   log_boot "Applying Battery Saver Tuner..."
-  sh "$MODDIR/frosty.sh" bss_apply >/dev/null 2>&1
+  sh "$MODDIR/frosty.sh" apply_bss >/dev/null 2>&1
   log_boot "Battery Saver applied"
 else
   log_boot "Battery Saver SKIPPED"
@@ -131,4 +131,8 @@ else
 fi
 
 log_boot "Boot complete at $(date '+%Y-%m-%d %H:%M:%S')"
+
+if ls $MODDIR/tmp/*_needs_reboot >/dev/null 2>&1; then
+  log_boot "Please reboot to apply all changes"
+fi
 exit 0

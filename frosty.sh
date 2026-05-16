@@ -49,28 +49,7 @@ should_disable_category() {
 
 load_prefs
 
-apply_system_props() {
-  if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
-    if [ -f "$SYSPROP_OLD" ]; then
-      mv "$SYSPROP_OLD" "$SYSPROP"
-    fi
-    echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
-    if [ -f "$SYSPROP" ]; then
-      local pc=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
-      log_props "[OK] system.prop ENABLED - $pc props, reboot for effect"
-    else
-      log_props "[WARN] system.prop ENABLED but file missing"
-    fi
-    echo '{"status":"ok","action":"enabled"}'
-  else
-    if [ -f "$SYSPROP" ]; then
-      mv "$SYSPROP" "$SYSPROP_OLD"
-    fi
-    echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
-    log_props "[OK] system.prop DISABLED, reboot for effect"
-    echo '{"status":"ok","action":"disabled"}'
-  fi
-}
+_bool() { [ "$1" = "1" ] && echo "true" || echo "false"; }
 
 freeze_services() {
   echo "Frosty v${MODVER:-?} - Services (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
@@ -116,7 +95,7 @@ freeze_services() {
   echo "  Disabled: $count_ok  Re-enabled: $count_enabled  Failed: $count_fail"
 }
 
-stock_services() {
+unfreeze_services() {
   echo "Frosty v${MODVER:-?} - Services (STOCK) - $(date '+%Y-%m-%d %H:%M:%S')" > "$SERVICES_LOG"
   [ ! -f "$GMS_LIST" ] && { echo "ERROR: Service list not found"; return 1; }
 
@@ -196,306 +175,31 @@ unfreeze_category() {
   echo "{\"status\":\"ok\",\"enabled\":$count,\"failed\":$fail}"
 }
 
-backup_settings() {
-  local dir="/storage/emulated/0/Frosty"
-  mkdir -p "$dir" 2>/dev/null || { echo "ERROR: Cannot write to /storage/emulated/0/Frosty"; return 1; }
-  local ts=$(date '+%Y%m%d_%H%M%S')
-  local out="$dir/frosty_$ts.json"
-
-  load_prefs
-  local wl_b64=""
-  [ -f "$MODDIR/config/doze_whitelist.txt" ] && wl_b64=$(base64 < "$MODDIR/config/doze_whitelist.txt" | tr -d '\n')
-  local patches_b64=""
-  [ -f "$MODDIR/config/doze_patches.txt" ] && patches_b64=$(base64 < "$MODDIR/config/doze_patches.txt" | tr -d '\n')
-
-  cat > "$out" << ENDJSON
-{
-  "version": "${MODVER:-unknown}",
-  "exported": "$ts",
-  "prefs": {
-    "ENABLE_KERNEL_TWEAKS": ${ENABLE_KERNEL_TWEAKS:-0},
-    "ENABLE_RAM_OPTIMIZER": ${ENABLE_RAM_OPTIMIZER:-0},
-    "ENABLE_SYSTEM_PROPS": ${ENABLE_SYSTEM_PROPS:-0},
-    "ENABLE_BLUR_DISABLE": ${ENABLE_BLUR_DISABLE:-0},
-    "ENABLE_LOG_KILLING": ${ENABLE_LOG_KILLING:-0},
-    "ENABLE_KILL_TRACKING": ${ENABLE_KILL_TRACKING:-0},
-    "ENABLE_DEEP_DOZE": ${ENABLE_DEEP_DOZE:-0},
-    "DEEP_DOZE_LEVEL": "${DEEP_DOZE_LEVEL:-moderate}",
-    "ENABLE_BATTERY_SAVER": ${ENABLE_BATTERY_SAVER:-0},
-    "BSS_SOUNDTRIGGER_DISABLED": ${BSS_SOUNDTRIGGER_DISABLED:-0},
-    "BSS_FULLBACKUP_DEFERRED": ${BSS_FULLBACKUP_DEFERRED:-0},
-    "BSS_KEYVALUEBACKUP_DEFERRED": ${BSS_KEYVALUEBACKUP_DEFERRED:-0},
-    "BSS_FORCE_STANDBY": ${BSS_FORCE_STANDBY:-0},
-    "BSS_FORCE_BG_CHECK": ${BSS_FORCE_BG_CHECK:-0},
-    "BSS_SENSORS_DISABLED": ${BSS_SENSORS_DISABLED:-0},
-    "BSS_GPS_MODE": ${BSS_GPS_MODE:-0},
-    "BSS_DATASAVER": ${BSS_DATASAVER:-0},
-    "DISABLE_TELEMETRY": ${DISABLE_TELEMETRY:-0},
-    "DISABLE_BACKGROUND": ${DISABLE_BACKGROUND:-0},
-    "DISABLE_LOCATION": ${DISABLE_LOCATION:-0},
-    "DISABLE_CONNECTIVITY": ${DISABLE_CONNECTIVITY:-0},
-    "DISABLE_CLOUD": ${DISABLE_CLOUD:-0},
-    "DISABLE_PAYMENTS": ${DISABLE_PAYMENTS:-0},
-    "DISABLE_WEARABLES": ${DISABLE_WEARABLES:-0},
-    "DISABLE_GAMES": ${DISABLE_GAMES:-0},
-    "ENABLE_CUSTOM_APP_DOZE": ${ENABLE_CUSTOM_APP_DOZE:-0},
-    "ENABLE_SCREEN_OFF_OPT": ${ENABLE_SCREEN_OFF_OPT:-0},
-    "SOO_KILL_WIFI": ${SOO_KILL_WIFI:-0},
-    "SOO_KILL_BT": ${SOO_KILL_BT:-0},
-    "SOO_KILL_DATA": ${SOO_KILL_DATA:-0},
-    "SOO_KILL_LOCATION": ${SOO_KILL_LOCATION:-0},
-    "SOO_CONN_DELAY": ${SOO_CONN_DELAY:-5},
-    "SOO_RESTORE_ON_UNLOCK": ${SOO_RESTORE_ON_UNLOCK:-1},
-    "SOO_KILL_CACHE": ${SOO_KILL_CACHE:-0},
-    "SOO_CACHE_DELAY": ${SOO_CACHE_DELAY:-5}
-  },
-  "whitelist_b64": "$wl_b64",
-  "patches_b64": "$patches_b64"
-}
-ENDJSON
-  echo "$out"
-}
-
-restore_settings() {
-  local file="$1"
-  [ ! -f "$file" ] && { echo "ERROR: File not found"; return 1; }
-
-  pi()  { grep "\"$1\"" "$file" | grep -o '[0-9]*' | head -1; }
-  ps_() { grep "\"$1\"" "$file" | sed 's/.*: *"//;s/".*//' | head -1; }
-
-  local ram_opt=$(pi ENABLE_RAM_OPTIMIZER);         [ -z "$ram_opt" ] && ram_opt=0
-  local ker_twe=$(pi ENABLE_KERNEL_TWEAKS);         [ -z "$ker_twe" ] && ker_twe=0
-  local sys_pro=$(pi ENABLE_SYSTEM_PROPS);          [ -z "$sys_pro" ] && sys_pro=0
-  local blu_dis=$(pi ENABLE_BLUR_DISABLE);          [ -z "$blu_dis" ] && blu_dis=0
-  local log_kil=$(pi ENABLE_LOG_KILLING);           [ -z "$log_kil" ] && log_kil=0
-  local kil_tra=$(pi ENABLE_KILL_TRACKING);         [ -z "$kil_tra" ] && kil_tra=0
-  local dep_doz=$(pi ENABLE_DEEP_DOZE);             [ -z "$dep_doz" ] && dep_doz=0
-  local dep_lvl=$(ps_ DEEP_DOZE_LEVEL);             [ -z "$dep_lvl" ] && dep_lvl="moderate"
-  local bss_ena=$(pi ENABLE_BATTERY_SAVER);         [ -z "$bss_ena" ] && bss_ena=0
-  local bss_snd=$(pi BSS_SOUNDTRIGGER_DISABLED);    [ -z "$bss_snd" ] && bss_snd=1
-  local bss_fbu=$(pi BSS_FULLBACKUP_DEFERRED);      [ -z "$bss_fbu" ] && bss_fbu=1
-  local bss_kbu=$(pi BSS_KEYVALUEBACKUP_DEFERRED);  [ -z "$bss_kbu" ] && bss_kbu=1
-  local bss_fsb=$(pi BSS_FORCE_STANDBY);            [ -z "$bss_fsb" ] && bss_fsb=0
-  local bss_fbg=$(pi BSS_FORCE_BG_CHECK);           [ -z "$bss_fbg" ] && bss_fbg=0
-  local bss_sen=$(pi BSS_SENSORS_DISABLED);         [ -z "$bss_sen" ] && bss_sen=1
-  local bss_gps=$(pi BSS_GPS_MODE);                 [ -z "$bss_gps" ] && bss_gps=0
-  local bss_dat=$(pi BSS_DATASAVER);                [ -z "$bss_dat" ] && bss_dat=0
-  local dis_tel=$(pi DISABLE_TELEMETRY);            [ -z "$dis_tel" ] && dis_tel=0
-  local dis_bac=$(pi DISABLE_BACKGROUND);           [ -z "$dis_bac" ] && dis_bac=0
-  local dis_loc=$(pi DISABLE_LOCATION);             [ -z "$dis_loc" ] && dis_loc=0
-  local dis_con=$(pi DISABLE_CONNECTIVITY);         [ -z "$dis_con" ] && dis_con=0
-  local dis_clo=$(pi DISABLE_CLOUD);                [ -z "$dis_clo" ] && dis_clo=0
-  local dis_pay=$(pi DISABLE_PAYMENTS);             [ -z "$dis_pay" ] && dis_pay=0
-  local dis_wea=$(pi DISABLE_WEARABLES);            [ -z "$dis_wea" ] && dis_wea=0
-  local dis_gam=$(pi DISABLE_GAMES);                [ -z "$dis_gam" ] && dis_gam=0
-  local cad_ena=$(pi ENABLE_CUSTOM_APP_DOZE);       [ -z "$cad_ena" ] && cad_ena=0
-  local soo_ena=$(pi ENABLE_SCREEN_OFF_OPT);        [ -z "$soo_ena" ] && soo_ena=0
-  local soo_wifi=$(pi SOO_KILL_WIFI);               [ -z "$soo_wifi" ] && soo_wifi=0
-  local soo_bt=$(pi SOO_KILL_BT);                   [ -z "$soo_bt" ]   && soo_bt=0
-  local soo_data=$(pi SOO_KILL_DATA);               [ -z "$soo_data" ] && soo_data=0
-  local soo_loc=$(pi SOO_KILL_LOCATION);            [ -z "$soo_loc" ]  && soo_loc=0
-  local soo_cdel=$(pi SOO_CONN_DELAY);              [ -z "$soo_cdel" ] && soo_cdel=5
-  local soo_rest=$(pi SOO_RESTORE_ON_UNLOCK);       [ -z "$soo_rest" ] && soo_rest=1
-  local soo_cache=$(pi SOO_KILL_CACHE);             [ -z "$soo_cache" ] && soo_cache=0
-  local soo_cdel2=$(pi SOO_CACHE_DELAY);            [ -z "$soo_cdel2" ] && soo_cdel2=5
-
-  cat > "$MODDIR/config/user_prefs" << ENDPREFS
-ENABLE_RAM_OPTIMIZER=$ram_opt
-ENABLE_KERNEL_TWEAKS=$ker_twe
-ENABLE_SYSTEM_PROPS=$sys_pro
-ENABLE_BLUR_DISABLE=$blu_dis
-ENABLE_LOG_KILLING=$log_kil
-ENABLE_KILL_TRACKING=$kil_tra
-ENABLE_DEEP_DOZE=$dep_doz
-DEEP_DOZE_LEVEL=$dep_lvl
-ENABLE_BATTERY_SAVER=$bss_ena
-BSS_SOUNDTRIGGER_DISABLED=$bss_snd
-BSS_FULLBACKUP_DEFERRED=$bss_fbu
-BSS_KEYVALUEBACKUP_DEFERRED=$bss_kbu
-BSS_FORCE_STANDBY=$bss_fsb
-BSS_FORCE_BG_CHECK=$bss_fbg
-BSS_SENSORS_DISABLED=$bss_sen
-BSS_GPS_MODE=$bss_gps
-BSS_DATASAVER=$bss_dat
-DISABLE_TELEMETRY=$dis_tel
-DISABLE_BACKGROUND=$dis_bac
-DISABLE_LOCATION=$dis_loc
-DISABLE_CONNECTIVITY=$dis_con
-DISABLE_CLOUD=$dis_clo
-DISABLE_PAYMENTS=$dis_pay
-DISABLE_WEARABLES=$dis_wea
-DISABLE_GAMES=$dis_gam
-ENABLE_CUSTOM_APP_DOZE=$cad_ena
-ENABLE_SCREEN_OFF_OPT=$soo_ena
-SOO_KILL_WIFI=$soo_wifi
-SOO_KILL_BT=$soo_bt
-SOO_KILL_DATA=$soo_data
-SOO_KILL_LOCATION=$soo_loc
-SOO_CONN_DELAY=$soo_cdel
-SOO_RESTORE_ON_UNLOCK=$soo_rest
-SOO_KILL_CACHE=$soo_cache
-SOO_CACHE_DELAY=$soo_cdel2
-ENDPREFS
-
-  local b64_data=$(grep '"whitelist_b64"' "$file" | sed 's/.*: *"//;s/".*//')
-  if [ -n "$b64_data" ]; then
-    printf '%s' "$b64_data" | base64 -d > "$MODDIR/config/doze_whitelist.txt"
-  fi
-  local patches_data=$(grep '"patches_b64"' "$file" | sed 's/.*: *"//;s/".*//')
-  if [ -n "$patches_data" ]; then
-    printf '%s' "$patches_data" | base64 -d > "$MODDIR/config/doze_patches.txt"
-  fi
-  echo "OK"
-}
-
-list_backups() {
-  local dir="/storage/emulated/0/Frosty"
-  [ ! -d "$dir" ] && { echo "[]"; return; }
-  local files=$(ls -t "$dir"/frosty_*.json 2>/dev/null)
-  [ -z "$files" ] && { echo "[]"; return; }
-  printf '['
-  local first=1
-  for f in $files; do
-    [ "$first" -eq 1 ] && first=0 || printf ','
-    local _name
-    _name=$(basename "$f" | sed 's/\\/\\\\/g; s/"/\\"/g')
-    printf '{"name":"%s","path":"%s"}' "$_name" "$f"
-  done
-  printf ']\n'
-}
-
-share_backup() {
-  local file="$1"
-  [ ! -f "$file" ] && { echo "ERROR: not found"; return 1; }
-  local pub="/data/local/tmp/$(basename "$file")"
-  cp -f "$file" "$pub" && chmod 644 "$pub"
-  echo "$pub"
-}
-
-apply_ram_optimizer() {
-  echo "Frosty v${MODVER:-?} - RAM (apply) - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
-  log_ram "Applying RAM optimizer..."
-  mkdir -p "$MODDIR/backup"
-
-  if [ ! -f "$RAM_BACKUP" ] && [ -f "$RAM_TWEAKS" ]; then
-    printf "# RAM Backup - $(date)\n" > "$RAM_BACKUP"
-    while IFS= read -r _line; do
-      case "$_line" in ''|'#'*) continue ;; esac
-      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
-      [ ! -f "$_path" ] && continue
-      printf "%s=%s=%s\n" "$(basename "$_path")" "$(cat "$_path" 2>/dev/null)" "$_path" >> "$RAM_BACKUP"
-    done < "$RAM_TWEAKS"
-    log_ram "[OK] RAM backup saved"
-  fi
-
-  local kcount=0 kfail=0
-
-  if [ -f "$RAM_TWEAKS" ]; then
-    while IFS= read -r _line; do
-      case "$_line" in ''|'#'*) continue ;; esac
-      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
-      _val=$(printf '%s' "$_line" | cut -d'|' -f2-)
-      [ ! -f "$_path" ] && continue
-      local _old=$(cat "$_path" 2>/dev/null)
-      chmod +w "$_path" 2>/dev/null
-      if printf '%s\n' "$_val" > "$_path" 2>/dev/null; then
-        log_ram "[OK] $(basename "$_path"): $_old -> $_val"
-        kcount=$((kcount + 1))
-      else
-        log_ram "[FAIL] $(basename "$_path")"
-        kfail=$((kfail + 1))
-      fi
-    done < "$RAM_TWEAKS"
-  fi
-
-  local total_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
-  local extra_free
-  if [ "${total_kb:-0}" -ge 7340032 ]; then
-    extra_free=24576
-  elif [ "${total_kb:-0}" -ge 5242880 ]; then
-    extra_free=16384
-  elif [ "${total_kb:-0}" -ge 3145728 ]; then
-    extra_free=12288
-  else
-    extra_free=8192
-  fi
-
-  if [ -f /proc/sys/vm/extra_free_kbytes ]; then
-    if ! grep -q "^extra_free_kbytes=" "$RAM_BACKUP" 2>/dev/null; then
-      printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)" >> "$RAM_BACKUP"
+# System Props
+apply_system_props() {
+  if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
+    if [ -f "$SYSPROP_OLD" ]; then
+      mv "$SYSPROP_OLD" "$SYSPROP"
     fi
-    local _old_efk=$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)
-    if printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null; then
-      log_ram "[OK] extra_free_kbytes: $_old_efk -> $extra_free"
-      kcount=$((kcount + 1))
+    echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
+    if [ -f "$SYSPROP" ]; then
+      local pc=$(grep -c '^[^#]' "$SYSPROP" 2>/dev/null || echo "0")
+      log_props "[OK] system.prop ENABLED - $pc props, reboot for effect"
     else
-      log_ram "[FAIL] extra_free_kbytes"
-      kfail=$((kfail + 1))
+      log_props "[WARN] system.prop ENABLED but file missing"
     fi
-  fi
-
-  local sdk=$(getprop ro.build.version.sdk 2>/dev/null)
-  if [ "${sdk:-0}" -ge 30 ] 2>/dev/null; then
-    if content call --uri content://settings/config --method PUT_value \
-      --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null; then
-      log_ram "[OK] usap_pool_enabled = true"
-      kcount=$((kcount + 1))
-    else
-      log_ram "[FAIL] usap_pool_enabled"
-      kfail=$((kfail + 1))
-    fi
-  fi
-
-  if device_config put activity_manager use_compaction true 2>/dev/null; then
-    log_ram "[OK] use_compaction = true"
-    kcount=$((kcount + 1))
-  fi
-
-  if device_config put activity_manager_native_boot use_freezer true 2>/dev/null; then
-    log_ram "[OK] use_freezer = true"
-    kcount=$((kcount + 1))
-  fi
-
-  if device_config put alarm_manager save_battery_on_idle true 2>/dev/null; then
-    log_ram "[OK] alarm save_battery_on_idle = true"
-    kcount=$((kcount + 1))
-  fi
-
-  log_ram "[OK] RAM: $((${total_kb:-0} / 1024))MB - $kcount applied, $kfail failed"
-  echo '{"status":"ok"}'
-}
-
-revert_ram_optimizer() {
-  echo "Frosty v${MODVER:-?} - RAM (revert) - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
-  log_ram "Reverting RAM optimizer..."
-
-  if [ -f "$RAM_BACKUP" ]; then
-    local kcount=0
-    while IFS= read -r line; do
-      case "$line" in ''|'#'*) continue ;; esac
-      val=$(echo "$line" | cut -d= -f2)
-      path=$(echo "$line" | cut -d= -f3-)
-      [ ! -f "$path" ] && continue
-      chmod +w "$path" 2>/dev/null
-      printf '%s\n' "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
-    done < "$RAM_BACKUP"
-    rm -f "$RAM_BACKUP"
-    log_ram "[OK] RAM values restored ($kcount)"
+    echo '{"status":"ok","action":"enabled"}'
   else
-    log_ram "No RAM backup found"
+    if [ -f "$SYSPROP" ]; then
+      mv "$SYSPROP" "$SYSPROP_OLD"
+    fi
+    echo "Frosty v${MODVER:-?} - Props - $(date '+%Y-%m-%d %H:%M:%S')" > "$PROPS_LOG"
+    log_props "[OK] system.prop DISABLED, reboot for effect"
+    echo '{"status":"ok","action":"disabled"}'
   fi
-
-  content call --uri content://settings/config --method DELETE_value \
-    --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
-
-  device_config delete activity_manager use_compaction 2>/dev/null
-  device_config delete activity_manager_native_boot use_freezer 2>/dev/null
-  device_config delete alarm_manager save_battery_on_idle 2>/dev/null
-
-  log_ram "[OK] RAM optimizer reverted"
-  echo "{\"status\":\"ok\"}"
 }
 
+# Kernel Tweaks
 apply_kernel() {
   if [ ! -f "$KERNEL_TWEAKS" ]; then
     echo '{"status":"error","message":"kernel_tweaks.txt not found"}'
@@ -654,8 +358,132 @@ revert_kernel() {
   echo "{\"status\":\"ok\",\"restored\":$count}"
 }
 
-_bool() { [ "$1" = "1" ] && echo "true" || echo "false"; }
+# RAM Optimizer
+apply_ram_optimizer() {
+  echo "Frosty v${MODVER:-?} - RAM (apply) - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
+  log_ram "Applying RAM optimizer..."
+  mkdir -p "$MODDIR/backup"
 
+  if [ ! -f "$RAM_BACKUP" ] && [ -f "$RAM_TWEAKS" ]; then
+    printf "# RAM Backup - $(date)\n" > "$RAM_BACKUP"
+    while IFS= read -r _line; do
+      case "$_line" in ''|'#'*) continue ;; esac
+      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
+      [ ! -f "$_path" ] && continue
+      printf "%s=%s=%s\n" "$(basename "$_path")" "$(cat "$_path" 2>/dev/null)" "$_path" >> "$RAM_BACKUP"
+    done < "$RAM_TWEAKS"
+    log_ram "[OK] RAM backup saved"
+  fi
+
+  local kcount=0 kfail=0
+
+  if [ -f "$RAM_TWEAKS" ]; then
+    while IFS= read -r _line; do
+      case "$_line" in ''|'#'*) continue ;; esac
+      _path=$(printf '%s' "$_line" | cut -d'|' -f1 | tr -d ' ')
+      _val=$(printf '%s' "$_line" | cut -d'|' -f2-)
+      [ ! -f "$_path" ] && continue
+      local _old=$(cat "$_path" 2>/dev/null)
+      chmod +w "$_path" 2>/dev/null
+      if printf '%s\n' "$_val" > "$_path" 2>/dev/null; then
+        log_ram "[OK] $(basename "$_path"): $_old -> $_val"
+        kcount=$((kcount + 1))
+      else
+        log_ram "[FAIL] $(basename "$_path")"
+        kfail=$((kfail + 1))
+      fi
+    done < "$RAM_TWEAKS"
+  fi
+
+  local total_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
+  local extra_free
+  if [ "${total_kb:-0}" -ge 7340032 ]; then
+    extra_free=24576
+  elif [ "${total_kb:-0}" -ge 5242880 ]; then
+    extra_free=16384
+  elif [ "${total_kb:-0}" -ge 3145728 ]; then
+    extra_free=12288
+  else
+    extra_free=8192
+  fi
+
+  if [ -f /proc/sys/vm/extra_free_kbytes ]; then
+    if ! grep -q "^extra_free_kbytes=" "$RAM_BACKUP" 2>/dev/null; then
+      printf 'extra_free_kbytes=%s=/proc/sys/vm/extra_free_kbytes\n' "$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)" >> "$RAM_BACKUP"
+    fi
+    local _old_efk=$(cat /proc/sys/vm/extra_free_kbytes 2>/dev/null)
+    if printf '%s\n' "$extra_free" > /proc/sys/vm/extra_free_kbytes 2>/dev/null; then
+      log_ram "[OK] extra_free_kbytes: $_old_efk -> $extra_free"
+      kcount=$((kcount + 1))
+    else
+      log_ram "[FAIL] extra_free_kbytes"
+      kfail=$((kfail + 1))
+    fi
+  fi
+
+  local sdk=$(getprop ro.build.version.sdk 2>/dev/null)
+  if [ "${sdk:-0}" -ge 30 ] 2>/dev/null; then
+    if content call --uri content://settings/config --method PUT_value \
+      --arg runtime_native/usap_pool_enabled --extra value:s:true 2>/dev/null >/dev/null; then
+      log_ram "[OK] usap_pool_enabled = true"
+      kcount=$((kcount + 1))
+    else
+      log_ram "[FAIL] usap_pool_enabled"
+      kfail=$((kfail + 1))
+    fi
+  fi
+
+  if device_config put activity_manager use_compaction true 2>/dev/null; then
+    log_ram "[OK] use_compaction = true"
+    kcount=$((kcount + 1))
+  fi
+
+  if device_config put activity_manager_native_boot use_freezer true 2>/dev/null; then
+    log_ram "[OK] use_freezer = true"
+    kcount=$((kcount + 1))
+  fi
+
+  if device_config put alarm_manager save_battery_on_idle true 2>/dev/null; then
+    log_ram "[OK] alarm save_battery_on_idle = true"
+    kcount=$((kcount + 1))
+  fi
+
+  log_ram "[OK] RAM: $((${total_kb:-0} / 1024))MB - $kcount applied, $kfail failed"
+  echo '{"status":"ok"}'
+}
+
+revert_ram_optimizer() {
+  echo "Frosty v${MODVER:-?} - RAM (revert) - $(date '+%Y-%m-%d %H:%M:%S')" > "$RAM_LOG"
+  log_ram "Reverting RAM optimizer..."
+
+  if [ -f "$RAM_BACKUP" ]; then
+    local kcount=0
+    while IFS= read -r line; do
+      case "$line" in ''|'#'*) continue ;; esac
+      val=$(echo "$line" | cut -d= -f2)
+      path=$(echo "$line" | cut -d= -f3-)
+      [ ! -f "$path" ] && continue
+      chmod +w "$path" 2>/dev/null
+      printf '%s\n' "$val" > "$path" 2>/dev/null && kcount=$((kcount + 1))
+    done < "$RAM_BACKUP"
+    rm -f "$RAM_BACKUP"
+    log_ram "[OK] RAM values restored ($kcount)"
+  else
+    log_ram "No RAM backup found"
+  fi
+
+  content call --uri content://settings/config --method DELETE_value \
+    --arg runtime_native/usap_pool_enabled >/dev/null 2>&1
+
+  device_config delete activity_manager use_compaction 2>/dev/null
+  device_config delete activity_manager_native_boot use_freezer 2>/dev/null
+  device_config delete alarm_manager save_battery_on_idle 2>/dev/null
+
+  log_ram "[OK] RAM optimizer reverted"
+  echo "{\"status\":\"ok\"}"
+}
+
+# Battery Saver Tuner
 apply_battery_saver() {
   local sdk=$(getprop ro.build.version.sdk 2>/dev/null)
   local constants
@@ -705,6 +533,19 @@ revert_battery_saver() {
   echo '{"status":"ok"}'
 }
 
+# Screen-Off Optimization
+apply_soo() {
+  chmod +x "$MODDIR/screen_off_opt.sh" 2>/dev/null
+  sh "$MODDIR/screen_off_opt.sh" start 2>/dev/null
+  echo '{"status":"ok"}'
+}
+
+revert_soo() {
+  sh "$MODDIR/screen_off_opt.sh" stop 2>/dev/null
+  echo '{"status":"ok"}'
+}
+
+# Log Killing
 kill_logs() {
   local k=0
   for svc in logcat logcatd tcpdump cnss_diag traced traced_perf traced_probes \
@@ -804,6 +645,7 @@ revert_kill_logs() {
   echo '{"status":"ok"}'
 }
 
+# Google Tracking
 kill_tracking() {
   settings put global gmscorestat_enabled 0 >/dev/null 2>&1
   settings put global play_store_panel_logging_enabled 0 >/dev/null 2>&1
@@ -832,7 +674,7 @@ kill_tracking() {
   echo '{"status":"ok"}'
 }
 
-revert_tracking() {
+revert_kill_tracking() {
   settings put global gmscorestat_enabled 1 >/dev/null 2>&1
   settings put global play_store_panel_logging_enabled 1 >/dev/null 2>&1
   settings put global clearcut_enabled 1 >/dev/null 2>&1
@@ -860,7 +702,8 @@ revert_tracking() {
   echo '{"status":"ok"}'
 }
 
-wl_list() {
+# App Doze
+list_wl() {
   local wl="$MODDIR/config/doze_whitelist.txt"
   [ -f "$wl" ] || { echo '{"status":"ok","packages":[]}'; return; }
   local installed
@@ -878,7 +721,7 @@ wl_list() {
   printf ']}\n'
 }
 
-wl_add() {
+add_to_wl() {
   local pkg="$1"
   [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
   local wl="$MODDIR/config/doze_whitelist.txt"
@@ -888,7 +731,7 @@ wl_add() {
   echo '{"status":"ok"}'
 }
 
-wl_remove() {
+remove_from_wl() {
   local pkg="$1"
   [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
   local wl="$MODDIR/config/doze_whitelist.txt"
@@ -899,43 +742,209 @@ wl_remove() {
   echo '{"status":"ok"}'
 }
 
-# Screen-Off Optimization
-soo_apply() {
-  chmod +x "$MODDIR/screen_off_opt.sh" 2>/dev/null
-  sh "$MODDIR/screen_off_opt.sh" start 2>/dev/null
-  echo '{"status":"ok"}'
+# Settings
+backup_settings() {
+  local dir="/storage/emulated/0/Frosty"
+  mkdir -p "$dir" 2>/dev/null || { echo "ERROR: Cannot write to /storage/emulated/0/Frosty"; return 1; }
+  local ts=$(date '+%Y%m%d_%H%M%S')
+  local out="$dir/frosty_$ts.json"
+
+  load_prefs
+  local wl_b64=""
+  [ -f "$MODDIR/config/doze_whitelist.txt" ] && wl_b64=$(base64 < "$MODDIR/config/doze_whitelist.txt" | tr -d '\n')
+  local patches_b64=""
+  [ -f "$MODDIR/config/doze_patches.txt" ] && patches_b64=$(base64 < "$MODDIR/config/doze_patches.txt" | tr -d '\n')
+
+  cat > "$out" << ENDJSON
+{
+  "version": "${MODVER:-unknown}",
+  "exported": "$ts",
+  "prefs": {
+    "ENABLE_KERNEL_TWEAKS": ${ENABLE_KERNEL_TWEAKS:-0},
+    "ENABLE_RAM_OPTIMIZER": ${ENABLE_RAM_OPTIMIZER:-0},
+    "ENABLE_SYSTEM_PROPS": ${ENABLE_SYSTEM_PROPS:-0},
+    "ENABLE_BLUR_DISABLE": ${ENABLE_BLUR_DISABLE:-0},
+    "ENABLE_LOG_KILLING": ${ENABLE_LOG_KILLING:-0},
+    "ENABLE_KILL_TRACKING": ${ENABLE_KILL_TRACKING:-0},
+    "ENABLE_DEEP_DOZE": ${ENABLE_DEEP_DOZE:-0},
+    "DEEP_DOZE_LEVEL": "${DEEP_DOZE_LEVEL:-moderate}",
+    "ENABLE_BATTERY_SAVER": ${ENABLE_BATTERY_SAVER:-0},
+    "BSS_SOUNDTRIGGER_DISABLED": ${BSS_SOUNDTRIGGER_DISABLED:-0},
+    "BSS_FULLBACKUP_DEFERRED": ${BSS_FULLBACKUP_DEFERRED:-0},
+    "BSS_KEYVALUEBACKUP_DEFERRED": ${BSS_KEYVALUEBACKUP_DEFERRED:-0},
+    "BSS_FORCE_STANDBY": ${BSS_FORCE_STANDBY:-0},
+    "BSS_FORCE_BG_CHECK": ${BSS_FORCE_BG_CHECK:-0},
+    "BSS_SENSORS_DISABLED": ${BSS_SENSORS_DISABLED:-0},
+    "BSS_GPS_MODE": ${BSS_GPS_MODE:-0},
+    "BSS_DATASAVER": ${BSS_DATASAVER:-0},
+    "DISABLE_TELEMETRY": ${DISABLE_TELEMETRY:-0},
+    "DISABLE_BACKGROUND": ${DISABLE_BACKGROUND:-0},
+    "DISABLE_LOCATION": ${DISABLE_LOCATION:-0},
+    "DISABLE_CONNECTIVITY": ${DISABLE_CONNECTIVITY:-0},
+    "DISABLE_CLOUD": ${DISABLE_CLOUD:-0},
+    "DISABLE_PAYMENTS": ${DISABLE_PAYMENTS:-0},
+    "DISABLE_WEARABLES": ${DISABLE_WEARABLES:-0},
+    "DISABLE_GAMES": ${DISABLE_GAMES:-0},
+    "ENABLE_CUSTOM_APP_DOZE": ${ENABLE_CUSTOM_APP_DOZE:-0},
+    "ENABLE_SCREEN_OFF_OPT": ${ENABLE_SCREEN_OFF_OPT:-0},
+    "SOO_KILL_WIFI": ${SOO_KILL_WIFI:-0},
+    "SOO_KILL_BT": ${SOO_KILL_BT:-0},
+    "SOO_KILL_DATA": ${SOO_KILL_DATA:-0},
+    "SOO_KILL_LOCATION": ${SOO_KILL_LOCATION:-0},
+    "SOO_CONN_DELAY": ${SOO_CONN_DELAY:-5},
+    "SOO_RESTORE_ON_UNLOCK": ${SOO_RESTORE_ON_UNLOCK:-1},
+    "SOO_KILL_CACHE": ${SOO_KILL_CACHE:-0},
+    "SOO_CACHE_DELAY": ${SOO_CACHE_DELAY:-5}
+  },
+  "whitelist_b64": "$wl_b64",
+  "patches_b64": "$patches_b64"
+}
+ENDJSON
+  echo "$out"
 }
 
-soo_revert() {
-  sh "$MODDIR/screen_off_opt.sh" stop 2>/dev/null
-  echo '{"status":"ok"}'
+restore_settings() {
+  local file="$1"
+  [ ! -f "$file" ] && { echo "ERROR: File not found"; return 1; }
+
+  pi()  { grep "\"$1\"" "$file" | grep -o '[0-9]*' | head -1; }
+  ps_() { grep "\"$1\"" "$file" | sed 's/.*: *"//;s/".*//' | head -1; }
+
+  local ram_opt=$(pi ENABLE_RAM_OPTIMIZER);         [ -z "$ram_opt" ] && ram_opt=0
+  local ker_twe=$(pi ENABLE_KERNEL_TWEAKS);         [ -z "$ker_twe" ] && ker_twe=0
+  local sys_pro=$(pi ENABLE_SYSTEM_PROPS);          [ -z "$sys_pro" ] && sys_pro=0
+  local blu_dis=$(pi ENABLE_BLUR_DISABLE);          [ -z "$blu_dis" ] && blu_dis=0
+  local log_kil=$(pi ENABLE_LOG_KILLING);           [ -z "$log_kil" ] && log_kil=0
+  local kil_tra=$(pi ENABLE_KILL_TRACKING);         [ -z "$kil_tra" ] && kil_tra=0
+  local dep_doz=$(pi ENABLE_DEEP_DOZE);             [ -z "$dep_doz" ] && dep_doz=0
+  local dep_lvl=$(ps_ DEEP_DOZE_LEVEL);             [ -z "$dep_lvl" ] && dep_lvl="moderate"
+  local bss_ena=$(pi ENABLE_BATTERY_SAVER);         [ -z "$bss_ena" ] && bss_ena=0
+  local bss_snd=$(pi BSS_SOUNDTRIGGER_DISABLED);    [ -z "$bss_snd" ] && bss_snd=1
+  local bss_fbu=$(pi BSS_FULLBACKUP_DEFERRED);      [ -z "$bss_fbu" ] && bss_fbu=1
+  local bss_kbu=$(pi BSS_KEYVALUEBACKUP_DEFERRED);  [ -z "$bss_kbu" ] && bss_kbu=1
+  local bss_fsb=$(pi BSS_FORCE_STANDBY);            [ -z "$bss_fsb" ] && bss_fsb=0
+  local bss_fbg=$(pi BSS_FORCE_BG_CHECK);           [ -z "$bss_fbg" ] && bss_fbg=0
+  local bss_sen=$(pi BSS_SENSORS_DISABLED);         [ -z "$bss_sen" ] && bss_sen=1
+  local bss_gps=$(pi BSS_GPS_MODE);                 [ -z "$bss_gps" ] && bss_gps=0
+  local bss_dat=$(pi BSS_DATASAVER);                [ -z "$bss_dat" ] && bss_dat=0
+  local dis_tel=$(pi DISABLE_TELEMETRY);            [ -z "$dis_tel" ] && dis_tel=0
+  local dis_bac=$(pi DISABLE_BACKGROUND);           [ -z "$dis_bac" ] && dis_bac=0
+  local dis_loc=$(pi DISABLE_LOCATION);             [ -z "$dis_loc" ] && dis_loc=0
+  local dis_con=$(pi DISABLE_CONNECTIVITY);         [ -z "$dis_con" ] && dis_con=0
+  local dis_clo=$(pi DISABLE_CLOUD);                [ -z "$dis_clo" ] && dis_clo=0
+  local dis_pay=$(pi DISABLE_PAYMENTS);             [ -z "$dis_pay" ] && dis_pay=0
+  local dis_wea=$(pi DISABLE_WEARABLES);            [ -z "$dis_wea" ] && dis_wea=0
+  local dis_gam=$(pi DISABLE_GAMES);                [ -z "$dis_gam" ] && dis_gam=0
+  local cad_ena=$(pi ENABLE_CUSTOM_APP_DOZE);       [ -z "$cad_ena" ] && cad_ena=0
+  local soo_ena=$(pi ENABLE_SCREEN_OFF_OPT);        [ -z "$soo_ena" ] && soo_ena=0
+  local soo_wifi=$(pi SOO_KILL_WIFI);               [ -z "$soo_wifi" ] && soo_wifi=0
+  local soo_bt=$(pi SOO_KILL_BT);                   [ -z "$soo_bt" ]   && soo_bt=0
+  local soo_data=$(pi SOO_KILL_DATA);               [ -z "$soo_data" ] && soo_data=0
+  local soo_loc=$(pi SOO_KILL_LOCATION);            [ -z "$soo_loc" ]  && soo_loc=0
+  local soo_cdel=$(pi SOO_CONN_DELAY);              [ -z "$soo_cdel" ] && soo_cdel=5
+  local soo_rest=$(pi SOO_RESTORE_ON_UNLOCK);       [ -z "$soo_rest" ] && soo_rest=1
+  local soo_cache=$(pi SOO_KILL_CACHE);             [ -z "$soo_cache" ] && soo_cache=0
+  local soo_cdel2=$(pi SOO_CACHE_DELAY);            [ -z "$soo_cdel2" ] && soo_cdel2=5
+
+  cat > "$MODDIR/config/user_prefs" << ENDPREFS
+ENABLE_RAM_OPTIMIZER=$ram_opt
+ENABLE_KERNEL_TWEAKS=$ker_twe
+ENABLE_SYSTEM_PROPS=$sys_pro
+ENABLE_BLUR_DISABLE=$blu_dis
+ENABLE_LOG_KILLING=$log_kil
+ENABLE_KILL_TRACKING=$kil_tra
+ENABLE_DEEP_DOZE=$dep_doz
+DEEP_DOZE_LEVEL=$dep_lvl
+ENABLE_BATTERY_SAVER=$bss_ena
+BSS_SOUNDTRIGGER_DISABLED=$bss_snd
+BSS_FULLBACKUP_DEFERRED=$bss_fbu
+BSS_KEYVALUEBACKUP_DEFERRED=$bss_kbu
+BSS_FORCE_STANDBY=$bss_fsb
+BSS_FORCE_BG_CHECK=$bss_fbg
+BSS_SENSORS_DISABLED=$bss_sen
+BSS_GPS_MODE=$bss_gps
+BSS_DATASAVER=$bss_dat
+DISABLE_TELEMETRY=$dis_tel
+DISABLE_BACKGROUND=$dis_bac
+DISABLE_LOCATION=$dis_loc
+DISABLE_CONNECTIVITY=$dis_con
+DISABLE_CLOUD=$dis_clo
+DISABLE_PAYMENTS=$dis_pay
+DISABLE_WEARABLES=$dis_wea
+DISABLE_GAMES=$dis_gam
+ENABLE_CUSTOM_APP_DOZE=$cad_ena
+ENABLE_SCREEN_OFF_OPT=$soo_ena
+SOO_KILL_WIFI=$soo_wifi
+SOO_KILL_BT=$soo_bt
+SOO_KILL_DATA=$soo_data
+SOO_KILL_LOCATION=$soo_loc
+SOO_CONN_DELAY=$soo_cdel
+SOO_RESTORE_ON_UNLOCK=$soo_rest
+SOO_KILL_CACHE=$soo_cache
+SOO_CACHE_DELAY=$soo_cdel2
+ENDPREFS
+
+  local b64_data=$(grep '"whitelist_b64"' "$file" | sed 's/.*: *"//;s/".*//')
+  if [ -n "$b64_data" ]; then
+    printf '%s' "$b64_data" | base64 -d > "$MODDIR/config/doze_whitelist.txt"
+  fi
+  local patches_data=$(grep '"patches_b64"' "$file" | sed 's/.*: *"//;s/".*//')
+  if [ -n "$patches_data" ]; then
+    printf '%s' "$patches_data" | base64 -d > "$MODDIR/config/doze_patches.txt"
+  fi
+  echo "OK"
+}
+
+# Backups
+list_backups() {
+  local dir="/storage/emulated/0/Frosty"
+  [ ! -d "$dir" ] && { echo "[]"; return; }
+  local files=$(ls -t "$dir"/frosty_*.json 2>/dev/null)
+  [ -z "$files" ] && { echo "[]"; return; }
+  printf '['
+  local first=1
+  for f in $files; do
+    [ "$first" -eq 1 ] && first=0 || printf ','
+    local _name
+    _name=$(basename "$f" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '{"name":"%s","path":"%s"}' "$_name" "$f"
+  done
+  printf ']\n'
+}
+
+share_backup() {
+  local file="$1"
+  [ ! -f "$file" ] && { echo "ERROR: not found"; return 1; }
+  local pub="/data/local/tmp/$(basename "$file")"
+  cp -f "$file" "$pub" && chmod 644 "$pub"
+  echo "$pub"
 }
 
 case "$1" in
   freeze)             freeze_services ;;
-  stock)              stock_services ;;
+  stock)              unfreeze_services ;;
+  freeze_category)    freeze_category "$2" ;;
+  unfreeze_category)  unfreeze_category "$2" ;;
   apply_sysprops)     apply_system_props ;;
   apply_kernel)       apply_kernel ;;
   revert_kernel)      revert_kernel ;;
-  freeze_category)    freeze_category "$2" ;;
-  unfreeze_category)  unfreeze_category "$2" ;;
-  ram_optimizer)      apply_ram_optimizer ;;
-  ram_restore)        revert_ram_optimizer ;;
-  bss_apply)          apply_battery_saver ;;
-  bss_revert)         revert_battery_saver ;;
+  apply_ram)          apply_ram_optimizer ;;
+  revert_ram)         revert_ram_optimizer ;;
+  apply_bss)          apply_battery_saver ;;
+  revert_bss)         revert_battery_saver ;;
+  apply_soo)          apply_soo ;;
+  revert_soo)         revert_soo ;;
   kill_logs)          kill_logs ;;
-  revert_kill_logs)   revert_kill_logs ;;
+  revert_logs)        revert_kill_logs ;;
   kill_tracking)      kill_tracking ;;
-  revert_tracking)    revert_tracking ;;
+  revert_tracking)    revert_kill_tracking ;;
+  list_wl)            list_wl ;;
+  add_wl)             add_to_wl "$2" ;;
+  remove_wl)          remove_from_wl "$2" ;;
   export)             backup_settings ;;
   import)             restore_settings "$2" ;;
   list_backups)       list_backups ;;
   share_backup)       share_backup "$2" ;;
-  wl_list)            wl_list ;;
-  wl_add)             wl_add "$2" ;;
-  wl_remove)          wl_remove "$2" ;;
-  soo_apply)          soo_apply ;;
-  soo_revert)         soo_revert ;;
   *)  echo '{"status":"error","message":"unknown action"}'; exit 1 ;;
 esac
 exit 0
