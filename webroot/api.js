@@ -257,16 +257,16 @@ var API = (function () {
   }
 
   async function getWhitelist() {
-    var raw = await run('sh ' + MODDIR + '/frosty.sh wl_list 2>/dev/null');
+    var raw = await run('sh ' + MODDIR + '/frosty.sh list_wl 2>/dev/null');
     try { return JSON.parse(raw); } catch(e) { return { status: 'ok', packages: [] }; }
   }
 
   async function addWhitelist(pkg) {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_add \'' + esc(pkg) + '\' 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh add_wl \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function removeWhitelist(pkg) {
-    return await runJSON('sh ' + MODDIR + '/frosty.sh wl_remove \'' + esc(pkg) + '\' 2>/dev/null');
+    return await runJSON('sh ' + MODDIR + '/frosty.sh remove_wl \'' + esc(pkg) + '\' 2>/dev/null');
   }
 
   async function applyCustomAppDoze() {
