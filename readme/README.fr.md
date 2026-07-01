@@ -35,10 +35,10 @@ Frosty optimise la durée de vie de la batterie en gelant les services GMS, en a
 - **Gel des GMS** : Désactivez les services GMS à travers 8 catégories.
 - **App Doze** : Retirez n'importe quelle application de la liste d'exemption d'économie d'énergie Doze d'Android. GMS est également sélectionnable ici, remplaçant l'ancien interrupteur dédié GMS Doze.
 - **Deep Doze** : Restrictions agressives en arrière-plan pour toutes les applications (Modéré / Maximum).
-- **Optimisation Écran Éteint** : Désactive automatiquement les connexions sélectionnées (Wi-Fi, Bluetooth, données mobiles, localisation) et vide les applications en cache après un délai configurable d'extinction de l'écran, puis restaure tout au déverrouillage.
+- **Optimisation Écran Éteint** : Désactive les connexions sélectionnées (Wi-Fi, Bluetooth, données, localisation) et exécute optionnellement le nettoyage RAM après un délai configurable d'extinction de l'écran, restaure au déverrouillage.
 - **Désactiver le suivi Google** : Désactive les analyses GMS, la télémétrie Clearcut, le polling Phenotype et le suivi publicitaire.
 - **Ajustements du Kernel** : Optimisations du planificateur, de la VM, du réseau et du débogage.
-- **Optimiseur de RAM** : Ajuste les limites des processus, le compactage de la mémoire et le comportement de zram.
+- **Optimiseur de RAM** : Réglage automatique ZRAM, seuils LMK/LMKD/PSI, désactivation de la récupération OEM, paramètres mémoire VM (Modéré / Maximum), Nettoyeur RAM configurable.
 - **Props Système** : Désactivez les propriétés de débogage pour économiser la RAM et la batterie.
 - **Arrêt des Logs** : Arrête les processus de journalisation (logs) et de débogage qui drainent la batterie.
 - **Tuner Économiseur de Batterie** : Personnalisez ce que fait l'économiseur de batterie intégré à Android lorsqu'il est actif.
@@ -59,7 +59,7 @@ Frosty optimise la durée de vie de la batterie en gelant les services GMS, en a
 
 Ouvrez la WebUI depuis votre gestionnaire root :
 
-- **Ajustements Système** : Ajustements du kernel, props système, désactivation du flou, arrêt des logs, désactivation du suivi.
+- **Ajustements Système** : Ajustements du kernel, props système, désactivation du flou, arrêt des logs, blocage du suivi, optimiseur et nettoyeur RAM.
 - **Doze** : App Doze avec sélecteur d'applications, Deep Doze avec sélecteur de niveau et éditeur de liste blanche.
 - **Optimisation Écran Éteint** : Interrupteurs par connexion, minuteries de délai, restauration au déverrouillage.
 - **Catégories GMS** : Gelez les groupes de services GMS individuels.
@@ -86,13 +86,11 @@ Ouvrez la WebUI depuis votre gestionnaire root :
 
 ## Niveaux de Deep Doze
 
-| Fonctionnalité | Modéré | Maximum |
-|---------|:--------:|:-------:|
-| Constantes Doze Agressives | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Arrêt de Wakelock écran éteint | ✅ | ✅ |
-| Refuser WAKE_LOCK | ❌ | ✅ |
+Les deux niveaux réécrivent les constantes Doze, forcent l'état IDLE à l'extinction de l'écran, exécutent un tueur de wakelocks après 5 minutes d'écran éteint, et activent la politique flex-idle du JobScheduler sur Android 13+. Le niveau **Maximum** utilise en plus le bucket de standby `restricted` (le Modéré utilise `rare`), refuse `WAKE_LOCK`, désactive le capteur de mouvement à l'extinction de l'écran, et tue les wakelocks immédiatement lors de l'application.
 
+## Optimiseur RAM
+
+Réglage automatique de la compression ZRAM, des seuils LMK / LMKD / PSI, des nœuds de récupération OEM et des paramètres mémoire VM. Le niveau **Maximum** augmente les poids LMK d'environ 60-70 % et utilise des seuils LMKD/PSI plus proactifs.
 ## FAQ
 
 **Q : Pourquoi mes notifications sont-elles retardées ?**  
@@ -102,7 +100,7 @@ R : App Doze et Deep Doze restreignent l'activité en arrière-plan. Ajoutez vos
 R : Il fait désormais partie de App Doze. Ouvrez le sélecteur d'App Doze et sélectionnez GMS, même effet, interface unifiée.
 
 **Q : Est-ce que cela fonctionne sans les Services Google Play ?**  
-R : Les Ajustements du Kernel, les Props Système, la Désactivation du Flou, l'Arrêt des Logs, l'Optimiseur de RAM et Deep Doze fonctionnent tous. Les fonctionnalités GMS nécessitent GMS.
+R : Les Ajustements du Kernel, les Props Système, la Désactivation du Flou, l'Arrêt des Logs, l'Optimiseur et Nettoyeur RAM, et Deep Doze fonctionnent tous. Les fonctionnalités GMS nécessitent GMS.
 
 **Q : Est-ce que quelque chose est activé après l'installation ?**  
 R : Non. Tout est désactivé par défaut. Activez uniquement ce dont vous avez besoin.

@@ -1,8 +1,11 @@
 #!/system/bin/sh
 # Frosty - Deep Doze
 
-MODDIR="${0%/*}"
+_d="${0%/*}"
+[ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
+MODDIR="${_d%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+unset _d
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
@@ -69,22 +72,27 @@ restrict_apps() {
     [ -z "$pkg" ] && continue
     is_whitelisted "$pkg" && continue
 
-    # Skip apps currently in the foreground
     local cur
     cur=$(am get-standby-bucket "$pkg" 2>/dev/null | tail -1 | tr -d '[:space:]')
     case "$cur" in
-      5|active|ACTIVE) skip=$((skip + 1)); continue ;;
+      active|ACTIVE|working_set|WORKING_SET) skip=$((skip + 1)); continue ;;
     esac
 
-    # rare bucket: Android significantly throttles background jobs, alarms, and network access.
-    am set-standby-bucket "$pkg" rare 2>/dev/null
+    if [ "$level" = "maximum" ]; then
+      am set-standby-bucket "$pkg" restricted 2>/dev/null
+    else
+      am set-standby-bucket "$pkg" rare 2>/dev/null
+    fi
 
-    # maximum only: also deny wakelocks so apps cannot prevent deep sleep
     [ "$level" = "maximum" ] && appops set "$pkg" WAKE_LOCK deny 2>/dev/null
 
     count=$((count + 1))
   done
-  log_deep "[OK] Restricted $count apps to rare bucket (skipped $skip active)"
+  if [ "$level" = "maximum" ]; then
+    log_deep "[OK] Restricted $count apps to restricted bucket (skipped $skip active/recent)"
+  else
+    log_deep "[OK] Restricted $count apps to rare bucket (skipped $skip active/recent)"
+  fi
 }
 
 unrestrict_apps() {
@@ -103,7 +111,6 @@ kill_wakelocks() {
   local killed=0
   local tmpfile="$MODDIR/tmp/wakelocks.txt"
   local procfile="$MODDIR/tmp/processes.txt"
-  trap 'rm -f "$tmpfile" "$procfile"' EXIT TERM
   dumpsys power 2>/dev/null | grep -E "PARTIAL_WAKE_LOCK|FULL_WAKE_LOCK" > "$tmpfile"
   dumpsys activity processes 2>/dev/null > "$procfile"
 
@@ -128,7 +135,6 @@ kill_wakelocks() {
 
 
 get_screen_state() {
-  # Try dumpsys display first (more reliable on most ROMs)
   local state
   state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
   [ -n "$state" ] && { echo "$state"; return; }
@@ -136,7 +142,6 @@ get_screen_state() {
   state=$(dumpsys display 2>/dev/null | grep -m1 "Display Power: state=" | sed 's/.*state=//;s/ .*//')
   [ -n "$state" ] && { echo "$state"; return; }
 
-  # Fallback: power wakefulness
   local wake
   wake=$(dumpsys power 2>/dev/null | grep -m1 "mWakefulness=" | cut -d= -f2 | tr -d ' ')
   case "$wake" in
@@ -169,11 +174,11 @@ start_screen_monitor() {
       if [ "$(get_screen_state)" != "ON" ]; then
         log_deep "Running wakelock killer..."
         kill_wakelocks
+        _stepdeep
       fi
 
-      # Wait until screen turns back on before re-arming
       while [ "$(get_screen_state)" != "ON" ]; do
-        sleep 180
+        sleep 5
       done
 
       if [ "$_mon_level" = "maximum" ]; then
@@ -222,7 +227,6 @@ freeze_deep_doze() {
   apply_doze_constants
   restrict_apps "$DEEP_DOZE_LEVEL"
 
-  # Screen monitor runs on BOTH levels: after 5 minutes screen-off it kills background wakelock holders.
   if [ "$DEEP_DOZE_LEVEL" = "maximum" ]; then
     kill_wakelocks
   fi

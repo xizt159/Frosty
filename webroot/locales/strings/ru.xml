@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">Оптимизатор батареи</string>
   <string name="kpi_sub">из 18 активных</string>
   <string name="status_count">{0} из {1} активных</string>
   <string name="home_active">активно</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">Глубокий Doze отменён</string>
   <string name="log_deep_doze_level">Глубокий Doze → {0}</string>
   <string name="log_deep_doze_reapplied">Глубокий Doze применён повторно</string>
+  <string name="loading_reapplying_ram">Переприменение оптимизатора ОЗУ...</string>
+  <string name="log_ram_opt_level">Оптимизатор ОЗУ → {0}</string>
+  <string name="log_ram_opt_reapplied">Оптимизатор ОЗУ переприменён</string>
+  <string name="ram_wl_btn">▶ Белый список очистки ОЗУ</string>
+  <string name="ram_wl_title">Белый список очистки ОЗУ</string>
+  <string name="ram_wl_notice">Приложения из белого списка никогда не останавливаются принудительно очисткой ОЗУ.</string>
   <string name="tgl_soo">Оптимизация при выкл. экрана</string>
   <string name="tgl_soo_desc">Отключает выбранные соединения и по желанию очищает ОЗУ после задержки выключения экрана. Восстанавливает при разблокировке.</string>
   <string name="soo_configure">Настройка параметров</string>

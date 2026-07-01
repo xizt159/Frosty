@@ -20,15 +20,30 @@
 <div class="modal-overlay" id="wl-modal">
   <div class="modal">
     <div class="modal-head">
-      <h3><span data-i18n="wl_title">Doze Whitelist</span></h3>
+      <h3><span data-i18n="wl_title">Deep Doze Whitelist</span></h3>
       <button class="modal-x ripple" id="wl-close">&#x2715;</button>
     </div>
-    <div class="modal-notice"><span><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></span><span data-i18n="wl_notice">Whitelisted apps bypass Deep Doze. Add messaging, banking, and alarm apps here.</span></div>
+    <div class="modal-notice"><span><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></span><span data-i18n="wl_notice">Whitelisted apps bypass Deep Doze restrictions. Add messaging, banking, and alarm apps here.</span></div>
     <div class="modal-controls">
       <input type="text" class="modal-search" placeholder="Search apps..." data-i18n-ph="wl_search" id="wl-search">
       <label class="sys-toggle"><input type="checkbox" id="wl-sys"><span data-i18n="wl_system">System</span></label>
     </div>
     <div class="modal-list" id="wl-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ramwl-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3><span data-i18n="ram_wl_title">RAM Cleaner Whitelist</span></h3>
+      <button class="modal-x ripple" id="ram-wl-close">&#x2715;</button>
+    </div>
+    <div class="modal-notice"><span><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></span><span data-i18n="ram_wl_notice">Whitelisted apps are never force-stopped by the RAM cleaner.</span></div>
+    <div class="modal-controls">
+      <input type="text" class="modal-search" placeholder="Search apps..." data-i18n-ph="wl_search" id="ram-wl-search">
+      <label class="sys-toggle"><input type="checkbox" id="ram-wl-sys"><span data-i18n="wl_system">System</span></label>
+    </div>
+    <div class="modal-list" id="ramwl-list"></div>
   </div>
 </div>
 
@@ -147,7 +162,7 @@
       </button>
       <button class="act-btn reapply ripple" id="btn-reapply">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5.5 4.5v15L20 12z"/></svg>
-        <span data-i18n="btn_reapply">Reapply</span>
+        <span data-i18n="btn_reapply">Force Reapply Settings</span>
       </button>
     </div>
     <div class="status-list">
@@ -205,12 +220,18 @@
         <label class="tgl"><input type="checkbox" id="t-kernel"><span class="tgl-sl"></span></label>
       </div>
       <div class="tgl-row ripple" data-key="system_props">
-        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_sysprops">System Props</span><span class="tgl-desc" data-i18n="tgl_sysprops_desc">Disables debug logging, saves battery &amp; RAM</span><span class="reboot-tag" data-i18n="reboot_req">&#x26A0; Reboot required</span></div>
+        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_sysprops">System Props</span><span class="tgl-desc" data-i18n="tgl_sysprops_desc">Disables debug logging, saves battery and RAM</span><span class="reboot-tag" data-i18n="reboot_req">&#x26A0; Reboot required</span></div>
         <label class="tgl"><input type="checkbox" id="t-sysprops"><span class="tgl-sl"></span></label>
       </div>
       <div class="tgl-row ripple" data-key="ram_optimizer">
-        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_ram_optimizer">RAM Optimizer</span><span class="tgl-desc" data-i18n="tgl_ram_optimizer_desc">Limits cached background processes, tunes zram swap behavior</span></div>
+        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_ram_optimizer">RAM Optimizer</span><span class="tgl-desc" data-i18n="tgl_ram_optimizer_desc">Limits cached and empty background processes, tunes zram swap behavior for more free RAM</span></div>
         <label class="tgl"><input type="checkbox" id="t-ram-optimizer"><span class="tgl-sl"></span></label>
+      </div>
+      <div class="ram-opt-extras dd-extras" id="ram-opt-extras">
+        <div class="level-row">
+          <button class="lvl-btn ripple" data-level="moderate" id="ram-lvl-mod"><span class="lvl-ico"><svg viewBox="-0.5 0 32 32" width="16" height="15" fill="currentColor"><path d="M30.000,32.000 L23.000,32.000 C22.447,32.000 22.000,31.552 22.000,31.000 L22.000,1.000 C22.000,0.448 22.447,-0.000 23.000,-0.000 L30.000,-0.000 C30.553,-0.000 31.000,0.448 31.000,1.000 L31.000,31.000 C31.000,31.552 30.553,32.000 30.000,32.000 ZM29.000,2.000 L24.000,2.000 L24.000,30.000 L29.000,30.000 L29.000,2.000 ZM19.000,32.000 L12.000,32.000 C11.448,32.000 11.000,31.552 11.000,31.000 L11.000,17.000 C11.000,16.448 11.448,16.000 12.000,16.000 L19.000,16.000 C19.553,16.000 20.000,16.448 20.000,17.000 L20.000,31.000 C20.000,31.552 19.553,32.000 19.000,32.000 ZM18.000,18.000 L13.000,18.000 L13.000,30.000 L18.000,30.000 L18.000,18.000 ZM8.000,32.000 L1.000,32.000 C0.448,32.000 0.000,31.552 0.000,31.000 L0.000,11.000 C0.000,10.448 0.448,10.000 1.000,10.000 L8.000,10.000 C8.552,10.000 9.000,10.448 9.000,11.000 L9.000,31.000 C9.000,31.552 8.552,32.000 8.000,32.000 ZM7.000,12.000 L2.000,12.000 L2.000,30.000 L7.000,30.000 L7.000,12.000 Z"/></svg></span><span class="lvl-name" data-i18n="lvl_moderate">Moderate</span></button>
+          <button class="lvl-btn ripple" data-level="maximum" id="ram-lvl-max"><span class="lvl-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 13h2l3-7 3 11 3-8 2 4h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="lvl-name" data-i18n="lvl_maximum">Maximum</span></button>
+        </div>
       </div>
       <div class="bss-extras always-on">
         <button class="bss-cfg-btn ripple" id="ram-clean-open"><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" fill-opacity="0.18" stroke="currentColor"/><path d="M12 6V3m4 3V4M8 6V4m10 8h3m-3 4h2M18 8h2M12 18v3M8 18v2m8-2v2M6 12H3M6 8H4m2 8H4"/></svg></span><span data-i18n="ram_cleaner_btn">RAM Cleaner</span></button>
@@ -224,7 +245,7 @@
         <label class="tgl"><input type="checkbox" id="t-logs"><span class="tgl-sl"></span></label>
       </div>
       <div class="tgl-row ripple" data-key="kill_tracking">
-        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_tracking">Kill Google Tracking</span><span class="tgl-desc" data-i18n="tgl_tracking_desc">Disables GMS analytics, Clearcut telemetry, Phenotype polling and ad tracking</span></div>
+        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_tracking">Kill Google Tracking</span><span class="tgl-desc" data-i18n="tgl_tracking_desc">Disables GMS analytics, Clearcut telemetry, Phenotype polling and ad tracking at the app layer</span></div>
         <label class="tgl"><input type="checkbox" id="t-tracking"><span class="tgl-sl"></span></label>
       </div>
     </section>
@@ -235,7 +256,7 @@
     <section class="card">
       <h2 class="card-title" data-i18n="sec_doze">Doze</h2>
       <div class="tgl-row ripple" data-key="custom_app_doze">
-        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_cad">App Doze</span><span class="tgl-desc" data-i18n="tgl_cad_desc">Removes selected apps from Android's Doze exemption list. Select GMS here to replace the old GMS Doze toggle.</span><span class="reboot-tag" data-i18n="reboot_req">&#x26A0; Reboot required</span></div>
+        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_cad">App Doze</span><span class="tgl-desc" data-i18n="tgl_cad_desc">Removes selected apps from Android's Doze power-save exemption list. GMS can be selected here too.</span><span class="reboot-tag" data-i18n="reboot_req">&#x26A0; Reboot required</span></div>
         <label class="tgl"><input type="checkbox" id="t-custom-app-doze"><span class="tgl-sl"></span></label>
       </div>
       <div class="cad-extras" id="cad-extras">
@@ -248,10 +269,10 @@
       </div>
       <div class="dd-extras" id="dd-extras">
         <div class="level-row">
-          <button class="lvl-btn ripple" data-level="moderate" id="lvl-mod"><span class="lvl-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="9" cy="9" r="3.2"/><circle cx="15" cy="9" r="3.2"/><circle cx="9" cy="15" r="3.2"/><circle cx="15" cy="15" r="3.2"/><rect x="11.25" y="17.5" width="1.5" height="4" rx="0.75"/><rect x="9.5" y="20" width="5" height="1.5" rx="0.75"/></svg></span><span class="lvl-name" data-i18n="lvl_moderate">Moderate</span></button>
+          <button class="lvl-btn ripple" data-level="moderate" id="lvl-mod"><span class="lvl-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.75C7,8,17,8,17,8Z"/></svg></span><span class="lvl-name" data-i18n="lvl_moderate">Moderate</span></button>
           <button class="lvl-btn ripple" data-level="maximum" id="lvl-max"><span class="lvl-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></span><span class="lvl-name" data-i18n="lvl_maximum">Maximum</span></button>
         </div>
-        <button class="wl-btn ripple" id="wl-open"><span data-i18n="wl_btn">&#x25B6; App Whitelist</span><span class="wl-count" id="wl-count">0</span></button>
+        <button class="wl-btn ripple" id="wl-open"><span data-i18n="wl_btn">&#x25B6; Manage Apps</span><span class="wl-count" id="wl-count">0</span></button>
       </div>
       <div class="divider"></div>
       <div class="tgl-row ripple" data-key="battery_saver">
@@ -263,7 +284,7 @@
       </div>
       <div class="divider"></div>
       <div class="tgl-row ripple" data-key="screen_off_opt">
-        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_soo">Screen Off Optimization</span><span class="tgl-desc" data-i18n="tgl_soo_desc">Disables selected connections after a screen-off delay. Restores on unlock.</span></div>
+        <div class="tgl-info"><span class="tgl-name" data-i18n="tgl_soo">Screen Off Optimization</span><span class="tgl-desc" data-i18n="tgl_soo_desc">Disables selected connections and optionally cleans RAM after a screen-off delay. Restores on unlock.</span></div>
         <label class="tgl"><input type="checkbox" id="t-screen-off-opt"><span class="tgl-sl"></span></label>
       </div>
       <div class="bss-extras" id="soo-extras">
@@ -345,8 +366,8 @@
 
 <div class="modal-overlay" id="cad-modal">
   <div class="modal">
-    <div class="modal-head"><h3><span data-i18n="cad_title">Custom App Doze</span></h3><button class="modal-x ripple" id="cad-close">&#x2715;</button></div>
-    <div class="modal-notice"><span>&#x2139;&#xFE0F;</span><span data-i18n="cad_notice">Selected apps will be removed from Android's Doze exemption list. Only apps currently bypassing battery optimization are shown.</span></div>
+    <div class="modal-head"><h3><span data-i18n="cad_title">App Doze</span></h3><button class="modal-x ripple" id="cad-close">&#x2715;</button></div>
+    <div class="modal-notice"><span>&#x2139;&#xFE0F;</span><span data-i18n="cad_notice">Selected apps will be removed from Android's Doze exemption list so the OS can optimize them. GMS can be selected here for the same effect as the old GMS Doze toggle.</span></div>
     <div class="modal-controls"><input type="text" class="modal-search" placeholder="Search apps..." data-i18n-ph="cad_search" id="cad-search"></div>
     <div class="modal-list" id="cad-list"></div>
   </div>
@@ -356,59 +377,60 @@
   <div class="modal bss-modal">
     <div class="modal-head"><h3><span data-i18n="bss_modal_title">Battery Saver Options</span></h3><button class="modal-x ripple" id="bss-close">&#x2715;</button></div>
     <div class="bss-opt-list">
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_datasaver">Enable data saver</span><span class="bss-opt-desc" data-i18n="bss_opt_datasaver_desc">Restricts background data usage for all apps</span></div><label class="tgl"><input type="checkbox" id="bss-t-datasaver"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_datasaver">Enable data saver</span><span class="bss-opt-desc" data-i18n="bss_opt_datasaver_desc">Restricts background data usage for all apps while battery saver is active</span></div><label class="tgl"><input type="checkbox" id="bss-t-datasaver"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_hotword">Disable hotword detection</span><span class="bss-opt-desc" data-i18n="bss_opt_hotword_desc">Stops the always-on microphone from listening for "Hey Google"</span></div><label class="tgl"><input type="checkbox" id="bss-t-soundtrigger"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_fullbackup">Defer full backup</span><span class="bss-opt-desc" data-i18n="bss_opt_fullbackup_desc">Pauses full device backups while battery saver is on.</span></div><label class="tgl"><input type="checkbox" id="bss-t-fullbackup"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_keybackup">Defer key-value backup</span><span class="bss-opt-desc" data-i18n="bss_opt_keybackup_desc">Pauses syncing of app settings and small data backups.</span></div><label class="tgl"><input type="checkbox" id="bss-t-keybackup"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_force_standby">Force apps standby</span><span class="bss-opt-desc" data-i18n="bss_opt_force_standby_desc">Moves all background apps into the restricted standby bucket.</span></div><label class="tgl"><input type="checkbox" id="bss-t-force-standby"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_force_bg">Force background check</span><span class="bss-opt-desc" data-i18n="bss_opt_force_bg_desc">Applies stricter enforcement of background execution limits.</span></div><label class="tgl"><input type="checkbox" id="bss-t-force-bg"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_sensors">Disable optional sensors</span><span class="bss-opt-desc" data-i18n="bss_opt_sensors_desc">Turns off non-critical sensors like barometer and step counter.</span></div><label class="tgl"><input type="checkbox" id="bss-t-sensors"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_fullbackup">Defer full backup</span><span class="bss-opt-desc" data-i18n="bss_opt_fullbackup_desc">Pauses full device backups while battery saver is on. Resumes when turned off.</span></div><label class="tgl"><input type="checkbox" id="bss-t-fullbackup"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_keybackup">Defer key-value backup</span><span class="bss-opt-desc" data-i18n="bss_opt_keybackup_desc">Pauses syncing of app settings and small data backups to the cloud.</span></div><label class="tgl"><input type="checkbox" id="bss-t-keybackup"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_force_standby">Force apps standby</span><span class="bss-opt-desc" data-i18n="bss_opt_force_standby_desc">Moves all background apps into the restricted standby bucket, heavily limiting their wakeups.</span></div><label class="tgl"><input type="checkbox" id="bss-t-force-standby"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_force_bg">Force background check</span><span class="bss-opt-desc" data-i18n="bss_opt_force_bg_desc">Applies stricter enforcement of background execution limits across all apps.</span></div><label class="tgl"><input type="checkbox" id="bss-t-force-bg"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="bss_opt_sensors">Disable optional sensors</span><span class="bss-opt-desc" data-i18n="bss_opt_sensors_desc">Turns off non-critical sensors like barometer, step counter, and rotation vector.</span></div><label class="tgl"><input type="checkbox" id="bss-t-sensors"><span class="tgl-sl"></span></label></div>
       <div class="bss-section-head" data-i18n="bss_opt_gps">Location mode</div>
       <div class="bss-mode-list">
-        <div class="bss-mode-row" id="bss-gps-0" data-gps="0"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_0">No restriction</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_0">GPS and all location services work normally at all times.</span></div></div>
-        <div class="bss-mode-row" id="bss-gps-1" data-gps="1"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_1">GPS off (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_1">GPS chip shuts off when screen goes off. Wi-Fi and cell-tower location keep working.</span></div></div>
-        <div class="bss-mode-row" id="bss-gps-2" data-gps="2"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_2">All off (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_2">Every location provider stops when the screen goes off.</span></div></div>
-        <div class="bss-mode-row" id="bss-gps-3" data-gps="3"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_3">Foreground only</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_3">Only the app on screen can access location.</span></div></div>
-        <div class="bss-mode-row" id="bss-gps-4" data-gps="4"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_4">Throttle (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_4">Background apps get location but updates are rate-limited when screen is off.</span></div></div>
+        <div class="bss-mode-row" id="bss-gps-0" data-gps="0"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_0">No restriction</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_0">GPS and all location services work normally at all times. No restriction applied.</span></div></div>
+        <div class="bss-mode-row" id="bss-gps-1" data-gps="1"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_1">GPS off (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_1">GPS satellite chip shuts off when the screen goes off. Wi-Fi and cell-tower location keep working at lower accuracy. Safe for most navigation use cases.</span></div></div>
+        <div class="bss-mode-row" id="bss-gps-2" data-gps="2"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_2">All off (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_2">Every location provider - GPS, Wi-Fi, and cell tower - stops when the screen goes off. Weather widgets, maps, and fitness trackers stop updating in the background.</span></div></div>
+        <div class="bss-mode-row" id="bss-gps-3" data-gps="3"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_3">Foreground only</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_3">Only the app on screen can access location. Any app running in the background is fully denied, regardless of permissions granted.</span></div></div>
+        <div class="bss-mode-row" id="bss-gps-4" data-gps="4"><div class="bss-mode-dot"></div><div class="bss-mode-info"><span class="bss-mode-name" data-i18n="bss_gps_4">Throttle (screen off)</span><span class="bss-mode-desc" data-i18n="bss_gps_hint_4">Background apps can still get location, but updates are rate-limited when the screen is off. Less battery impact with better app compatibility than a full disable.</span></div></div>
       </div>
     </div>
     <div class="bss-actions"><button class="bss-apply-btn ripple" id="bss-apply"><span data-i18n="bss_apply">Apply &amp; Close</span></button></div>
   </div>
 </div>
 
-<div class="modal-overlay" id="soo-modal" style="transition:none">
-  <div class="modal bss-modal" style="transition:none">
+<div class="modal-overlay" id="soo-modal">
+  <div class="modal bss-modal">
     <div class="modal-head"><h3><span data-i18n="soo_modal_title">Screen Off Options</span></h3><button class="modal-x ripple" id="soo-close">&#x2715;</button></div>
     <div class="bss-opt-list">
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_wifi">Disable Wi-Fi</span><span class="bss-opt-desc" data-i18n="soo_opt_wifi_desc">Turns off Wi-Fi after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-wifi"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_bt">Disable Bluetooth</span><span class="bss-opt-desc" data-i18n="soo_opt_bt_desc">Turns off Bluetooth after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-bt"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_data">Disable mobile data</span><span class="bss-opt-desc" data-i18n="soo_opt_data_desc">Turns off mobile data after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-data"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_location">Disable location</span><span class="bss-opt-desc" data-i18n="soo_opt_location_desc">Turns off all location providers after the connections off delay</span></div><label class="tgl"><input type="checkbox" id="soo-t-location"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_sensors">Disable sensors</span><span class="bss-opt-desc" data-i18n="soo_opt_sensors_desc">Turns off all sensors (accelerometer, gyroscope, step counter, etc.) via Android's sensors_off mode</span></div><label class="tgl"><input type="checkbox" id="soo-t-sensors"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_sensors">Disable sensors</span><span class="bss-opt-desc" data-i18n="soo_opt_sensors_desc">Turns off all sensors (accelerometer, gyroscope, step counter, etc.)</span></div><label class="tgl"><input type="checkbox" id="soo-t-sensors"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_panel_lpm">Panel LPM</span><span class="bss-opt-desc" data-i18n="soo_opt_panel_lpm_desc">Enables the display panel's low-power mode when screen is off, reducing power draw on brief wake-ups</span></div><label class="tgl"><input type="checkbox" id="soo-t-panel-lpm"><span class="tgl-sl"></span></label></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_conn_delay">Connections off delay</span><span class="bss-opt-desc" data-i18n="soo_opt_conn_delay_desc">Minutes after screen-off before disabling connections</span></div><select id="soo-conn-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:10px;padding:8px 10px;font-size:0.82rem;font-weight:700;min-width:70px"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="240">240 min</option></select></div>
-      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_restore">Restore on unlock</span><span class="bss-opt-desc" data-i18n="soo_opt_restore_desc">Re-enables all connections that were disabled when screen turns back on</span></div><label class="tgl"><input type="checkbox" id="soo-t-restore"><span class="tgl-sl"></span></label></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_conn_delay">Connections off delay</span><span class="bss-opt-desc" data-i18n="soo_opt_conn_delay_desc">Minutes after screen-off before disabling connections</span></div><select id="soo-conn-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:10px;padding:8px 10px;font-size:0.82rem;font-weight:700;min-width:70px"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="240">240 min</option></select></div>
+      <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_restore">Restore on unlock</span><span class="bss-opt-desc" data-i18n="soo_opt_restore_desc">Re-enables all connections that were disabled when the screen turns back on</span></div><label class="tgl"><input type="checkbox" id="soo-t-restore"><span class="tgl-sl"></span></label></div>
       <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_ram_clean">Clean RAM on screen off</span><span class="bss-opt-desc" data-i18n="soo_opt_ram_clean_desc">Run RAM cleaner after the delay below</span></div><select id="soo-t-ram-clean-mode" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:10px;padding:8px 10px;font-size:0.82rem;font-weight:700;min-width:100px"><option value="off" data-i18n="soo_ram_clean_off">Off</option><option value="safe" data-i18n="soo_ram_clean_safe">Safe</option><option value="aggressive" data-i18n="soo_ram_clean_aggressive">Aggressive</option><option value="extreme" data-i18n="soo_ram_clean_extreme">Extreme</option></select></div>
       <div id="soo-ram-clean-extras" style="overflow:hidden;max-height:0;transition:max-height 0.25s ease">
-        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_ram_clean_delay">RAM clean delay</span><span class="bss-opt-desc" data-i18n="soo_opt_ram_clean_delay_desc">Minutes after screen-off before running the RAM cleaner</span></div><select id="soo-ram-clean-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:10px;padding:8px 10px;font-size:0.82rem;font-weight:700;min-width:70px"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="240">240 min</option></select></div>
+        <div class="bss-opt-row"><div class="bss-opt-info"><span class="bss-opt-name" data-i18n="soo_opt_ram_clean_delay">RAM clean delay</span><span class="bss-opt-desc" data-i18n="soo_opt_ram_clean_delay_desc">Minutes after screen-off before running the RAM cleaner</span></div><select id="soo-ram-clean-delay" style="background:var(--surface-3);color:var(--on-surface);border:1px solid var(--stroke-var);border-radius:10px;padding:8px 10px;font-size:0.82rem;font-weight:700;min-width:70px"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="120">120 min</option><option value="180">180 min</option><option value="240">240 min</option></select></div>
       </div>
     </div>
     <div class="bss-actions"><button class="bss-apply-btn ripple" id="soo-apply"><span data-i18n="soo_apply">Apply &amp; Close</span></button></div>
   </div>
 </div>
 
-<div class="modal-overlay" id="ram-clean-modal" style="transition:none">
-  <div class="modal bss-modal ram-clean-modal" style="transition:none">
+<div class="modal-overlay" id="ram-clean-modal">
+  <div class="modal bss-modal ram-clean-modal">
     <div class="modal-head">
       <h3><span data-i18n="ram_cleaner_title">RAM Cleaner</span></h3>
       <button class="modal-x ripple" id="ram-clean-close">&#x2715;</button>
     </div>
     <div id="ram-clean-picker" class="rc-picker">
+      <button class="wl-btn ripple" id="ram-wl-open"><span data-i18n="ram_wl_btn">&#x25B6; RAM Cleaner Whitelist</span><span class="wl-count" id="ramwl-count">0</span></button>
       <p class="ram-clean-sub" data-i18n="ram_cleaner_subtitle">Free up memory by clearing cached processes</p>
       <div class="ram-clean-modes" id="ram-clean-modes">
         <button class="ram-clean-mode ripple" data-mode="safe">
           <span class="rcm-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span>
-          <span class="rcm-info"><span class="rcm-name" data-i18n="ram_clean_safe_name">Safe</span><span class="rcm-desc" data-i18n="ram_clean_safe_desc">Releases cached background apps using the system mechanism. Minimal impact.</span></span>
+          <span class="rcm-info"><span class="rcm-name" data-i18n="ram_clean_safe_name">Safe</span><span class="rcm-desc" data-i18n="ram_clean_safe_desc">Releases cached background apps using the system mechanism. Minimal impact, safe to use anytime.</span></span>
         </button>
         <button class="ram-clean-mode ripple" data-mode="aggressive">
           <span class="rcm-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></span>

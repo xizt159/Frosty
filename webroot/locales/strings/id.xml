@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">Pengoptimal Baterai</string>
   <string name="kpi_sub">dari 18 aktif</string>
   <string name="status_count">{0} dari {1} aktif</string>
   <string name="home_active">aktif</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">Deep Doze dikembalikan</string>
   <string name="log_deep_doze_level">Deep Doze → {0}</string>
   <string name="log_deep_doze_reapplied">Deep Doze diterapkan ulang</string>
+  <string name="loading_reapplying_ram">Menerapkan ulang pengoptimal RAM...</string>
+  <string name="log_ram_opt_level">Pengoptimal RAM → {0}</string>
+  <string name="log_ram_opt_reapplied">Pengoptimal RAM diterapkan ulang</string>
+  <string name="ram_wl_btn">▶ Daftar Putih Pembersih RAM</string>
+  <string name="ram_wl_title">Daftar Putih Pembersih RAM</string>
+  <string name="ram_wl_notice">Aplikasi dalam daftar putih tidak pernah di-force-stop oleh pembersih RAM.</string>
   <string name="tgl_soo">Optimasi Layar Mati</string>
   <string name="tgl_soo_desc">Menonaktifkan koneksi terpilih dan secara opsional membersihkan RAM setelah jeda layar mati. Dipulihkan saat layar aktif.</string>
   <string name="soo_configure">Konfigurasi Opsi</string>

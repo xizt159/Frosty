@@ -1,0 +1,3 @@
+# Frosty - RAM Cleaner Whitelist
+# Apps listed here are never force-stopped by the safe/aggressive/extreme RAM cleaner.
+# Add package names one per line. Lines starting with # are comments.

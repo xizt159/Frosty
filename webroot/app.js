@@ -20,11 +20,20 @@
   var wlIconObserver = null;
   var wlIconCache = new Map();
 
+  var ramwlPkgs = [];
+  var ramwlSearch = '';
+  var ramwlShowSys = false;
+  var ramwlRendered = 0;
+  var ramwlFiltered = [];
+  var ramwlScrolling = false;
+  var ramwlIconObserver = null;
+  var ramwlSearchTimer = null;
+
   var cadAllApps = [];
   var cadPkgs = [];
   var cadSearch = '';
   var cadLoaded = false;
-  var cadRendered = 0;
+  var cadRendered = 0;       // FIX: batch rendering counter (was missing)
   var cadFiltered = [];
   var cadScrolling = false;
   var cadIconObserver = null;
@@ -308,6 +317,16 @@
     if (mod) { if (p.deep_doze_level === 'moderate') mod.classList.add('on'); else mod.classList.remove('on'); }
     if (max) { if (p.deep_doze_level === 'maximum') max.classList.add('on'); else max.classList.remove('on'); }
 
+    var ramoptx = $('ram-opt-extras');
+    if (ramoptx) {
+      if (p.ram_optimizer) ramoptx.classList.add('on');
+      else ramoptx.classList.remove('on');
+    }
+
+    var ramMod = $('ram-lvl-mod'), ramMax = $('ram-lvl-max');
+    if (ramMod) { if (p.ram_optimizer_level === 'moderate') ramMod.classList.add('on'); else ramMod.classList.remove('on'); }
+    if (ramMax) { if (p.ram_optimizer_level === 'maximum') ramMax.classList.add('on'); else ramMax.classList.remove('on'); }
+
     setChk('t-bss', p.battery_saver);
     var bssx = $('bss-extras');
     if (bssx) {
@@ -527,6 +546,31 @@
 
         // Update local state and re-render without a shell round-trip
         state.prefs.deep_doze_level = level;
+        render();
+      }
+    } catch (e) { toast(t('toast_error'), 'err'); }
+    hideLoading();
+    busy = false;
+  }
+
+  async function setRamOptLevel(level) {
+    if (busy) return;
+    if (level === state.prefs.ram_optimizer_level) return;
+    busy = true;
+    showLoading(t('loading_setting_level'));
+    try {
+      var res = await API.setPref('ram_optimizer_level', level);
+      if (res.status === 'ok') {
+        toast(tf('log_ram_opt_level', level), 'ok');
+        logAction(tf('log_ram_opt_level', level), 'info');
+
+        if (state.prefs.ram_optimizer) {
+          updateLoading(t('loading_reapplying_ram'));
+          await API.applyRamOptimizer();
+          logAction(t('log_ram_opt_reapplied'), 'ok');
+        }
+
+        state.prefs.ram_optimizer_level = level;
         render();
       }
     } catch (e) { toast(t('toast_error'), 'err'); }
@@ -1114,96 +1158,11 @@
       updateWlCount();
       wlFiltered = getSortedFiltered();
 
-      // ── In-place update: toggle every rendered row for this pkg ──
       if (list) {
-        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-        for (var i = 0; i < rows.length; i++) {
-          if (isWl) {
-            rows[i].classList.remove('active');
-            rows[i].querySelector('.wl-chk').innerHTML = '';
-          } else {
-            rows[i].classList.add('active');
-            rows[i].querySelector('.wl-chk').innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-          }
-        }
+        var savedScroll = list.scrollTop;
+        renderWl();
+        list.scrollTop = savedScroll;
       }
-
-      // ── Update top selected section without touching scroll position ──
-      if (list) {
-        var sep = list.querySelector('.wl-sep');
-        if (isWl) {
-          // Removing: delete duplicate row from top section if present
-          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-          // If there's a separator, the first match above it is the top copy
-          if (sep && topRows.length > 1) {
-            for (var j = 0; j < topRows.length; j++) {
-              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                topRows[j].remove();
-                break;
-              }
-            }
-          }
-          // If no more selected apps, remove separator
-          var remaining = list.querySelectorAll('.wl-item.active');
-          if (sep && remaining.length === 0) sep.remove();
-        } else {
-          // Adding: insert a copy at the top (before separator or at start)
-          var appData = null;
-          for (var k = 0; k < wlFiltered.length; k++) {
-            if (wlFiltered[k].pkg === pkg) { appData = wlFiltered[k]; break; }
-          }
-          if (appData) {
-            var newRow = document.createElement('div');
-            newRow.className = 'wl-item active';
-            newRow.dataset.pkg = pkg;
-
-            var img = document.createElement('img');
-            img.className = 'wl-ico';
-            img.decoding = 'async';
-            img.dataset.pkg = pkg;
-            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
-              img.src = wlIconCache.get(pkg);
-            } else {
-              img.dataset.src = 'ksu://icon/' + pkg;
-              img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
-              img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
-              if (wlIconObserver) wlIconObserver.observe(img);
-            }
-
-            var infoDiv = document.createElement('div');
-            infoDiv.className = 'wl-app';
-            var nameSpan = document.createElement('span');
-            nameSpan.className = 'wl-name';
-            nameSpan.textContent = appData.label;
-            infoDiv.appendChild(nameSpan);
-            if (appData.label !== appData.pkg) {
-              var pkgSpan = document.createElement('span');
-              pkgSpan.className = 'wl-pkg';
-              pkgSpan.textContent = appData.pkg;
-              infoDiv.appendChild(pkgSpan);
-            }
-
-            var chk = document.createElement('span');
-            chk.className = 'wl-chk';
-            chk.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-
-            newRow.appendChild(img);
-            newRow.appendChild(infoDiv);
-            newRow.appendChild(chk);
-
-            // Ensure separator exists
-            if (!sep) {
-              sep = document.createElement('div');
-              sep.className = 'wl-sep';
-              sep.setAttribute('data-i18n', 'wl_sep_other');
-              sep.textContent = t('wl_sep_other') || 'Other apps';
-              list.insertBefore(sep, list.firstChild);
-            }
-            list.insertBefore(newRow, sep);
-          }
-        }
-      }
-
     } catch (e) {
       toast(tf('log_load_failed', e.message), 'err');
     }
@@ -1212,6 +1171,233 @@
   function updateWlCount() {
     var el = $('wl-count');
     if (el) el.textContent = wlPkgs.length;
+  }
+
+  function openRamWhitelist() {
+    var titleEl = document.querySelector('#ramwl-modal .modal-head h3 span[data-i18n]');
+    var noticeEl = document.querySelector('#ramwl-modal .modal-notice span[data-i18n="ram_wl_notice"]');
+    if (titleEl) titleEl.textContent = t('ram_wl_title');
+    if (noticeEl) noticeEl.textContent = t('ram_wl_notice');
+    $('ramwl-modal').classList.add('open');
+    renderRamWlLoading();
+    setTimeout(function () {
+      if (!wlLoaded) {
+        loadAllApps().then(function () {
+          return loadRamWlPkgs();
+        }).then(function () {
+          ramwlFiltered = getRamWlSortedFiltered();
+          renderRamWl();
+        });
+      } else {
+        loadRamWlPkgs().then(function () {
+          ramwlFiltered = getRamWlSortedFiltered();
+          renderRamWl();
+        });
+      }
+    }, 50);
+  }
+
+  function closeRamWhitelist() {
+    $('ramwl-modal').classList.remove('open');
+    if (ramwlIconObserver) { ramwlIconObserver.disconnect(); ramwlIconObserver = null; }
+  }
+
+  function renderRamWlLoading() {
+    var list = $('ramwl-list');
+    if (!list) return;
+    list.innerHTML = '<div class="wl-empty">' + t('wl_loading') + '</div>';
+    list.style.pointerEvents = 'none';
+  }
+
+  async function loadRamWlPkgs() {
+    try {
+      var res = await API.getRamWhitelist();
+      ramwlPkgs = res.packages || [];
+      updateRamWlCount();
+    } catch (e) {
+      ramwlPkgs = [];
+    }
+  }
+
+  function updateRamWlCount() {
+    var el = $('ramwl-count');
+    if (el) el.textContent = ramwlPkgs.length;
+  }
+
+  function getRamWlFilteredApps() {
+    return wlAllApps.filter(function (a) {
+      if (!ramwlShowSys && a.system) return false;
+      if (ramwlSearch) {
+        var q = ramwlSearch.toLowerCase();
+        return a.label.toLowerCase().indexOf(q) !== -1 || a.pkg.toLowerCase().indexOf(q) !== -1;
+      }
+      return true;
+    });
+  }
+
+  function getRamWlSortedFiltered() {
+    var filtered = getRamWlFilteredApps();
+    var checked = [];
+    var unchecked = [];
+    for (var i = 0; i < filtered.length; i++) {
+      if (ramwlPkgs.indexOf(filtered[i].pkg) !== -1) checked.push(filtered[i]);
+      else unchecked.push(filtered[i]);
+    }
+    return checked.concat(unchecked);
+  }
+
+  function setupRamWlIconObserver() {
+    if (ramwlIconObserver) ramwlIconObserver.disconnect();
+    ramwlIconObserver = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) {
+          var img = entries[i].target;
+          var pkg = img.dataset.pkg;
+          var src = img.dataset.src;
+          if (src) {
+            if (wlIconCache.has(pkg)) {
+              var cached = wlIconCache.get(pkg);
+              if (cached !== 'err') img.src = cached;
+              else img.style.visibility = 'hidden';
+            } else { img.src = src; }
+            img.removeAttribute('data-src');
+          }
+          ramwlIconObserver.unobserve(img);
+        }
+      }
+    }, { root: $('ramwl-list'), rootMargin: '500px 0px' });
+  }
+
+  function renderRamWl() {
+    var list = $('ramwl-list');
+    if (!list) return;
+    list.style.pointerEvents = '';
+
+    if (ramwlFiltered.length === 0) {
+      list.innerHTML = '<div class="wl-empty">' + t('wl_empty') + '</div>';
+      return;
+    }
+
+    ramwlRendered = 0;
+    list.scrollTop = 0;
+    list.innerHTML = '';
+    setupRamWlIconObserver();
+
+    var hasChecked = false;
+    for (var i = 0; i < ramwlFiltered.length; i++) {
+      if (ramwlPkgs.indexOf(ramwlFiltered[i].pkg) !== -1) { hasChecked = true; break; }
+    }
+
+    appendRamWlBatch(25, false);
+    if (hasChecked) {
+      var sepIdx = -1;
+      for (var j = 0; j < ramwlFiltered.length; j++) {
+        if (ramwlPkgs.indexOf(ramwlFiltered[j].pkg) === -1) { sepIdx = j; break; }
+      }
+      if (sepIdx > 0) {
+        var sep = document.createElement('div');
+        sep.className = 'wl-sep';
+        sep.textContent = t('wl_sep_other') || 'Other apps';
+        var rows = list.querySelectorAll('.wl-item');
+        if (rows[sepIdx]) list.insertBefore(sep, rows[sepIdx]);
+      }
+    }
+  }
+
+  function appendRamWlBatch(count, append) {
+    var list = $('ramwl-list');
+    if (!list) return;
+    var end = Math.min(ramwlRendered + count, ramwlFiltered.length);
+    var frag = document.createDocumentFragment();
+    for (var i = ramwlRendered; i < end; i++) {
+      var a = ramwlFiltered[i];
+      var isWl = ramwlPkgs.indexOf(a.pkg) !== -1;
+
+      var row = document.createElement('div');
+      row.className = 'wl-item' + (isWl ? ' active' : '');
+      row.dataset.pkg = a.pkg;
+
+      var img = document.createElement('img');
+      img.className = 'wl-ico';
+      img.decoding = 'async';
+      img.dataset.pkg = a.pkg;
+      if (wlIconCache.has(a.pkg) && wlIconCache.get(a.pkg) !== 'err') {
+        img.src = wlIconCache.get(a.pkg);
+      } else {
+        img.dataset.src = 'ksu://icon/' + a.pkg;
+        img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
+        img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
+        ramwlIconObserver.observe(img);
+      }
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'wl-app';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'wl-name';
+      nameSpan.textContent = a.label;
+      infoDiv.appendChild(nameSpan);
+      if (a.label !== a.pkg) {
+        var pkgSpan = document.createElement('span');
+        pkgSpan.className = 'wl-pkg';
+        pkgSpan.textContent = a.pkg;
+        infoDiv.appendChild(pkgSpan);
+      }
+
+      var chk = document.createElement('span');
+      chk.className = 'wl-chk';
+      chk.innerHTML = isWl ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>' : '';
+
+      row.appendChild(img);
+      row.appendChild(infoDiv);
+      row.appendChild(chk);
+  
+      frag.appendChild(row);
+    }
+    list.appendChild(frag);
+    ramwlRendered = end;
+    if (!append) list.onscroll = onRamWlScroll;
+  }
+
+  function onRamWlScroll() {
+    if (ramwlScrolling) return;
+    ramwlScrolling = true;
+    requestAnimationFrame(function () {
+      var list = $('ramwl-list');
+      if (!list || ramwlRendered >= ramwlFiltered.length) {
+        ramwlScrolling = false;
+        return;
+      }
+      var scrollBottom = list.scrollTop + list.clientHeight;
+      var threshold = list.scrollHeight - 300;
+      if (scrollBottom >= threshold) {
+        appendRamWlBatch(25, true);
+      }
+      ramwlScrolling = false;
+    });
+  }
+
+  async function toggleRamWlApp(pkg) {
+    var list = $('ramwl-list');
+    var isWl = ramwlPkgs.indexOf(pkg) !== -1;
+    try {
+      if (isWl) {
+        await API.removeRamWhitelist(pkg);
+        ramwlPkgs = ramwlPkgs.filter(function (p) { return p !== pkg; });
+      } else {
+        await API.addRamWhitelist(pkg);
+        ramwlPkgs.push(pkg);
+      }
+      updateRamWlCount();
+      ramwlFiltered = getRamWlSortedFiltered();
+
+      if (list) {
+        var savedScroll = list.scrollTop;
+        renderRamWl();
+        list.scrollTop = savedScroll;
+      }
+    } catch (e) {
+      toast(tf('log_load_failed', e.message), 'err');
+    }
   }
 
 
@@ -1467,69 +1653,9 @@
 
       var list = $('cad-list');
       if (list) {
-        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-        for (var i = 0; i < rows.length; i++) {
-          if (isCad) {
-            rows[i].classList.remove('active');
-            rows[i].querySelector('.wl-chk').innerHTML = '';
-          } else {
-            rows[i].classList.add('active');
-            rows[i].querySelector('.wl-chk').innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-          }
-        }
-        var sep = list.querySelector('.wl-sep');
-        if (isCad) {
-          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-          if (sep && topRows.length > 1) {
-            for (var j = 0; j < topRows.length; j++) {
-              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                topRows[j].remove(); break;
-              }
-            }
-          }
-          var remaining = list.querySelectorAll('.wl-item.active');
-          if (sep && remaining.length === 0) sep.remove();
-        } else {
-          var appData = null;
-          for (var k = 0; k < cadFiltered.length; k++) {
-            if (cadFiltered[k].pkg === pkg) { appData = cadFiltered[k]; break; }
-          }
-          if (appData) {
-            var newRow = document.createElement('div');
-            newRow.className = 'wl-item active';
-            newRow.dataset.pkg = pkg;
-
-            var img2 = document.createElement('img');
-            img2.className = 'wl-ico'; img2.decoding = 'async'; img2.dataset.pkg = pkg;
-            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
-              img2.src = wlIconCache.get(pkg);
-            } else {
-              img2.dataset.src = 'ksu://icon/' + pkg;
-              img2.onload = function() { wlIconCache.set(this.dataset.pkg, this.src); };
-              img2.onerror = function() { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
-              if (cadIconObserver) cadIconObserver.observe(img2);
-            }
-
-            var infoDiv2 = document.createElement('div'); infoDiv2.className = 'wl-app';
-            var ns2 = document.createElement('span'); ns2.className = 'wl-name'; ns2.textContent = appData.label;
-            infoDiv2.appendChild(ns2);
-            if (appData.label !== appData.pkg) {
-              var ps2 = document.createElement('span'); ps2.className = 'wl-pkg'; ps2.textContent = appData.pkg;
-              infoDiv2.appendChild(ps2);
-            }
-            var chk2 = document.createElement('span'); chk2.className = 'wl-chk'; chk2.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-
-            newRow.appendChild(img2); newRow.appendChild(infoDiv2); newRow.appendChild(chk2);
-
-            if (!sep) {
-              sep = document.createElement('div');
-              sep.className = 'wl-sep';
-              sep.textContent = t('wl_sep_other') || 'Other apps';
-              list.insertBefore(sep, list.firstChild);
-            }
-            list.insertBefore(newRow, sep);
-          }
-        }
+        var savedScroll = list.scrollTop;
+        renderCad();
+        list.scrollTop = savedScroll;
       }
     } catch (e) {
       toast(tf('log_load_failed', e.message), 'err');
@@ -1571,6 +1697,15 @@
     searchTimer = setTimeout(function () {
       wlFiltered = getSortedFiltered();
       renderWl();
+    }, 150);
+  }
+
+  function debouncedRamWlSearch(val) {
+    ramwlSearch = val;
+    if (ramwlSearchTimer) clearTimeout(ramwlSearchTimer);
+    ramwlSearchTimer = setTimeout(function () {
+      ramwlFiltered = getRamWlSortedFiltered();
+      renderRamWl();
     }, 150);
   }
 
@@ -1638,7 +1773,7 @@
           var curName = spanEl.textContent;
           var newName = window.prompt(t('io_rename_prompt'), curName);
           if (!newName || newName === curName) return;
-          var newPath = dir + 'frosty_' + newName.replace(/[\/\:*?"<>|]/g, '_') + '.json';
+          var newPath = dir + 'frosty_' + newName.replace(/[\/\:*?"<>|`$]/g, '_') + '.json';
           API.run('mv "' + path + '" "' + newPath + '"').then(function() {
             spanEl.textContent = newName;
             bObj.path = newPath;
@@ -1710,6 +1845,7 @@
   var _MODAL_ORDER = [
     { id: 'cad-modal',           close: function() { closeCustomAppDoze(); } },
     { id: 'wl-modal',            close: function() { closeWhitelist(); } },
+    { id: 'ramwl-modal',         close: function() { closeRamWhitelist(); } },
     { id: 'bss-modal',           close: function() { closeBssModal(); } },
     { id: 'soo-modal',           close: function() { closeSooModal(); } },
     { id: 'about-modal',         close: function() { $('about-modal').classList.remove('open'); } },
@@ -1944,7 +2080,7 @@
         if (closeBtn)    { closeBtn.style.display    = ''; }
         if (modal)       { delete modal.dataset.cleaning; }
       }
-    }, 400);
+    }, 1500);
   }
 
     $('soo-close').addEventListener('click', closeSooModal);
@@ -2008,6 +2144,35 @@
         toggleWlApp(item.dataset.pkg);
       }
     });
+
+    // ── RAM Cleaner Whitelist ──
+    $('ram-wl-open').addEventListener('click', function() { _pushModalHistory(); openRamWhitelist(); });
+    $('ram-wl-close').addEventListener('click', closeRamWhitelist);
+    $('ramwl-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeRamWhitelist();
+    });
+
+    $('ram-wl-search').addEventListener('input', function () {
+      debouncedRamWlSearch(this.value);
+    });
+
+    $('ram-wl-sys').addEventListener('change', function () {
+      ramwlShowSys = this.checked;
+      ramwlFiltered = getRamWlSortedFiltered();
+      renderRamWl();
+    });
+
+    $('ramwl-list').addEventListener('scroll', onRamWlScroll, { passive: true });
+
+    $('ramwl-list').addEventListener('click', function (e) {
+      var item = e.target.closest('.wl-item');
+      if (item && item.dataset.pkg) {
+        toggleRamWlApp(item.dataset.pkg);
+      }
+    });
+
+    $('ram-lvl-mod').addEventListener('click', function () { setRamOptLevel('moderate'); });
+    $('ram-lvl-max').addEventListener('click', function () { setRamOptLevel('maximum'); });
 
     // ── GMS Categories ──
     var cats = ['telemetry', 'background', 'location', 'connectivity', 'cloud', 'payments', 'wearables', 'games'];
@@ -2300,6 +2465,12 @@
       updateCadCount();
     } catch (e) {}
 
+    try {
+      var ramwl = await API.getRamWhitelist();
+      ramwlPkgs = ramwl.packages || [];
+      updateRamWlCount();
+    } catch (e) {}
+
     hideLoading();
   }
 
@@ -2316,7 +2487,7 @@
     var appEl = null;
 
     function isModalOpen() {
-      var ids = ['wl-modal', 'cad-modal', 'bss-modal', 'soo-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
+      var ids = ['wl-modal', 'ramwl-modal', 'cad-modal', 'bss-modal', 'soo-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
       for (var i = 0; i < ids.length; i++) {
         var m = document.getElementById(ids[i]);
         if (m && m.classList.contains('open')) return true;

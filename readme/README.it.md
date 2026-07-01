@@ -35,10 +35,10 @@ Frosty ottimizza la durata della batteria congelando i servizi GMS, applicando m
 - **Congelamento GMS**: Disabilita i servizi GMS in 8 categorie.
 - **App Doze**: Rimuove qualsiasi app dall'elenco delle eccezioni del risparmio energetico Doze di Android. Anche i GMS possono essere selezionati qui, sostituendo il vecchio interruttore dedicato GMS Doze.
 - **Deep Doze**: Restrizioni aggressive in background per tutte le app (Moderato / Massimo).
-- **Ottimizzazione Schermo Spento**: Disabilita automaticamente le connessioni selezionate (Wi-Fi, Bluetooth, dati, posizione) e svuota le app in cache dopo un ritardo configurabile allo spegnimento dello schermo, quindi ripristina tutto allo sblocco.
+- **Ottimizzazione Schermo Spento**: Disabilita le connessioni selezionate (Wi-Fi, Bluetooth, dati, posizione) ed esegue opzionalmente la pulizia RAM dopo un ritardo configurabile di spegnimento schermo, ripristina tutto allo sblocco.
 - **Disabilita Tracciamento Google**: Disabilita l'analisi GMS, la telemetria Clearcut, il polling Phenotype e il tracciamento degli annunci.
 - **Tweak del Kernel**: Ottimizzazioni per scheduler, VM, rete e debug.
-- **Ottimizzatore RAM**: Regola i limiti dei processi, la compattazione della memoria e il comportamento di zram.
+- **Ottimizzatore RAM**: Auto-tuning ZRAM, soglie LMK/LMKD/PSI, disabilitazione reclaim OEM, parametri memoria VM (Moderato / Massimo), pulitore RAM configurabile.
 - **Proprietà di Sistema**: Disabilita le proprietà di debug per risparmiare RAM e batteria.
 - **Terminazione Log**: Arresta i processi di log e di debug che consumano batteria.
 - **Ottimizzatore Risparmio Energetico**: Personalizza il comportamento del risparmio energetico integrato di Android quando è attivo.
@@ -59,7 +59,7 @@ Frosty ottimizza la durata della batteria congelando i servizi GMS, applicando m
 
 Apri la WebUI dal tuo gestore root:
 
-- **Tweak di Sistema**: tweak del kernel, proprietà di sistema, disabilitazione sfocatura, terminazione log, disabilitazione tracciamento.
+- **Tweak di Sistema**: tweak del kernel, proprietà di sistema, disabilitazione sfocatura, terminazione log, disabilitazione tracciamento, ottimizzatore e pulitore RAM.
 - **Doze**: App Doze con selettore app, Deep Doze con selettore di livello e editor di whitelist.
 - **Ottimizzazione Schermo Spento**: interruttori per connessione, timer di ritardo, ripristino allo sblocco.
 - **Categorie GMS**: congela i singoli gruppi di servizi GMS.
@@ -86,13 +86,11 @@ Apri la WebUI dal tuo gestore root:
 
 ## Livelli Deep Doze
 
-| Funzionalità | Moderato | Massimo |
-|---------|:--------:|:-------:|
-| Costanti Doze Aggressive | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Terminazione Wakelock (schermo spento) | ✅ | ✅ |
-| Nega WAKE_LOCK | ❌ | ✅ |
+Entrambi i livelli riscrivono le costanti Doze, forzano IDLE a schermo spento, eseguono un killer di wakelock dopo 5 minuti di schermo spento e attivano la policy flex-idle di JobScheduler su Android 13+. **Massimo** usa inoltre il bucket di standby `restricted` (Moderato usa `rare`), nega `WAKE_LOCK`, disabilita il sensore di movimento a schermo spento e termina i wakelock immediatamente all'applicazione.
 
+## Ottimizzatore RAM
+
+Auto-tiene la compressione ZRAM, le soglie LMK / LMKD / PSI, i nodi di reclaim OEM e i parametri di memoria VM. **Massimo** scala i pesi LMK di ~60-70% verso l'alto e usa soglie LMKD/PSI più proattive.
 ## FAQ
 
 **D: Perché le mie notifiche sono in ritardo?**  
@@ -102,7 +100,7 @@ R: App Doze e Deep Doze limitano l'attività in background. Aggiungi le tue app 
 R: Ora fa parte di App Doze. Apri il selettore di App Doze e seleziona GMS: stesso effetto, interfaccia unificata.
 
 **D: Funziona senza Google Play Services?**  
-R: I Tweak del Kernel, le Proprietà di Sistema, la Disabilitazione Sfocatura, la Terminazione Log, l'Ottimizzatore RAM e Deep Doze funzionano tutti. Le funzionalità GMS richiedono i GMS.
+R: I Tweak del Kernel, le Proprietà di Sistema, la Disabilitazione Sfocatura, la Terminazione Log, l'Ottimizzatore e Pulitore RAM, e Deep Doze funzionano tutti. Le funzionalità GMS richiedono i GMS.
 
 **D: C'è qualcosa di abilitato dopo l'installazione?**  
 R: No. Tutto è spento per impostazione predefinita. Abilita solo ciò di cui hai bisogno.

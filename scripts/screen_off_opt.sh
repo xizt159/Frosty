@@ -1,8 +1,11 @@
 #!/system/bin/sh
 # Frosty - Screen Off Optimization daemon
 
-MODDIR="${0%/*}"
+_d="${0%/*}"
+[ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
+MODDIR="${_d%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+unset _d
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
@@ -25,9 +28,6 @@ SOO_RAM_CLEAN_MODE=off
 SOO_RAM_CLEAN_DELAY=5
 
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
-# Migration from SOO_KILL_CACHE/SOO_CACHE_DELAY
-[ "${SOO_KILL_CACHE:-0}" = "1" ] && [ "$SOO_RAM_CLEAN_MODE" = "off" ] && SOO_RAM_CLEAN_MODE=safe
-: "${SOO_RAM_CLEAN_DELAY:=${SOO_CACHE_DELAY:-5}}"
 
 mkdir -p "$LOGDIR" "$MODDIR/tmp"
 log_soo() { echo "[$(date '+%H:%M:%S')] $1" >> "$SOO_LOG"; }
@@ -92,22 +92,35 @@ _is_tethering() {
   return 1
 }
 
+_svc_toggle() {
+  local _svc="$1" _verb="$2" _label="$3"
+  local _e _rc
+  _e=$(/system/bin/svc "$_svc" "$_verb" 2>&1); _rc=$?
+  if [ "$_rc" = "0" ]; then
+    if [ "$_verb" = "enable" ]; then
+      log_soo "[OK] $_label restored"
+    else
+      log_soo "[OK] $_label disabled"
+    fi
+  else
+    _e=$(printf '%s' "$_e" | tr '\n' ' ')
+    log_soo "[FAIL] $_label $_verb rc=$_rc $_e"
+  fi
+  return "$_rc"
+}
+
 _disable_connections() {
   rm -f "$DISABLED_FILE"
 
   if [ "$SOO_KILL_WIFI" = "1" ] && _wifi_is_on; then
-    svc wifi disable 2>/dev/null
-    echo "wifi" >> "$DISABLED_FILE"
-    log_soo "[OK] Wi-Fi disabled"
+    _svc_toggle wifi disable "Wi-Fi" && echo "wifi" >> "$DISABLED_FILE"
   fi
 
   if [ "$SOO_KILL_BT" = "1" ] && _bt_is_on; then
     if _media_active; then
       log_soo "[SKIP] Bluetooth - media playback active"
     else
-      svc bluetooth disable 2>/dev/null
-      echo "bt" >> "$DISABLED_FILE"
-      log_soo "[OK] Bluetooth disabled"
+      _svc_toggle bluetooth disable "Bluetooth" && echo "bt" >> "$DISABLED_FILE"
     fi
   fi
 
@@ -115,9 +128,7 @@ _disable_connections() {
     if _is_tethering; then
       log_soo "[SKIP] Mobile data - tethering active"
     else
-      svc data disable 2>/dev/null
-      echo "data" >> "$DISABLED_FILE"
-      log_soo "[OK] Mobile data disabled"
+      _svc_toggle data disable "Mobile data" && echo "data" >> "$DISABLED_FILE"
     fi
   fi
 
@@ -148,31 +159,26 @@ _restore_connections() {
   [ -f "$DISABLED_FILE" ] || return
   local _what
   _what=$(cat "$DISABLED_FILE")
-  rm -f "$DISABLED_FILE"
-  [ -z "$_what" ] && return
+  [ -z "$_what" ] && { rm -f "$DISABLED_FILE"; return; }
 
-  log_soo "Restoring: $(echo "$_what" | tr '\n' ' ')"
+  local _list
+  _list=$(echo "$_what" | sed 's/^location:.*/location/' | tr '\n' ',' | sed 's/,$//;s/,/, /g')
+  log_soo "Restoring: $_list"
 
   {
-    echo "$_what" | grep -q "^wifi$" && \
-      svc wifi enable 2>/dev/null && log_soo "[OK] Wi-Fi restored"
+    echo "$_what" | grep -q "^wifi$" && _svc_toggle wifi enable "Wi-Fi"
   } &
   {
-    echo "$_what" | grep -q "^bt$" && \
-      svc bluetooth enable 2>/dev/null && log_soo "[OK] Bluetooth restored"
+    echo "$_what" | grep -q "^bt$" && _svc_toggle bluetooth enable "Bluetooth"
   } &
   {
-    echo "$_what" | grep -q "^data$" && \
-      svc data enable 2>/dev/null && log_soo "[OK] Mobile data restored"
+    echo "$_what" | grep -q "^data$" && _svc_toggle data enable "Mobile data"
   } &
   {
     local _loc
     _loc=$(echo "$_what" | grep "^location:" | cut -d: -f2)
     if [ -n "$_loc" ]; then
       settings put secure location_mode "$_loc" 2>/dev/null
-      am broadcast -a android.location.MODE_CHANGED_ACTION \
-        --ei android.location.extra.LOCATION_MODE "$_loc" \
-        >/dev/null 2>&1
       log_soo "[OK] Location restored (mode $_loc)"
     fi
   } &
@@ -184,6 +190,7 @@ _restore_connections() {
       settings put global display_panel_lpm 0 2>/dev/null && log_soo "[OK] Panel LPM disabled"
   } &
   wait
+  rm -f "$DISABLED_FILE"
 }
 
 
@@ -253,7 +260,7 @@ _monitor_loop() {
     if [ "$SOO_RAM_CLEAN_MODE" != "off" ] && [ -n "$SOO_RAM_CLEAN_MODE" ] && \
        [ "$cache_done" = "0" ] && [ "$elapsed" -ge "$(( SOO_RAM_CLEAN_DELAY * 60 ))" ]; then
       log_soo "RAM clean delay reached (${elapsed}s) mode=$SOO_RAM_CLEAN_MODE"
-      sh "$MODDIR/frosty.sh" ram_clean_silent "$SOO_RAM_CLEAN_MODE" &
+      sh "$MODDIR/scripts/frosty.sh" ram_clean_silent "$SOO_RAM_CLEAN_MODE" &
       cache_done=1
     fi
 

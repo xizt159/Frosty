@@ -370,8 +370,8 @@ html[data-theme="light"] .icon-light { display:block; }
 .lvl-ico  { font-size:1.1rem; line-height:1; }
 .lvl-name { font-size:0.85rem; font-weight:700; letter-spacing:0.2px; }
 .lvl-btn:active { transform:scale(0.94); }
-#lvl-mod.on { background:linear-gradient(135deg,rgba(45,212,160,0.18),rgba(45,212,160,0.06)); border-color:rgba(45,212,160,0.45); color:var(--green); box-shadow:0 1px 12px rgba(45,212,160,0.15); }
-#lvl-max.on { background:linear-gradient(135deg,rgba(229,169,64,0.18),rgba(229,169,64,0.06)); border-color:rgba(229,169,64,0.45); color:var(--orange); box-shadow:0 1px 12px rgba(229,169,64,0.15); }
+.lvl-btn[data-level="moderate"].on { background:linear-gradient(135deg,rgba(45,212,160,0.18),rgba(45,212,160,0.06)); border-color:rgba(45,212,160,0.45); color:var(--green); box-shadow:0 1px 12px rgba(45,212,160,0.15); }
+.lvl-btn[data-level="maximum"].on { background:linear-gradient(135deg,rgba(229,169,64,0.18),rgba(229,169,64,0.06)); border-color:rgba(229,169,64,0.45); color:var(--orange); box-shadow:0 1px 12px rgba(229,169,64,0.15); }
 
 /* ── Manage / Configure Buttons ── */
 .wl-btn {
@@ -446,15 +446,16 @@ html[data-theme="light"] .icon-light { display:block; }
 
 /* ── Modals ── */
 .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.65); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.28s var(--smooth); }
+#ramwl-modal { z-index:1001; }
 .modal-overlay.open { opacity:1; pointer-events:auto; }
 .modal-overlay.centered { align-items:center; padding:0 22px; }
 .modal-overlay.centered .modal { width:100%; max-width:340px; max-height:85vh; border-radius:var(--radius); transform:scale(0.9) translateY(12px); transition:all 0.32s var(--spring); }
 .modal-overlay.centered.open .modal { transform:none; }
 .modal { width:100%; max-width:500px; max-height:85vh; background:var(--surface); border:1px solid var(--border-hi); border-radius:var(--radius) var(--radius) 0 0; box-shadow:0 -6px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; transform:translateY(100%); transition:transform 0.38s var(--spring); }
 .modal-overlay.open .modal { transform:none; }
-#wl-modal .modal,#bss-modal .modal,#cad-modal .modal { transition:none; }
-#wl-modal,#bss-modal,#cad-modal { transition:none; }
-#wl-modal .modal,#cad-modal .modal { height:85vh; }
+#wl-modal .modal,#ramwl-modal .modal,#bss-modal .modal,#cad-modal .modal,#soo-modal .modal,#ram-clean-modal .modal { transition:none; }
+#wl-modal,#ramwl-modal,#bss-modal,#cad-modal,#soo-modal,#ram-clean-modal { transition:none; }
+#wl-modal .modal,#ramwl-modal .modal,#cad-modal .modal { height:85vh; }
 
 .modal-head { display:flex; justify-content:space-between; align-items:center; padding:20px 20px 10px; flex-shrink:0; }
 .modal-head h3 { font-size:0.96rem; font-weight:800; color:var(--text); }
@@ -676,6 +677,7 @@ html[data-theme="light"] .icon-light { display:block; }
 
 /* RAM Cleaner Modal */
 .rc-picker { padding:0 20px 20px; }
+#ram-clean-picker .wl-btn { margin-bottom:14px; }
 .ram-clean-sub { margin:0 0 14px; font-size:0.82rem; color:var(--text-2); line-height:1.45; word-break:break-word; }
 .ram-clean-modes { display:flex; flex-direction:column; gap:8px; }
 .ram-clean-mode {
@@ -689,6 +691,12 @@ html[data-theme="light"] .icon-light { display:block; }
 .rcm-info { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
 .rcm-name { font-size:0.92rem; font-weight:700; color:var(--text); }
 .rcm-desc { font-size:0.74rem; color:var(--text-2); line-height:1.35; word-break:break-word; }
+.ram-clean-mode[data-mode="safe"] .rcm-icon { background:var(--green-dim); color:var(--green); }
+.ram-clean-mode[data-mode="safe"] .rcm-name { color:var(--green); }
+.ram-clean-mode[data-mode="aggressive"] .rcm-icon { background:var(--orange-dim); color:var(--orange); }
+.ram-clean-mode[data-mode="aggressive"] .rcm-name { color:var(--orange); }
+.ram-clean-mode[data-mode="extreme"] .rcm-icon { background:var(--error-dim); color:var(--error); }
+.ram-clean-mode[data-mode="extreme"] .rcm-name { color:var(--error); }
 
 /* RAM Cleaner Processing / Result */
 .rc-proc-wrap { padding:32px 20px 28px; display:flex; flex-direction:column; align-items:center; gap:28px; }

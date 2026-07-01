@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">电池优化器</string>
   <string name="kpi_sub">共 18 项活跃</string>
   <string name="status_count">{0} / {1} 项活跃</string>
   <string name="home_active">活跃</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">深度 Doze 已恢复</string>
   <string name="log_deep_doze_level">深度 Doze → {0}</string>
   <string name="log_deep_doze_reapplied">深度 Doze 已重新应用</string>
+  <string name="loading_reapplying_ram">正在重新应用内存优化器...</string>
+  <string name="log_ram_opt_level">内存优化器 → {0}</string>
+  <string name="log_ram_opt_reapplied">内存优化器已重新应用</string>
+  <string name="ram_wl_btn">▶ 内存清理白名单</string>
+  <string name="ram_wl_title">内存清理白名单</string>
+  <string name="ram_wl_notice">白名单中的应用永远不会被内存清理器强行停止。</string>
   <string name="tgl_soo">锁屏优化</string>
   <string name="tgl_soo_desc">锁屏一段时间后禁用所选连接，并可选择清理内存。解锁时恢复。</string>
   <string name="soo_configure">配置选项</string>

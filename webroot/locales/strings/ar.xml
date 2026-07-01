@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">محسّن البطارية</string>
   <string name="kpi_sub">من 18 نشط</string>
   <string name="status_count">{0} من {1} نشط</string>
   <string name="home_active">نشط</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">تم استعادة Doze العميق</string>
   <string name="log_deep_doze_level">Doze العميق → {0}</string>
   <string name="log_deep_doze_reapplied">تم إعادة تطبيق Doze العميق</string>
+  <string name="loading_reapplying_ram">إعادة تطبيق محسّن RAM...</string>
+  <string name="log_ram_opt_level">محسّن RAM → {0}</string>
+  <string name="log_ram_opt_reapplied">تم إعادة تطبيق محسّن RAM</string>
+  <string name="ram_wl_btn">◀ القائمة البيضاء لمنظف RAM</string>
+  <string name="ram_wl_title">القائمة البيضاء لمنظف RAM</string>
+  <string name="ram_wl_notice">التطبيقات في القائمة البيضاء لا يتم إيقافها قسراً أبداً بواسطة منظف RAM.</string>
   <string name="tgl_soo">تحسين إيقاف الشاشة</string>
   <string name="tgl_soo_desc">تعطيل الاتصالات المحددة وتنظيف RAM اختيارياً بعد تأخير إيقاف الشاشة. الاستعادة عند إلغاء القفل.</string>
   <string name="soo_configure">خيارات الضبط</string>

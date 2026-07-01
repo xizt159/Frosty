@@ -35,10 +35,10 @@ Frosty optimiert die Akkulaufzeit, indem es GMS-Dienste einfriert, systemweite D
 - **GMS Einfrieren**: Deaktiviere GMS-Dienste in 8 Kategorien.
 - **App-Doze**: Entferne jede beliebige App aus der Doze-Ausnahmeliste von Android. GMS ist hier ebenfalls auswählbar und ersetzt den alten dedizierten GMS-Doze-Schalter.
 - **Deep Doze**: Aggressive Hintergrundbeschränkungen für alle Apps (Moderat / Maximum).
-- **Screen-Off-Optimierung**: Deaktiviert automatisch ausgewählte Verbindungen (WLAN, Bluetooth, Daten, Standort) und leert gecachte Apps nach einer konfigurierbaren Verzögerung bei ausgeschaltetem Bildschirm. Stellt beim Entsperren alles wieder her.
+- **Screen-Off-Optimierung**: Deaktiviert ausgewählte Verbindungen (WLAN, Bluetooth, Daten, Standort) und führt optional die RAM-Bereinigung nach einer konfigurierbaren Bildschirm-Aus-Verzögerung aus. Stellt beim Entsperren wieder her.
 - **Google-Tracking deaktivieren**: Deaktiviert GMS-Analysen, Clearcut-Telemetrie, Phenotype-Polling und Ad-Tracking.
 - **Kernel-Tweaks**: Optimierungen für Scheduler, VM, Netzwerk und Debugging.
-- **RAM-Optimierer**: Passt Prozesslimits, Speicherkomprimierung und zram-Verhalten an.
+- **RAM-Optimierer**: ZRAM-Auto-Tuning, LMK/LMKD/PSI-Schwellen, OEM-Reclaim-Deaktivierung, VM-Speicher-Parameter (Moderat / Maximum), konfigurierbarer RAM-Bereiniger.
 - **System-Props**: Deaktiviere Debug-Eigenschaften, um RAM und Akku zu sparen.
 - **Logs beenden**: Stoppt akkubelastende Log- und Debugging-Prozesse.
 - **Energiespar-Tuner**: Passe an, was der integrierte Android-Energiesparmodus macht, wenn er aktiv ist.
@@ -59,7 +59,7 @@ Frosty optimiert die Akkulaufzeit, indem es GMS-Dienste einfriert, systemweite D
 
 Öffne die WebUI über deinen Root-Manager:
 
-- **System-Tweaks**: Kernel-Tweaks, System-Props, Unschärfe deaktivieren, Logs beenden, Tracking-Blocker.
+- **System-Tweaks**: Kernel-Tweaks, System-Props, Unschärfe deaktivieren, Logs beenden, Tracking-Blocker, RAM-Optimierer und -Bereiniger.
 - **Doze**: App-Doze mit App-Auswahl, Deep Doze mit Level-Auswahl und Whitelist-Editor.
 - **Screen-Off-Optimierung**: Schalter pro Verbindung, Verzögerungs-Timer, Wiederherstellung beim Entsperren.
 - **GMS-Kategorien**: Friere einzelne GMS-Dienstgruppen ein.
@@ -86,13 +86,11 @@ Frosty optimiert die Akkulaufzeit, indem es GMS-Dienste einfriert, systemweite D
 
 ## Deep-Doze-Stufen
 
-| Funktion | Moderat | Maximum |
-|---------|:--------:|:-------:|
-| Aggressive Doze-Konstanten | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Screen-Off Wakelock-Beendigung | ✅ | ✅ |
-| WAKE_LOCK verweigern | ❌ | ✅ |
+Beide Stufen schreiben Doze-Konstanten neu, erzwingen IDLE bei Bildschirm-Aus, führen nach 5 Min. Bildschirm-Aus einen Wakelock-Killer aus und aktivieren JobScheduler flex-idle auf Android 13+. **Maximum** verwendet zusätzlich den `restricted` Standby-Bucket (Moderat verwendet `rare`), verweigert `WAKE_LOCK`, deaktiviert den Bewegungssensor bei Bildschirm-Aus und beendet Wakelocks sofort beim Anwenden.
 
+## RAM-Optimierer
+
+Stellt ZRAM-Kompression, LMK-/LMKD-/PSI-Schwellen, OEM-Reclaim-Nodes und VM-Speicher-Parameter automatisch ein. **Maximum** skaliert LMK-Gewichte um ~60-70% nach oben und verwendet proaktivere LMKD/PSI-Schwellen.
 ## FAQ
 
 **F: Warum sind meine Benachrichtigungen verzögert?**  
@@ -102,7 +100,7 @@ A: App-Doze und Deep Doze schränken die Hintergrundaktivität ein. Füge deine 
 A: Es ist jetzt Teil von App-Doze. Öffne die App-Doze-Auswahl und wähle GMS – gleicher Effekt, einheitliche Oberfläche.
 
 **F: Funktioniert das auch ohne Google Play-Dienste?**  
-A: Kernel-Tweaks, System-Props, Unschärfe deaktivieren, Logs beenden, RAM-Optimierer und Deep Doze funktionieren alle. GMS-Funktionen erfordern GMS.
+A: Kernel-Tweaks, System-Props, Unschärfe deaktivieren, Logs beenden, RAM-Optimierer und -Bereiniger und Deep Doze funktionieren alle. GMS-Funktionen erfordern GMS.
 
 **F: Ist nach der Installation irgendetwas aktiviert?**  
 A: Nein. Standardmäßig ist alles ausgeschaltet. Aktiviere nur das, was du brauchst.

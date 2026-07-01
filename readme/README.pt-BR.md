@@ -35,10 +35,10 @@ O Frosty otimiza a duração da bateria congelando os serviços do GMS, aplicand
 - **Congelamento do GMS**: Desative os serviços do GMS em 8 categorias.
 - **App Doze**: Remova qualquer aplicativo da lista de isenção de economia de energia do Doze do Android. O GMS também pode ser selecionado aqui, substituindo o antigo botão dedicado GMS Doze.
 - **Deep Doze**: Restrições agressivas em segundo plano para todos os aplicativos (Moderado / Máximo).
-- **Otimização de Tela Desligada**: Desativa automaticamente as conexões selecionadas (Wi-Fi, Bluetooth, dados, localização) e limpa aplicativos em cache após um atraso configurável com a tela desligada, em seguida, restaura tudo ao desbloquear.
+- **Otimização de Tela Desligada**: Desativa as conexões selecionadas (Wi-Fi, Bluetooth, dados, localização) e executa opcionalmente o limpador de RAM após um atraso configurável de tela desligada, restaura tudo ao desbloquear.
 - **Desativar Rastreamento do Google**: Desativa as análises do GMS, a telemetria Clearcut, as pesquisas Phenotype e o rastreamento de anúncios.
 - **Ajustes do Kernel**: Otimizações de agendamento (scheduler), VM, rede e depuração.
-- **Otimizador de RAM**: Ajusta limites de processos, compactação de memória e comportamento do zram.
+- **Otimizador de RAM**: Autoajuste de ZRAM, limiares LMK/LMKD/PSI, desativação de reclaim OEM, parâmetros de memória VM (Moderado / Máximo), limpador de RAM configurável.
 - **Props do Sistema**: Desative as propriedades de depuração para economizar RAM e bateria.
 - **Encerramento de Logs**: Pare processos de log e depuração que esgotam a bateria.
 - **Afinador de Economia de Bateria**: Personalize o que a economia de bateria integrada do Android faz quando ativa.
@@ -59,7 +59,7 @@ O Frosty otimiza a duração da bateria congelando os serviços do GMS, aplicand
 
 Abra a WebUI do seu gerenciador root:
 
-- **Ajustes do Sistema**: ajustes do kernel, props do sistema, desativar desfoque, encerramento de logs, desativação de rastreamento.
+- **Ajustes do Sistema**: ajustes do kernel, props do sistema, desativar desfoque, encerramento de logs, desativação de rastreamento, otimizador e limpador de RAM.
 - **Doze**: App Doze com seletor de aplicativos, Deep Doze com seletor de nível e editor de lista branca.
 - **Otimização de Tela Desligada**: interruptores por conexão, cronômetros de atraso, restaurar ao desbloquear.
 - **Categorias do GMS**: congele grupos individuais de serviços do GMS.
@@ -86,13 +86,11 @@ Abra a WebUI do seu gerenciador root:
 
 ## Níveis do Deep Doze
 
-| Recurso | Moderado | Máximo |
-|---------|:--------:|:-------:|
-| Constantes do Doze Agressivas | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Encerramento de Wakelock (tela desl.) | ✅ | ✅ |
-| Negar WAKE_LOCK | ❌ | ✅ |
+Ambos os níveis reescrevem as constantes Doze, forçam IDLE ao desligar a tela, executam um matador de wakelocks após 5 minutos de tela desligada e ativam a política flex-idle do JobScheduler no Android 13+. **Máximo** adicionalmente usa o bucket de standby `restricted` (Moderado usa `rare`), nega `WAKE_LOCK`, desativa o sensor de movimento ao desligar a tela e mata wakelocks imediatamente ao aplicar.
 
+## Otimizador de RAM
+
+Autoajusta a compressão ZRAM, os limiares LMK / LMKD / PSI, os nós de reclaim OEM e os parâmetros de memória VM. **Máximo** escala os pesos LMK em ~60-70% para cima e usa limiares LMKD/PSI mais proativos.
 ## FAQ
 
 **P: Por que minhas notificações estão atrasadas?**  
@@ -102,7 +100,7 @@ R: O App Doze e o Deep Doze restringem a atividade em segundo plano. Adicione se
 R: Agora faz parte do App Doze. Abra o seletor do App Doze e selecione o GMS, o mesmo efeito, mas em uma interface unificada.
 
 **P: Isso funciona sem o Google Play Services?**  
-R: Ajustes do Kernel, Props do Sistema, Desativar Desfoque, Encerramento de Logs, Otimizador de RAM e Deep Doze funcionam todos. Os recursos do GMS exigem o GMS.
+R: Ajustes do Kernel, Props do Sistema, Desativar Desfoque, Encerramento de Logs, Otimizador e Limpador de RAM, e Deep Doze funcionam todos. Os recursos do GMS exigem o GMS.
 
 **P: Algo está ativado após a instalação?**  
 R: Não. Tudo está desligado por padrão. Ative apenas o que você precisa.

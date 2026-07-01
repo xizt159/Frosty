@@ -35,10 +35,10 @@ Frosty mengoptimalkan masa pakai baterai dengan membekukan layanan GMS, menerapk
 - **Pembekuan GMS**: Nonaktifkan layanan GMS di 8 kategori.
 - **App Doze**: Hapus aplikasi apa pun dari daftar pengecualian penghematan daya Doze Android. GMS juga dapat dipilih di sini, menggantikan tombol khusus GMS Doze yang lama.
 - **Deep Doze**: Pembatasan latar belakang yang agresif untuk semua aplikasi (Moderat / Maksimum).
-- **Pengoptimalan Layar Mati**: Secara otomatis menonaktifkan koneksi tertentu (Wi-Fi, Bluetooth, data, lokasi) dan membersihkan aplikasi dalam cache setelah penundaan layar mati yang dapat dikonfigurasi, lalu memulihkan semuanya saat tidak terkunci.
+- **Pengoptimalan Layar Mati**: Menonaktifkan koneksi terpilih (Wi-Fi, Bluetooth, data, lokasi) dan secara opsional menjalankan pembersih RAM setelah penundaan layar mati yang dapat dikonfigurasi, memulihkan semuanya saat tidak terkunci.
 - **Nonaktifkan Pelacakan Google**: Menonaktifkan analitik GMS, telemetri Clearcut, polling Phenotype, dan pelacakan iklan.
 - **Penyesuaian Kernel**: Optimalisasi penjadwal (scheduler), VM, jaringan, dan debug.
-- **Pengoptimal RAM**: Menyesuaikan batas proses, pemadatan memori, dan perilaku zram.
+- **Pengoptimal RAM**: Penalaan otomatis ZRAM, ambang batas LMK/LMKD/PSI, penonaktifan reclaim OEM, parameter memori VM (Moderat / Maksimum), pembersih RAM yang dapat dikonfigurasi.
 - **System Props**: Menonaktifkan properti debug untuk menghemat RAM dan baterai.
 - **Penghentian Log**: Menghentikan proses log dan debug yang menguras baterai.
 - **Penyetel Penghemat Baterai**: Menyesuaikan apa yang dilakukan penghemat baterai bawaan Android saat aktif.
@@ -59,7 +59,7 @@ Frosty mengoptimalkan masa pakai baterai dengan membekukan layanan GMS, menerapk
 
 Buka WebUI dari root manager Anda:
 
-- **Penyesuaian Sistem**: penyesuaian kernel, system props, nonaktifkan blur, penghentian log, nonaktifkan pelacakan.
+- **Penyesuaian Sistem**: penyesuaian kernel, system props, nonaktifkan blur, penghentian log, nonaktifkan pelacakan, pengoptimal dan pembersih RAM.
 - **Doze**: App Doze dengan pemilih aplikasi, Deep Doze dengan pemilih level dan editor daftar putih (whitelist).
 - **Pengoptimalan Layar Mati**: tombol per koneksi, timer penundaan, pulihkan saat tidak terkunci.
 - **Kategori GMS**: bekukan setiap kelompok layanan GMS.
@@ -86,13 +86,11 @@ Buka WebUI dari root manager Anda:
 
 ## Tingkat Deep Doze
 
-| Fitur | Moderat | Maksimum |
-|---------|:--------:|:-------:|
-| Konstanta Doze Agresif | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Penghentian Wakelock (layar mati) | ✅ | ✅ |
-| Tolak WAKE_LOCK | ❌ | ✅ |
+Kedua tingkat menulis ulang konstanta Doze, memaksa IDLE saat layar mati, menjalankan pembunuh wakelock setelah 5 menit layar mati, dan mengaktifkan kebijakan flex-idle JobScheduler di Android 13+. **Maksimum** tambahan menggunakan bucket standby `restricted` (Moderat menggunakan `rare`), menolak `WAKE_LOCK`, menonaktifkan sensor gerak saat layar mati, dan membunuh wakelock segera saat diterapkan.
 
+## Pengoptimal RAM
+
+Menala otomatis kompresi ZRAM, ambang batas LMK / LMKD / PSI, node reclaim OEM, dan parameter memori VM. **Maksimum** meningkatkan bobot LMK ~60-70% dan menggunakan ambang batas LMKD/PSI yang lebih proaktif.
 ## FAQ
 
 **T: Mengapa notifikasi saya tertunda?**  
@@ -102,7 +100,7 @@ J: App Doze dan Deep Doze membatasi aktivitas latar belakang. Tambahkan aplikasi
 J: Sekarang ini adalah bagian dari App Doze. Buka pemilih App Doze dan pilih GMS, efeknya sama, hanya saja antarmukanya disatukan.
 
 **T: Apakah ini berfungsi tanpa Layanan Google Play?**  
-J: Penyesuaian Kernel, System Props, Nonaktifkan Blur, Penghentian Log, Pengoptimal RAM, dan Deep Doze semuanya tetap berfungsi. Fitur GMS tentu saja memerlukan GMS.
+J: Penyesuaian Kernel, System Props, Nonaktifkan Blur, Penghentian Log, Pengoptimal dan Pembersih RAM, serta Deep Doze semuanya tetap berfungsi. Fitur GMS tentu saja memerlukan GMS.
 
 **T: Apakah ada yang diaktifkan setelah instalasi?**  
 J: Tidak. Semuanya dimatikan secara default. Aktifkan hanya fitur yang Anda butuhkan.

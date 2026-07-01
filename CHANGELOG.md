@@ -1,6 +1,50 @@
 # Changelog
 ## I am not responsible for any unofficial or tampered versions of my module distributed outside this repository.
 
+## [4.2] - 2026-07-01
+### Deep Doze
+- **Fixed screen-ON poll window after wake**: Monitor now polls every 5 seconds instead of waiting up to 180 seconds.
+- **Maximum level now uses the `restricted` bucket**: Moderate stays on `rare`, maximum moves to `restricted`, giving the two levels a real behavioral difference.
+- **Skip recently-active apps in `restrict_apps()`**: `WORKING_SET` apps are now excluded from bucket restriction alongside `ACTIVE` ones. This fixes the multitasking page-refresh symptom.
+- **Re-force deep idle after wakelock kill**: `_stepdeep()` is now called after each wakelock-killer run in the monitor loop.
+### Battery Saver
+- **Snapshot and restore `low_power` state**: Original `low_power`, `low_power_sticky`, and `low_power_sticky_auto_disable_enabled` values are saved before applying and restored on revert.
+### Screen Off Optimization
+- **Added 1-minute delay option**: Both the connection-off and RAM clean delay dropdowns now include a 1-minute option.
+- **State file deleted after restore, not before**: If killed mid-restore, the partially-restored state is now recoverable.
+### Kill Logs
+- **DropBox tag list moved to `config/dropbox_tags.txt`**: Was duplicated verbatim in both kill and revert functions.
+- **Removed duplicate Wi-Fi verbose logging call**.
+### Kill Tracking
+- **Revert uses `settings delete` instead of forcing values to `1`**.
+### Kernel Tweaks
+- **Fixed debug mask pattern matching too broadly**.
+- **`tracing_on` removed from debug-mask zeroing loop**: Owned by Kill Logs with proper snapshot/restore; removing it from kernel tweaks eliminates the conflict.
+- **Debug mask nodes are now backed up before zeroing**: `revert_kernel()` can now restore them.
+### RAM Optimizer
+- **Added LMKD/PSI support**: Detects classic LMK vs PSI-capable LMKD vs legacy LMKD and tunes `ro.lmk.*` props accordingly.
+- **Added RAM Cleaner Whitelist**: Apps in the whitelist are skipped by aggressive and extreme mode.
+- **Extreme mode no longer force-stops system packages**: `android`, `com.android.*`, and `android.process.*` are now skipped.
+### App Doze
+- **`deviceidle.xml` write is now atomic**: Changed from `cat >` (truncate-then-write) to `mv -f`.
+- **XML overlay matching no longer uses an unbounded regex**: Replaced with `_xml_has_any_pkg()`, a per-package short-circuit helper.
+- **Package name matching uses fixed-string grep**: Dots in package names are regex wildcards; switched to `grep -qFx` throughout.
+### Uninstall
+- **`frozen_services.txt` preserved through uninstall**.
+- **GMS UID extraction is now robust**: Fixed malformed UID on ROMs with extra fields on the `userId=` line.
+### WebUI
+- **Fixed RAM Whitelist toggles being no-ops**: Each row had both a per-row and a container click listener, firing the toggle twice and cancelling itself out.
+- **Modal `transition:none` moved from inline style to CSS**.
+### Misc and code compatibility
+- **`post-fs-data.sh` property setting falls back to `setprop`** on environments without `resetprop`.
+- **Tracking revert uses `settings delete`** to restore system defaults rather than forcing hardcoded values.
+- **Whitelist file restore is guarded against empty backups**: Importing a backup where App Doze or RAM whitelist files were empty no longer wipes the current lists.
+- **`service.sh` category check no longer uses `eval`**.
+- **Unified log timestamp format** across all `log_*` functions.
+### Refactored
+- **`frosty.sh` split into `scripts/`**: Replaced the 1500 lines backend with an 80 lines dispatcher and 12 focused subscripts. All feature scripts are moved to `scripts/` alongside them.
+
+
 ## [4.1] - 2026-06-11
 ### App Doze: Bug Fixes
 - **Fixed XML overlays resetting every other reboot**: `_apply_xml_overlays()` was unconditionally calling `_remove_overlays()` before scanning partitions. After a reboot, the overlay files are bind-mounted by `post-fs-data.sh`, so the mounted (already-patched) XMLs are what get scanned. No unpatched entries are found, no new overlays are created, and the next reboot has nothing to mount. The fix defers `_remove_overlays()` until an unpatched XML is actually found during the scan, so already-correct overlays are left untouched. (@xizt159)

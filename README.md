@@ -35,10 +35,10 @@ Frosty optimizes battery life by freezing GMS services, applying system-wide doz
 - **GMS Freezing**: Disable GMS services across 8 categories
 - **App Doze**: Remove any app from Android's Doze power-save exemption list. GMS is selectable here too, replacing the old dedicated GMS Doze toggle
 - **Deep Doze**: Aggressive background restrictions for all apps (Moderate / Maximum)
-- **Screen Off Optimization**: Automatically disables selected connections (Wi-Fi, Bluetooth, data, location) and clears cached apps after a configurable screen-off delay, then restores everything on unlock
+- **Screen Off Optimization**: Disable selected connections (Wi-Fi, Bluetooth, data, location) and optionally run the RAM cleaner after a configurable screen-off delay, restores on unlock
 - **Kill Google Tracking**: Disables GMS analytics, Clearcut telemetry, Phenotype polling, and ad tracking
 - **Kernel Tweaks**: Scheduler, VM, network, and debug optimizations
-- **RAM Optimizer**: Tunes process limits, memory compaction, and zram behavior
+- **RAM Optimizer**: ZRAM auto-tuning, LMK/LMKD/PSI thresholds, OEM reclaim disabling, VM memory params (Moderate / Maximum), configurable RAM Cleaner
 - **System Props**: Disable debug properties to save RAM and battery
 - **Log Killing**: Stop battery-draining log and debug processes
 - **Battery Saver Tuner**: Customize what Android's built-in battery saver does when active
@@ -59,7 +59,7 @@ Frosty optimizes battery life by freezing GMS services, applying system-wide doz
 
 Open the WebUI from your root manager:
 
-- **System Tweaks**: kernel tweaks, system props, blur disable, log killing, tracking block
+- **System Tweaks**: kernel tweaks, system props, blur disable, log killing, tracking block, RAM optimizer and cleaner
 - **Doze**: App Doze with app picker, Deep Doze with level selector and whitelist editor
 - **Screen Off Optimization**: per-connection toggles, delay timers, restore on unlock
 - **GMS Categories**: freeze individual GMS service groups
@@ -86,12 +86,11 @@ Open the WebUI from your root manager:
 
 ## Deep Doze Levels
 
-| Feature | Moderate | Maximum |
-|---------|:--------:|:-------:|
-| Aggressive Doze Constants | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Screen-off Wakelock Killer | ✅ | ✅ |
-| Deny WAKE_LOCK | ❌ | ✅ |
+Both levels rewrite Doze constants, force IDLE on screen-off, run a 5-min screen-off wakelock killer, and enable JobScheduler flex-idle on Android 13+. **Maximum** additionally uses the `restricted` standby bucket (Moderate uses `rare`), denies `WAKE_LOCK`, disables the motion sensor on screen-off, and kills wakelocks immediately on apply.
+
+## RAM Optimizer
+
+Auto-tunes ZRAM compression, LMK / LMKD / PSI thresholds, OEM reclaim nodes, and VM memory params. **Maximum** scales LMK weights up ~60-70% and uses more proactive LMKD/PSI thresholds.
 
 ## FAQ
 
@@ -102,7 +101,7 @@ A: App Doze and Deep Doze restrict background activity. Add your messaging apps 
 A: It's now part of App Doze. Open the App Doze picker and select GMS, same effect, unified interface.
 
 **Q: Does this work without Google Play Services?**  
-A: Kernel Tweaks, System Props, Blur Disable, Log Killing, RAM Optimizer, and Deep Doze all work. GMS features require GMS.
+A: Kernel Tweaks, System Props, Blur Disable, Log Killing, RAM Optimizer and Cleaner, and Deep Doze all work. GMS features require GMS.
 
 **Q: Is anything enabled after install?**  
 A: No. Everything is off by default. Enable only what you need.

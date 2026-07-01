@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">Оптимізатор батареї</string>
   <string name="kpi_sub">з 18 активних</string>
   <string name="status_count">{0} з {1} активних</string>
   <string name="home_active">активно</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">Глибокий Doze скасовано</string>
   <string name="log_deep_doze_level">Глибокий Doze → {0}</string>
   <string name="log_deep_doze_reapplied">Глибокий Doze застосовано повторно</string>
+  <string name="loading_reapplying_ram">Повторне застосування оптимізатора ОЗП...</string>
+  <string name="log_ram_opt_level">Оптимізатор ОЗП → {0}</string>
+  <string name="log_ram_opt_reapplied">Оптимізатор ОЗП застосовано повторно</string>
+  <string name="ram_wl_btn">▶ Білий список очищення ОЗП</string>
+  <string name="ram_wl_title">Білий список очищення ОЗП</string>
+  <string name="ram_wl_notice">Додатки з білого списку ніколи не зупиняються примусово очищенням ОЗП.</string>
   <string name="tgl_soo">Оптимізація при вимк. екрана</string>
   <string name="tgl_soo_desc">Вимикає вибрані з'єднання та за бажанням очищує ОЗП після затримки вимкнення екрана. Відновлює при розблокуванні.</string>
   <string name="soo_configure">Налаштування параметрів</string>

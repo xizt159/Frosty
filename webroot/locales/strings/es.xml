@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">Optimizador de batería</string>
   <string name="kpi_sub">de 18 activos</string>
   <string name="status_count">{0} de {1} activos</string>
   <string name="home_active">activo</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">Doze profundo revertido</string>
   <string name="log_deep_doze_level">Doze profundo → {0}</string>
   <string name="log_deep_doze_reapplied">Doze profundo reaplicado</string>
+  <string name="loading_reapplying_ram">Reaplicando optimizador de RAM...</string>
+  <string name="log_ram_opt_level">Optimizador de RAM → {0}</string>
+  <string name="log_ram_opt_reapplied">Optimizador de RAM reaplicado</string>
+  <string name="ram_wl_btn">▶ Lista blanca del limpiador de RAM</string>
+  <string name="ram_wl_title">Lista blanca del limpiador de RAM</string>
+  <string name="ram_wl_notice">Las apps en la lista blanca nunca son forzadas a detenerse por el limpiador de RAM.</string>
   <string name="tgl_soo">Optimización con pantalla apagada</string>
   <string name="tgl_soo_desc">Desactiva las conexiones seleccionadas y, opcionalmente, limpia la RAM tras un retraso al apagar la pantalla. Restaura al desbloquear.</string>
   <string name="soo_configure">Configurar opciones</string>

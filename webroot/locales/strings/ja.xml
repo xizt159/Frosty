@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="hdr_sub">バッテリー最適化</string>
   <string name="kpi_sub">18 個有効</string>
   <string name="status_count">{1} 個中 {0} 個有効</string>
   <string name="home_active">有効</string>
@@ -99,6 +100,12 @@
   <string name="log_deep_doze_reverted">Deep Doze 復元済み</string>
   <string name="log_deep_doze_level">Deep Doze → {0}</string>
   <string name="log_deep_doze_reapplied">Deep Doze 再適用済み</string>
+  <string name="loading_reapplying_ram">RAM 最適化を再適用中...</string>
+  <string name="log_ram_opt_level">RAM 最適化 → {0}</string>
+  <string name="log_ram_opt_reapplied">RAM 最適化 再適用済み</string>
+  <string name="ram_wl_btn">▶ RAM クリーナーホワイトリスト</string>
+  <string name="ram_wl_title">RAM クリーナーホワイトリスト</string>
+  <string name="ram_wl_notice">ホワイトリスト登録アプリは RAM クリーナーによる強制停止を受けません。</string>
   <string name="tgl_soo">画面オフ最適化</string>
   <string name="tgl_soo_desc">画面オフ後の遅延で選択した接続を無効化し、オプションで RAM をクリーン。ロック解除時に復元。</string>
   <string name="soo_configure">オプションを設定</string>

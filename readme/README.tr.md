@@ -35,10 +35,10 @@ Frosty, GMS hizmetlerini dondurarak, sistem genelinde Doze iyileştirmeleri uygu
 - **GMS Dondurma**: 8 kategori genelinde GMS hizmetlerini devre dışı bırakın.
 - **App Doze**: İstediğiniz herhangi bir uygulamayı Android'in Doze güç tasarrufu istisna listesinden çıkarın. Eski özel GMS Doze geçişinin yerini alarak GMS de buradan seçilebilir.
 - **Deep Doze**: Tüm uygulamalar için agresif arka plan kısıtlamaları (Orta / Maksimum).
-- **Ekran Kapalı Optimizasyonu**: Ekran kapandıktan yapılandırılabilir bir süre sonra seçili bağlantıları (Wi-Fi, Bluetooth, mobil veri, konum) otomatik olarak devre dışı bırakır ve önbelleğe alınan uygulamaları temizler. Kilit açıldığında ise her şeyi geri yükler.
+- **Ekran Kapalı Optimizasyonu**: Seçili bağlantıları (Wi-Fi, Bluetooth, mobil veri, konum) devre dışı bırakır ve yapılandırılabilir bir ekran kapalı gecikmesinden sonra isteğe bağlı olarak RAM temizleyiciyi çalıştırır, kilit açıldığında her şeyi geri yükler.
 - **Google İzlemeyi Devre Dışı Bırakma**: GMS analizlerini, Clearcut telemetrisini, Phenotype sorgulamalarını ve reklam izlemeyi devre dışı bırakır.
 - **Çekirdek (Kernel) Ayarları**: Zamanlayıcı (scheduler), VM, ağ ve hata ayıklama optimizasyonları.
-- **RAM İyileştirici**: İşlem sınırlarını, bellek sıkıştırmasını ve zram davranışını ayarlar.
+- **RAM İyileştirici**: ZRAM otomatik ayarı, LMK/LMKD/PSI eşikleri, OEM reclaim devre dışı bırakma, VM bellek parametreleri (Orta / Maksimum), yapılandırılabilir RAM Temizleyici.
 - **Sistem Props**: RAM ve pilden tasarruf etmek için hata ayıklama (debug) özelliklerini devre dışı bırakın.
 - **Günlükleri Sonlandırma**: Pili tüketen günlük (log) ve hata ayıklama işlemlerini zorla durdurun.
 - **Pil Tasarrufu Ayarlayıcı**: Etkinken Android'in yerleşik pil tasarrufunun ne yapacağını özelleştirin.
@@ -59,7 +59,7 @@ Frosty, GMS hizmetlerini dondurarak, sistem genelinde Doze iyileştirmeleri uygu
 
 Root yöneticinizden WebUI'yi açın:
 
-- **Sistem İnce Ayarları**: Çekirdek ayarları, sistem Props, bulanıklığı devre dışı bırakma, günlükleri sonlandırma, izleme engelleme.
+- **Sistem İnce Ayarları**: Çekirdek ayarları, sistem Props, bulanıklığı devre dışı bırakma, günlükleri sonlandırma, izleme engelleme, RAM iyileştirici ve temizleyici.
 - **Doze**: Uygulama seçici ile App Doze, seviye seçici ve beyaz liste düzenleyicisi ile Deep Doze.
 - **Ekran Kapalı Optimizasyonu**: Bağlantı başına geçişler, gecikme zamanlayıcıları, kilit açıldığında geri yükleme.
 - **GMS Kategorileri**: Ayrı ayrı GMS hizmet gruplarını dondurun.
@@ -86,13 +86,11 @@ Root yöneticinizden WebUI'yi açın:
 
 ## Deep Doze Seviyeleri
 
-| Özellik | Orta | Maksimum |
-|---------|:--------:|:-------:|
-| Agresif Doze Sabitleri | ✅ | ✅ |
-| App Standby Buckets (Rare) | ✅ | ✅ |
-| Ekran Kapalı Wakelock Sonlandırma | ✅ | ✅ |
-| WAKE_LOCK Reddetme | ❌ | ✅ |
+Her iki seviye de Doze sabitlerini yeniden yazar, ekran kapandığında IDLE durumuna zorlar, ekran kapalı 5 dakika sonra bir wakelock sonlandırıcı çalıştırır ve Android 13+ üzerinde JobScheduler flex-idle politikasını etkinleştirir. **Maksimum** ayrıca `restricted` standby bucket'ını kullanır (Orta `rare` kullanır), `WAKE_LOCK`'u reddeder, ekran kapandığında hareket sensörünü devre dışı bırakır ve uygulama sırasında wakelock'ları anında sonlandırır.
 
+## RAM İyileştirici
+
+ZRAM sıkıştırmasını, LMK / LMKD / PSI eşiklerini, OEM reclaim düğümlerini ve VM bellek parametrelerini otomatik olarak ayarlar. **Maksimum** LMK ağırlıklarını ~%60-70 yukarı ölçekler ve daha proaktif LMKD/PSI eşikleri kullanır.
 ## SSS
 
 **S: Bildirimlerim neden gecikiyor?**
@@ -102,7 +100,7 @@ C: App Doze ve Deep Doze arka plan etkinliğini kısıtlar. Mesajlaşma uygulama
 C: Artık App Doze'un bir parçası. App Doze seçiciyi açın ve GMS'i seçin; aynı etkiyi sağlayan birleşik bir arayüzdür.
 
 **S: Bu, Google Play Hizmetleri olmadan çalışır mı?**
-C: Çekirdek Ayarları, Sistem Props, Bulanıklığı Devre Dışı Bırakma, Günlükleri Sonlandırma, RAM İyileştirici ve Deep Doze sorunsuz çalışır. GMS özellikleri GMS gerektirir.
+C: Çekirdek Ayarları, Sistem Props, Bulanıklığı Devre Dışı Bırakma, Günlükleri Sonlandırma, RAM İyileştirici ve Temizleyici, ve Deep Doze sorunsuz çalışır. GMS özellikleri GMS gerektirir.
 
 **S: Kurulumdan sonra herhangi bir şey etkinleştiriliyor mu?**
 C: Hayır. Varsayılan olarak her şey kapalıdır. Yalnızca ihtiyacınız olanları etkinleştirin.
