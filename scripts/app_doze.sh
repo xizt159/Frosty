@@ -1,8 +1,11 @@
 #!/system/bin/sh
 # Frosty - App Doze 
 
-MODDIR="${0%/*}"
+_d="${0%/*}"
+[ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
+MODDIR="${_d%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+unset _d
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
@@ -74,10 +77,20 @@ _remove_overlays() {
   done
 }
 
+_xml_has_any_pkg() {
+  local _xml="$1" _pkg _e
+  while IFS= read -r _pkg; do
+    case "$_pkg" in '#'*|'') continue ;; esac
+    _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
+    grep -qE "allow-in-power-save[^>]*${_e}|allow-in-data-usage-save[^>]*${_e}|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" "$_xml" 2>/dev/null && return 0
+  done < "$PATCHES_FILE"
+  return 1
+}
+
 _apply_xml_overlays() {
   _migrate_stale_lists
 
-  local pkgs grep_pat="" sed_pat="" any=0
+  local pkgs sed_pat="" any=0
   pkgs=$(_load_packages)
 
   if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ] && [ -n "$pkgs" ]; then
@@ -86,21 +99,9 @@ _apply_xml_overlays() {
       local _e
       _e=$(echo "$_pkg" | sed 's/\./\\./g')
       if [ "$_pkg" = "$GMS_PKG" ]; then
-        if [ -z "$grep_pat" ]; then
-          grep_pat="allow-in-power-save[^>]*${_e}|allow-in-data-usage-save[^>]*${_e}|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>"
-          sed_pat="/allow-in-power-save[^>]*${_e}/d;/allow-in-data-usage-save[^>]*${_e}/d;/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
-        else
-          grep_pat="${grep_pat}|allow-in-power-save[^>]*${_e}|allow-in-data-usage-save[^>]*${_e}|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>"
           sed_pat="${sed_pat}/allow-in-power-save[^>]*${_e}/d;/allow-in-data-usage-save[^>]*${_e}/d;/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
-        fi
       else
-        if [ -z "$grep_pat" ]; then
-          grep_pat="<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>"
-          sed_pat="/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
-        else
-          grep_pat="${grep_pat}|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>"
           sed_pat="${sed_pat}/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
-        fi
       fi
       any=1
     done
@@ -110,7 +111,7 @@ _apply_xml_overlays() {
 
   rm -f "$_reboot_file" 2>/dev/null
 
-  if [ "$any" -eq 0 ] || [ -z "$grep_pat" ]; then
+  if [ "$any" -eq 0 ]; then
     _remove_overlays
     return 0
   fi
@@ -126,7 +127,7 @@ _apply_xml_overlays() {
         case "$_seen" in *"|$_real|"*) continue ;; esac
         _seen="${_seen}|$_real|"
         scanned=$((scanned + 1))
-        grep -qE "$grep_pat" "$_real" 2>/dev/null || continue
+        _xml_has_any_pkg "$_real" || continue
 
         local _rel="${_real#/}"
         case "$_rel" in
@@ -143,8 +144,7 @@ _apply_xml_overlays() {
           *) _rel="system/$_rel" ;;
         esac
 
-        # Remove overlays once
-        if ! $_cleared; then
+        if [ "$_cleared" != "true" ]; then
           [ -f "$OVERLAYS_FILE" ] && log_app "[INFO] Found unpatched XML(s) - removing existing overlays"
           _remove_overlays
           _cleared=true
@@ -177,10 +177,12 @@ _apply_xml_overlays() {
 scan() {
   local _tmp_inst="$MODDIR/tmp/scan_inst.tmp"
   local _tmp_cand="$MODDIR/tmp/scan_cand.tmp"
-  trap 'rm -f "$_tmp_inst" "$_tmp_cand"' RETURN
 
   pm list packages 2>/dev/null | cut -d: -f2 | sort > "$_tmp_inst"
-  [ ! -s "$_tmp_inst" ] && return
+  if [ ! -s "$_tmp_inst" ]; then
+    rm -f "$_tmp_inst" "$_tmp_cand"
+    return
+  fi
 
   {
     dumpsys deviceidle 2>/dev/null \
@@ -201,13 +203,14 @@ scan() {
       [ -d /apex ] && find /apex -maxdepth 5 -type f -name "*.xml" \
         \( -path "*/etc/sysconfig/*" -o -path "*/etc/permissions/*" \) 2>/dev/null
     } | xargs readlink -f 2>/dev/null | sort -u \
-      | xargs grep -lE 'allow-in-power-save' 2>/dev/null \
-      | xargs grep -ohE 'package="[^"]*"' 2>/dev/null \
-      | cut -d'"' -f2
+      | xargs grep -lE 'allow-in-power-save|<wl[^/]' 2>/dev/null \
+      | xargs grep -oE 'package="[^"]*"|>[[:space:]]*[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+[[:space:]]*<' 2>/dev/null \
+      | grep -oE '[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+'
 
   } | sort -u > "$_tmp_cand"
 
   grep -xFf "$_tmp_inst" "$_tmp_cand"
+  rm -f "$_tmp_inst" "$_tmp_cand"
 }
 
 apply() {
@@ -284,8 +287,8 @@ apply() {
 revert() {
   echo "Frosty v${MODVER:-?} - App Doze (REVERT) - $(date '+%Y-%m-%d %H:%M:%S')" > "$APP_DOZE_LOG"
 
-  log_app "Updating XML overlays..."
-  _apply_xml_overlays
+  log_app "Removing XML overlays..."
+  _remove_overlays
   log_app "[OK] XML overlay step complete"
 
   local pkgs
@@ -344,7 +347,7 @@ add_pkg() {
       echo ""
     } > "$PATCHES_FILE"
   fi
-  grep -qx "$pkg" "$PATCHES_FILE" 2>/dev/null || echo "$pkg" >> "$PATCHES_FILE"
+  grep -qFx "$pkg" "$PATCHES_FILE" 2>/dev/null || echo "$pkg" >> "$PATCHES_FILE"
   echo '{"status":"ok"}'
 }
 

@@ -7,6 +7,7 @@
   var localLogs = [];
   var pollTimer = null;
   var busy = false;
+  var _rcPollTimer = null;
 
   var wlAllApps = [];
   var wlPkgs = [];
@@ -18,6 +19,15 @@
   var wlScrolling = false;
   var wlIconObserver = null;
   var wlIconCache = new Map();
+
+  var ramwlPkgs = [];
+  var ramwlSearch = '';
+  var ramwlShowSys = false;
+  var ramwlRendered = 0;
+  var ramwlFiltered = [];
+  var ramwlScrolling = false;
+  var ramwlIconObserver = null;
+  var ramwlSearchTimer = null;
 
   var cadAllApps = [];
   var cadPkgs = [];
@@ -40,10 +50,11 @@
 
   // ── i18n ───
   var _strings = {};
+  var _enStrings = {};
   var _lang = 'en';
   var RTL_LANGS = ['ar'];
 
-  function t(key) { return _strings[key] || key; }
+  function t(key) { return _strings[key] || _enStrings[key] || key; }
 
   // tf('key', arg0, arg1) — replaces {0}, {1} in translated string
   function tf(key) {
@@ -103,6 +114,20 @@
       });
       _strings = map;
       _lang = code;
+      if (code === 'en') {
+        _enStrings = map;
+      } else if (!Object.keys(_enStrings).length) {
+        try {
+          var enR = await fetch('locales/strings/en.xml');
+          if (enR.ok) {
+            var enDoc = (new DOMParser()).parseFromString(await enR.text(), 'application/xml');
+            _enStrings = {};
+            enDoc.querySelectorAll('string').forEach(function(n) {
+              _enStrings[n.getAttribute('name')] = n.textContent;
+            });
+          }
+        } catch(ef) {}
+      }
       applyStrings();
       if (typeof render === 'function') render();
       try { localStorage.setItem('frosty_lang', code); } catch(e) {}
@@ -292,6 +317,16 @@
     if (mod) { if (p.deep_doze_level === 'moderate') mod.classList.add('on'); else mod.classList.remove('on'); }
     if (max) { if (p.deep_doze_level === 'maximum') max.classList.add('on'); else max.classList.remove('on'); }
 
+    var ramoptx = $('ram-opt-extras');
+    if (ramoptx) {
+      if (p.ram_optimizer) ramoptx.classList.add('on');
+      else ramoptx.classList.remove('on');
+    }
+
+    var ramMod = $('ram-lvl-mod'), ramMax = $('ram-lvl-max');
+    if (ramMod) { if (p.ram_optimizer_level === 'moderate') ramMod.classList.add('on'); else ramMod.classList.remove('on'); }
+    if (ramMax) { if (p.ram_optimizer_level === 'maximum') ramMax.classList.add('on'); else ramMax.classList.remove('on'); }
+
     setChk('t-bss', p.battery_saver);
     var bssx = $('bss-extras');
     if (bssx) {
@@ -309,6 +344,7 @@
     // ── GMS Categories ──
     var cats = ['telemetry', 'background', 'location', 'connectivity', 'cloud', 'payments', 'wearables', 'games'];
     cats.forEach(function (cat) { setChk('t-' + cat, c[cat]); });
+    updateStatusCards();
   }
 
   function setChk(id, val) {
@@ -517,6 +553,31 @@
     busy = false;
   }
 
+  async function setRamOptLevel(level) {
+    if (busy) return;
+    if (level === state.prefs.ram_optimizer_level) return;
+    busy = true;
+    showLoading(t('loading_setting_level'));
+    try {
+      var res = await API.setPref('ram_optimizer_level', level);
+      if (res.status === 'ok') {
+        toast(tf('log_ram_opt_level', level), 'ok');
+        logAction(tf('log_ram_opt_level', level), 'info');
+
+        if (state.prefs.ram_optimizer) {
+          updateLoading(t('loading_reapplying_ram'));
+          await API.applyRamOptimizer();
+          logAction(t('log_ram_opt_reapplied'), 'ok');
+        }
+
+        state.prefs.ram_optimizer_level = level;
+        render();
+      }
+    } catch (e) { toast(t('toast_error'), 'err'); }
+    hideLoading();
+    busy = false;
+  }
+
   // ── BSS Modal ──
 
   var _bssGpsSelected = 0;
@@ -550,14 +611,17 @@
     setChk('soo-t-bt',         p.soo_kill_bt);
     setChk('soo-t-data',       p.soo_kill_data);
     setChk('soo-t-location',   p.soo_kill_location);
+    setChk('soo-t-sensors',    p.soo_kill_sensors);
+    setChk('soo-t-panel-lpm',  p.soo_kill_panel_lpm);
     setChk('soo-t-restore',    p.soo_restore_on_unlock !== undefined ? p.soo_restore_on_unlock : 1);
-    setChk('soo-t-kill-cache', p.soo_kill_cache);
     var rdEl = $('soo-conn-delay');
-    var cdEl = $('soo-cache-delay');
-    if (rdEl) rdEl.value = p.soo_conn_delay  !== undefined ? p.soo_conn_delay  : 5;
-    if (cdEl) cdEl.value = p.soo_cache_delay !== undefined ? p.soo_cache_delay : 5;
-    var cacheExtras = $('soo-cache-extras');
-    if (cacheExtras) cacheExtras.style.maxHeight = p.soo_kill_cache ? '100px' : '0';
+    var modeEl = $('soo-t-ram-clean-mode');
+    var cdEl   = $('soo-ram-clean-delay');
+    if (rdEl)   rdEl.value   = p.soo_conn_delay          !== undefined ? p.soo_conn_delay         : 5;
+    if (modeEl) modeEl.value = p.soo_ram_clean_mode       !== undefined ? p.soo_ram_clean_mode      : 'off';
+    if (cdEl)   cdEl.value   = p.soo_ram_clean_delay      !== undefined ? p.soo_ram_clean_delay     : 5;
+    var ramExtras = $('soo-ram-clean-extras');
+    if (ramExtras) ramExtras.style.maxHeight = (modeEl && modeEl.value !== 'off') ? '80px' : '0';
     $('soo-modal').classList.add('open');
   }
 
@@ -570,17 +634,20 @@
     busy = true;
     showLoading(t('loading_applying_soo'));
     try {
-      var rdEl = $('soo-conn-delay');
-      var cdEl = $('soo-cache-delay');
+      var rdEl   = $('soo-conn-delay');
+      var modeEl = $('soo-t-ram-clean-mode');
+      var cdEl   = $('soo-ram-clean-delay');
       var opts = {
         soo_kill_wifi:         $('soo-t-wifi').checked       ? 1 : 0,
         soo_kill_bt:           $('soo-t-bt').checked         ? 1 : 0,
         soo_kill_data:         $('soo-t-data').checked       ? 1 : 0,
         soo_kill_location:     $('soo-t-location').checked   ? 1 : 0,
+        soo_kill_sensors:      $('soo-t-sensors').checked    ? 1 : 0,
+        soo_kill_panel_lpm:    $('soo-t-panel-lpm').checked  ? 1 : 0,
         soo_restore_on_unlock: $('soo-t-restore').checked    ? 1 : 0,
-        soo_kill_cache:        $('soo-t-kill-cache').checked ? 1 : 0,
-        soo_conn_delay:  rdEl ? parseInt(rdEl.value) || 5 : 5,
-        soo_cache_delay: cdEl ? parseInt(cdEl.value) || 5 : 5
+        soo_ram_clean_mode:    modeEl ? modeEl.value : 'off',
+        soo_conn_delay:        rdEl   ? parseInt(rdEl.value)  || 5 : 5,
+        soo_ram_clean_delay:   cdEl   ? parseInt(cdEl.value)  || 5 : 5
       };
       for (var k in opts) { await API.setPref(k, opts[k]); state.prefs[k] = opts[k]; }
       if (state.prefs.screen_off_opt) {
@@ -1041,7 +1108,7 @@
 
       var chk = document.createElement('span');
       chk.className = 'wl-chk';
-      chk.textContent = isWl ? '✓' : '';
+      chk.innerHTML = isWl ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>' : '';
 
       row.appendChild(img);
       row.appendChild(infoDiv);
@@ -1091,96 +1158,11 @@
       updateWlCount();
       wlFiltered = getSortedFiltered();
 
-      // ── In-place update: toggle every rendered row for this pkg ──
       if (list) {
-        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-        for (var i = 0; i < rows.length; i++) {
-          if (isWl) {
-            rows[i].classList.remove('active');
-            rows[i].querySelector('.wl-chk').textContent = '';
-          } else {
-            rows[i].classList.add('active');
-            rows[i].querySelector('.wl-chk').textContent = '✓';
-          }
-        }
+        var savedScroll = list.scrollTop;
+        renderWl();
+        list.scrollTop = savedScroll;
       }
-
-      // ── Update top selected section without touching scroll position ──
-      if (list) {
-        var sep = list.querySelector('.wl-sep');
-        if (isWl) {
-          // Removing: delete duplicate row from top section if present
-          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-          // If there's a separator, the first match above it is the top copy
-          if (sep && topRows.length > 1) {
-            for (var j = 0; j < topRows.length; j++) {
-              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                topRows[j].remove();
-                break;
-              }
-            }
-          }
-          // If no more selected apps, remove separator
-          var remaining = list.querySelectorAll('.wl-item.active');
-          if (sep && remaining.length === 0) sep.remove();
-        } else {
-          // Adding: insert a copy at the top (before separator or at start)
-          var appData = null;
-          for (var k = 0; k < wlFiltered.length; k++) {
-            if (wlFiltered[k].pkg === pkg) { appData = wlFiltered[k]; break; }
-          }
-          if (appData) {
-            var newRow = document.createElement('div');
-            newRow.className = 'wl-item active';
-            newRow.dataset.pkg = pkg;
-
-            var img = document.createElement('img');
-            img.className = 'wl-ico';
-            img.decoding = 'async';
-            img.dataset.pkg = pkg;
-            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
-              img.src = wlIconCache.get(pkg);
-            } else {
-              img.dataset.src = 'ksu://icon/' + pkg;
-              img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
-              img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
-              if (wlIconObserver) wlIconObserver.observe(img);
-            }
-
-            var infoDiv = document.createElement('div');
-            infoDiv.className = 'wl-app';
-            var nameSpan = document.createElement('span');
-            nameSpan.className = 'wl-name';
-            nameSpan.textContent = appData.label;
-            infoDiv.appendChild(nameSpan);
-            if (appData.label !== appData.pkg) {
-              var pkgSpan = document.createElement('span');
-              pkgSpan.className = 'wl-pkg';
-              pkgSpan.textContent = appData.pkg;
-              infoDiv.appendChild(pkgSpan);
-            }
-
-            var chk = document.createElement('span');
-            chk.className = 'wl-chk';
-            chk.textContent = '✓';
-
-            newRow.appendChild(img);
-            newRow.appendChild(infoDiv);
-            newRow.appendChild(chk);
-
-            // Ensure separator exists
-            if (!sep) {
-              sep = document.createElement('div');
-              sep.className = 'wl-sep';
-              sep.setAttribute('data-i18n', 'wl_sep_other');
-              sep.textContent = t('wl_sep_other') || 'Other apps';
-              list.insertBefore(sep, list.firstChild);
-            }
-            list.insertBefore(newRow, sep);
-          }
-        }
-      }
-
     } catch (e) {
       toast(tf('log_load_failed', e.message), 'err');
     }
@@ -1189,6 +1171,233 @@
   function updateWlCount() {
     var el = $('wl-count');
     if (el) el.textContent = wlPkgs.length;
+  }
+
+  function openRamWhitelist() {
+    var titleEl = document.querySelector('#ramwl-modal .modal-head h3 span[data-i18n]');
+    var noticeEl = document.querySelector('#ramwl-modal .modal-notice span[data-i18n="ram_wl_notice"]');
+    if (titleEl) titleEl.textContent = t('ram_wl_title');
+    if (noticeEl) noticeEl.textContent = t('ram_wl_notice');
+    $('ramwl-modal').classList.add('open');
+    renderRamWlLoading();
+    setTimeout(function () {
+      if (!wlLoaded) {
+        loadAllApps().then(function () {
+          return loadRamWlPkgs();
+        }).then(function () {
+          ramwlFiltered = getRamWlSortedFiltered();
+          renderRamWl();
+        });
+      } else {
+        loadRamWlPkgs().then(function () {
+          ramwlFiltered = getRamWlSortedFiltered();
+          renderRamWl();
+        });
+      }
+    }, 50);
+  }
+
+  function closeRamWhitelist() {
+    $('ramwl-modal').classList.remove('open');
+    if (ramwlIconObserver) { ramwlIconObserver.disconnect(); ramwlIconObserver = null; }
+  }
+
+  function renderRamWlLoading() {
+    var list = $('ramwl-list');
+    if (!list) return;
+    list.innerHTML = '<div class="wl-empty">' + t('wl_loading') + '</div>';
+    list.style.pointerEvents = 'none';
+  }
+
+  async function loadRamWlPkgs() {
+    try {
+      var res = await API.getRamWhitelist();
+      ramwlPkgs = res.packages || [];
+      updateRamWlCount();
+    } catch (e) {
+      ramwlPkgs = [];
+    }
+  }
+
+  function updateRamWlCount() {
+    var el = $('ramwl-count');
+    if (el) el.textContent = ramwlPkgs.length;
+  }
+
+  function getRamWlFilteredApps() {
+    return wlAllApps.filter(function (a) {
+      if (!ramwlShowSys && a.system) return false;
+      if (ramwlSearch) {
+        var q = ramwlSearch.toLowerCase();
+        return a.label.toLowerCase().indexOf(q) !== -1 || a.pkg.toLowerCase().indexOf(q) !== -1;
+      }
+      return true;
+    });
+  }
+
+  function getRamWlSortedFiltered() {
+    var filtered = getRamWlFilteredApps();
+    var checked = [];
+    var unchecked = [];
+    for (var i = 0; i < filtered.length; i++) {
+      if (ramwlPkgs.indexOf(filtered[i].pkg) !== -1) checked.push(filtered[i]);
+      else unchecked.push(filtered[i]);
+    }
+    return checked.concat(unchecked);
+  }
+
+  function setupRamWlIconObserver() {
+    if (ramwlIconObserver) ramwlIconObserver.disconnect();
+    ramwlIconObserver = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) {
+          var img = entries[i].target;
+          var pkg = img.dataset.pkg;
+          var src = img.dataset.src;
+          if (src) {
+            if (wlIconCache.has(pkg)) {
+              var cached = wlIconCache.get(pkg);
+              if (cached !== 'err') img.src = cached;
+              else img.style.visibility = 'hidden';
+            } else { img.src = src; }
+            img.removeAttribute('data-src');
+          }
+          ramwlIconObserver.unobserve(img);
+        }
+      }
+    }, { root: $('ramwl-list'), rootMargin: '500px 0px' });
+  }
+
+  function renderRamWl() {
+    var list = $('ramwl-list');
+    if (!list) return;
+    list.style.pointerEvents = '';
+
+    if (ramwlFiltered.length === 0) {
+      list.innerHTML = '<div class="wl-empty">' + t('wl_empty') + '</div>';
+      return;
+    }
+
+    ramwlRendered = 0;
+    list.scrollTop = 0;
+    list.innerHTML = '';
+    setupRamWlIconObserver();
+
+    var hasChecked = false;
+    for (var i = 0; i < ramwlFiltered.length; i++) {
+      if (ramwlPkgs.indexOf(ramwlFiltered[i].pkg) !== -1) { hasChecked = true; break; }
+    }
+
+    appendRamWlBatch(25, false);
+    if (hasChecked) {
+      var sepIdx = -1;
+      for (var j = 0; j < ramwlFiltered.length; j++) {
+        if (ramwlPkgs.indexOf(ramwlFiltered[j].pkg) === -1) { sepIdx = j; break; }
+      }
+      if (sepIdx > 0) {
+        var sep = document.createElement('div');
+        sep.className = 'wl-sep';
+        sep.textContent = t('wl_sep_other') || 'Other apps';
+        var rows = list.querySelectorAll('.wl-item');
+        if (rows[sepIdx]) list.insertBefore(sep, rows[sepIdx]);
+      }
+    }
+  }
+
+  function appendRamWlBatch(count, append) {
+    var list = $('ramwl-list');
+    if (!list) return;
+    var end = Math.min(ramwlRendered + count, ramwlFiltered.length);
+    var frag = document.createDocumentFragment();
+    for (var i = ramwlRendered; i < end; i++) {
+      var a = ramwlFiltered[i];
+      var isWl = ramwlPkgs.indexOf(a.pkg) !== -1;
+
+      var row = document.createElement('div');
+      row.className = 'wl-item' + (isWl ? ' active' : '');
+      row.dataset.pkg = a.pkg;
+
+      var img = document.createElement('img');
+      img.className = 'wl-ico';
+      img.decoding = 'async';
+      img.dataset.pkg = a.pkg;
+      if (wlIconCache.has(a.pkg) && wlIconCache.get(a.pkg) !== 'err') {
+        img.src = wlIconCache.get(a.pkg);
+      } else {
+        img.dataset.src = 'ksu://icon/' + a.pkg;
+        img.onload = function () { wlIconCache.set(this.dataset.pkg, this.src); };
+        img.onerror = function () { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
+        ramwlIconObserver.observe(img);
+      }
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'wl-app';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'wl-name';
+      nameSpan.textContent = a.label;
+      infoDiv.appendChild(nameSpan);
+      if (a.label !== a.pkg) {
+        var pkgSpan = document.createElement('span');
+        pkgSpan.className = 'wl-pkg';
+        pkgSpan.textContent = a.pkg;
+        infoDiv.appendChild(pkgSpan);
+      }
+
+      var chk = document.createElement('span');
+      chk.className = 'wl-chk';
+      chk.innerHTML = isWl ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>' : '';
+
+      row.appendChild(img);
+      row.appendChild(infoDiv);
+      row.appendChild(chk);
+  
+      frag.appendChild(row);
+    }
+    list.appendChild(frag);
+    ramwlRendered = end;
+    if (!append) list.onscroll = onRamWlScroll;
+  }
+
+  function onRamWlScroll() {
+    if (ramwlScrolling) return;
+    ramwlScrolling = true;
+    requestAnimationFrame(function () {
+      var list = $('ramwl-list');
+      if (!list || ramwlRendered >= ramwlFiltered.length) {
+        ramwlScrolling = false;
+        return;
+      }
+      var scrollBottom = list.scrollTop + list.clientHeight;
+      var threshold = list.scrollHeight - 300;
+      if (scrollBottom >= threshold) {
+        appendRamWlBatch(25, true);
+      }
+      ramwlScrolling = false;
+    });
+  }
+
+  async function toggleRamWlApp(pkg) {
+    var list = $('ramwl-list');
+    var isWl = ramwlPkgs.indexOf(pkg) !== -1;
+    try {
+      if (isWl) {
+        await API.removeRamWhitelist(pkg);
+        ramwlPkgs = ramwlPkgs.filter(function (p) { return p !== pkg; });
+      } else {
+        await API.addRamWhitelist(pkg);
+        ramwlPkgs.push(pkg);
+      }
+      updateRamWlCount();
+      ramwlFiltered = getRamWlSortedFiltered();
+
+      if (list) {
+        var savedScroll = list.scrollTop;
+        renderRamWl();
+        list.scrollTop = savedScroll;
+      }
+    } catch (e) {
+      toast(tf('log_load_failed', e.message), 'err');
+    }
   }
 
 
@@ -1389,7 +1598,7 @@
 
       var chk = document.createElement('span');
       chk.className = 'wl-chk';
-      chk.textContent = isCad ? '✓' : '';
+      chk.innerHTML = isCad ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>' : '';
 
       row.appendChild(img);
       row.appendChild(infoDiv);
@@ -1444,69 +1653,9 @@
 
       var list = $('cad-list');
       if (list) {
-        var rows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-        for (var i = 0; i < rows.length; i++) {
-          if (isCad) {
-            rows[i].classList.remove('active');
-            rows[i].querySelector('.wl-chk').textContent = '';
-          } else {
-            rows[i].classList.add('active');
-            rows[i].querySelector('.wl-chk').textContent = '✓';
-          }
-        }
-        var sep = list.querySelector('.wl-sep');
-        if (isCad) {
-          var topRows = list.querySelectorAll('.wl-item[data-pkg="' + pkg + '"]');
-          if (sep && topRows.length > 1) {
-            for (var j = 0; j < topRows.length; j++) {
-              if (topRows[j].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                topRows[j].remove(); break;
-              }
-            }
-          }
-          var remaining = list.querySelectorAll('.wl-item.active');
-          if (sep && remaining.length === 0) sep.remove();
-        } else {
-          var appData = null;
-          for (var k = 0; k < cadFiltered.length; k++) {
-            if (cadFiltered[k].pkg === pkg) { appData = cadFiltered[k]; break; }
-          }
-          if (appData) {
-            var newRow = document.createElement('div');
-            newRow.className = 'wl-item active';
-            newRow.dataset.pkg = pkg;
-
-            var img2 = document.createElement('img');
-            img2.className = 'wl-ico'; img2.decoding = 'async'; img2.dataset.pkg = pkg;
-            if (wlIconCache.has(pkg) && wlIconCache.get(pkg) !== 'err') {
-              img2.src = wlIconCache.get(pkg);
-            } else {
-              img2.dataset.src = 'ksu://icon/' + pkg;
-              img2.onload = function() { wlIconCache.set(this.dataset.pkg, this.src); };
-              img2.onerror = function() { wlIconCache.set(this.dataset.pkg, 'err'); this.style.visibility = 'hidden'; };
-              if (cadIconObserver) cadIconObserver.observe(img2);
-            }
-
-            var infoDiv2 = document.createElement('div'); infoDiv2.className = 'wl-app';
-            var ns2 = document.createElement('span'); ns2.className = 'wl-name'; ns2.textContent = appData.label;
-            infoDiv2.appendChild(ns2);
-            if (appData.label !== appData.pkg) {
-              var ps2 = document.createElement('span'); ps2.className = 'wl-pkg'; ps2.textContent = appData.pkg;
-              infoDiv2.appendChild(ps2);
-            }
-            var chk2 = document.createElement('span'); chk2.className = 'wl-chk'; chk2.textContent = '✓';
-
-            newRow.appendChild(img2); newRow.appendChild(infoDiv2); newRow.appendChild(chk2);
-
-            if (!sep) {
-              sep = document.createElement('div');
-              sep.className = 'wl-sep';
-              sep.textContent = t('wl_sep_other') || 'Other apps';
-              list.insertBefore(sep, list.firstChild);
-            }
-            list.insertBefore(newRow, sep);
-          }
-        }
+        var savedScroll = list.scrollTop;
+        renderCad();
+        list.scrollTop = savedScroll;
       }
     } catch (e) {
       toast(tf('log_load_failed', e.message), 'err');
@@ -1548,6 +1697,15 @@
     searchTimer = setTimeout(function () {
       wlFiltered = getSortedFiltered();
       renderWl();
+    }, 150);
+  }
+
+  function debouncedRamWlSearch(val) {
+    ramwlSearch = val;
+    if (ramwlSearchTimer) clearTimeout(ramwlSearchTimer);
+    ramwlSearchTimer = setTimeout(function () {
+      ramwlFiltered = getRamWlSortedFiltered();
+      renderRamWl();
     }, 150);
   }
 
@@ -1615,7 +1773,7 @@
           var curName = spanEl.textContent;
           var newName = window.prompt(t('io_rename_prompt'), curName);
           if (!newName || newName === curName) return;
-          var newPath = dir + 'frosty_' + newName.replace(/[\/\:*?"<>|]/g, '_') + '.json';
+          var newPath = dir + 'frosty_' + newName.replace(/[\/\:*?"<>|`$]/g, '_') + '.json';
           API.run('mv "' + path + '" "' + newPath + '"').then(function() {
             spanEl.textContent = newName;
             bObj.path = newPath;
@@ -1687,6 +1845,7 @@
   var _MODAL_ORDER = [
     { id: 'cad-modal',           close: function() { closeCustomAppDoze(); } },
     { id: 'wl-modal',            close: function() { closeWhitelist(); } },
+    { id: 'ramwl-modal',         close: function() { closeRamWhitelist(); } },
     { id: 'bss-modal',           close: function() { closeBssModal(); } },
     { id: 'soo-modal',           close: function() { closeSooModal(); } },
     { id: 'about-modal',         close: function() { $('about-modal').classList.remove('open'); } },
@@ -1711,9 +1870,105 @@
     history.pushState({ frostyModal: true }, '');
   }
 
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('page-active'); });
+    document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+    var page = document.getElementById('page-' + id);
+    if (page) page.classList.add('page-active');
+    var tab = document.querySelector('.nav-tab[data-page="' + id + '"]');
+    if (tab) tab.classList.add('active');
+    var app = document.getElementById('app');
+    if (app) app.scrollTop = 0;
+  }
+
+  function initTheme() {
+    var saved; try { saved = localStorage.getItem('frosty-theme'); } catch(e) {}
+    var theme = saved || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    _updateThemeMeta(theme);
+  }
+  function toggleTheme() {
+    var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', cur);
+    try { localStorage.setItem('frosty-theme', cur); } catch(e) {}
+    _updateThemeMeta(cur);
+  }
+  function _updateThemeMeta(theme) {
+    var meta = document.getElementById('theme-meta');
+    if (meta) meta.content = theme === 'light' ? '#EEF3F8' : '#0D0F11';
+  }
+
+  function updateStatusCards() {
+    var p = state.prefs || {};
+    var c = state.categories || {};
+    var sections = [
+      { id: 'tweaks', total: 6, src: p, keys: [
+          { k: 'kernel_tweaks',  l: t('pill_kernel')     },
+          { k: 'system_props',   l: t('pill_props')      },
+          { k: 'ram_optimizer',  l: t('pill_ram')        },
+          { k: 'blur_disable',   l: t('pill_blur')       },
+          { k: 'log_killing',    l: t('pill_logs')       },
+          { k: 'kill_tracking',  l: t('pill_tracking')   }
+      ]},
+      { id: 'doze', total: 4, src: p, keys: [
+          { k: 'deep_doze',       l: t('pill_deep_doze')  },
+          { k: 'custom_app_doze', l: t('pill_app_doze')   },
+          { k: 'battery_saver',   l: t('pill_batt_saver') },
+          { k: 'screen_off_opt',  l: t('pill_screen_off') }
+      ]},
+      { id: 'gms', total: 8, src: c, keys: [
+          { k: 'telemetry',    l: t('pill_telemetry')    },
+          { k: 'background',   l: t('pill_background')   },
+          { k: 'location',     l: t('pill_location')     },
+          { k: 'connectivity', l: t('pill_connectivity') },
+          { k: 'cloud',        l: t('pill_cloud')        },
+          { k: 'payments',     l: t('pill_payments')     },
+          { k: 'wearables',    l: t('pill_wearables')    },
+          { k: 'games',        l: t('pill_games')        }
+      ]}
+    ];
+    var grand = 0;
+    sections.forEach(function(sec) {
+      var card    = document.getElementById('status-' + sec.id);
+      var countEl = document.getElementById('status-count-' + sec.id);
+      var ratioEl = document.getElementById('status-ratio-' + sec.id);
+      var pillsEl = document.getElementById('status-pills-' + sec.id);
+      if (!card) return;
+      var active = sec.keys.filter(function(item) { return sec.src[item.k]; }).length;
+      grand += active;
+      if (countEl) countEl.textContent = t('status_count').replace('{0}', active).replace('{1}', sec.total);
+      if (ratioEl) ratioEl.textContent = active + '/' + sec.total;
+      if (pillsEl) pillsEl.innerHTML = sec.keys.map(function(item) {
+        return '<span class="status-pill' + (sec.src[item.k] ? ' active' : '') + '">' + item.l + '</span>';
+      }).join('');
+      card.classList.toggle('has-active', active > 0);
+    });
+    var totalEl = document.getElementById('home-total-num');
+    if (totalEl) totalEl.textContent = grand;
+    var _kpiFill = document.getElementById('kpi-fill');
+    var _kpiNum  = document.getElementById('kpi-num');
+    var _kpiWrap = document.getElementById('kpi-ring-wrap');
+    var _CIRC = 534.07, _TOTAL = 18;
+    if (_kpiFill) _kpiFill.style.strokeDashoffset = (_CIRC * (1 - grand / _TOTAL)).toFixed(2);
+    if (_kpiNum)  _kpiNum.textContent = grand;
+    if (_kpiWrap) _kpiWrap.classList.toggle('has-active', grand > 0);
+
+  }
+
   function bind() {
     $('btn-freeze').addEventListener('click', applyFreeze);
     $('btn-stock').addEventListener('click', applyStock);
+
+    // ── Nav & Theme ──
+    document.querySelectorAll('.nav-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() { showPage(tab.dataset.page); });
+    });
+    var themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+    document.querySelectorAll('.status-card').forEach(function(card) {
+      card.addEventListener('click', function() { showPage(card.dataset.page); });
+    });
 
     // ── System Tweaks ──
     $('t-kernel').addEventListener('change', function () { togglePref('kernel_tweaks'); });
@@ -1761,14 +2016,91 @@
     }
 
     $('soo-open').addEventListener('click', function() { _pushModalHistory(); openSooModal(); });
+  // ── RAM Cleaner ──
+
+  function openRamCleanModal() {
+    var picker    = $('ram-clean-picker');
+    var procWrap  = $('ram-clean-processing');
+    var closeBtn  = $('ram-clean-close');
+    if (picker)   { picker.style.display   = ''; }
+    if (procWrap) { procWrap.style.display = 'none'; }
+    if (closeBtn) { closeBtn.style.display = ''; }
+    $('ram-clean-modal').classList.add('open');
+  }
+
+  function closeRamCleanModal() {
+    if (_rcPollTimer) return;
+    $('ram-clean-modal').classList.remove('open');
+  }
+
+  async function startRamClean(mode) {
+    if (busy) return;
+    var picker      = $('ram-clean-picker');
+    var procWrap    = $('ram-clean-processing');
+    var spinnerWrap = $('rc-spinner-wrap');
+    var resultBox   = $('rc-result-box');
+    var modeLabel   = $('rc-proc-mode');
+    var closeBtn    = $('ram-clean-close');
+    var modal       = $('ram-clean-modal');
+    var modeKeyMap  = { safe: 'ram_clean_safe_name', aggressive: 'ram_clean_aggressive_name', extreme: 'ram_clean_extreme_name' };
+
+    if (picker)      { picker.style.display      = 'none'; }
+    if (procWrap)    { procWrap.style.display     = ''; }
+    if (spinnerWrap) { spinnerWrap.style.display  = ''; }
+    if (resultBox)   { resultBox.style.display    = 'none'; }
+    if (modeLabel)   { modeLabel.textContent      = t(modeKeyMap[mode]) || mode; }
+    if (closeBtn)    { closeBtn.style.display     = 'none'; }
+    if (modal)       { modal.dataset.cleaning     = '1'; }
+
+    try { await API.ramClean(mode, ''); } catch (_) {}
+
+    _rcPollTimer = setInterval(async function() {
+      try {
+        var data = await API.ramCleanPoll();
+        if (!data || !data.running) {
+          clearInterval(_rcPollTimer);
+          _rcPollTimer = null;
+          if (spinnerWrap) { spinnerWrap.style.display = 'none'; }
+          if (resultBox) {
+            resultBox.style.display = '';
+            var appsEl  = $('rc-apps-val');
+            var freedEl = $('rc-freed-val');
+            var apps    = data ? parseInt(data.apps)  || 0 : 0;
+            var freed   = data ? parseInt(data.freed) || 0 : 0;
+            if (appsEl)  appsEl.textContent  = apps;
+            if (freedEl) freedEl.textContent = (freed > 0 ? '+' : '') + freed + ' MB';
+          }
+          if (closeBtn) { closeBtn.style.display = ''; }
+          if (modal)    { delete modal.dataset.cleaning; }
+        }
+      } catch (_) {
+        clearInterval(_rcPollTimer);
+        _rcPollTimer = null;
+        if (spinnerWrap) { spinnerWrap.style.display = 'none'; }
+        if (closeBtn)    { closeBtn.style.display    = ''; }
+        if (modal)       { delete modal.dataset.cleaning; }
+      }
+    }, 1500);
+  }
+
     $('soo-close').addEventListener('click', closeSooModal);
     $('soo-modal').addEventListener('click', function (e) {
       if (e.target === this) closeSooModal();
     });
     $('soo-apply').addEventListener('click', saveSooOptions);
-    $('soo-t-kill-cache').addEventListener('change', function() {
-      var cacheExtras = $('soo-cache-extras');
-      if (cacheExtras) cacheExtras.style.maxHeight = this.checked ? '100px' : '0';
+    $('soo-t-ram-clean-mode').addEventListener('change', function() {
+      var ramExtras = $('soo-ram-clean-extras');
+      if (ramExtras) ramExtras.style.maxHeight = this.value !== 'off' ? '80px' : '0';
+    });
+
+    $('ram-clean-open').addEventListener('click', function() { _pushModalHistory(); openRamCleanModal(); });
+    $('ram-clean-close').addEventListener('click', closeRamCleanModal);
+    $('ram-clean-modal').addEventListener('click', function(e) {
+      if (e.target === this && !this.dataset.cleaning) closeRamCleanModal();
+    });
+    $('ram-clean-modes').addEventListener('click', function(e) {
+      var btn = e.target.closest('.ram-clean-mode');
+      if (btn && btn.dataset.mode) startRamClean(btn.dataset.mode);
     });
 
     // ── Custom App Doze ──
@@ -1812,6 +2144,35 @@
         toggleWlApp(item.dataset.pkg);
       }
     });
+
+    // ── RAM Cleaner Whitelist ──
+    $('ram-wl-open').addEventListener('click', function() { _pushModalHistory(); openRamWhitelist(); });
+    $('ram-wl-close').addEventListener('click', closeRamWhitelist);
+    $('ramwl-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeRamWhitelist();
+    });
+
+    $('ram-wl-search').addEventListener('input', function () {
+      debouncedRamWlSearch(this.value);
+    });
+
+    $('ram-wl-sys').addEventListener('change', function () {
+      ramwlShowSys = this.checked;
+      ramwlFiltered = getRamWlSortedFiltered();
+      renderRamWl();
+    });
+
+    $('ramwl-list').addEventListener('scroll', onRamWlScroll, { passive: true });
+
+    $('ramwl-list').addEventListener('click', function (e) {
+      var item = e.target.closest('.wl-item');
+      if (item && item.dataset.pkg) {
+        toggleRamWlApp(item.dataset.pkg);
+      }
+    });
+
+    $('ram-lvl-mod').addEventListener('click', function () { setRamOptLevel('moderate'); });
+    $('ram-lvl-max').addEventListener('click', function () { setRamOptLevel('maximum'); });
 
     // ── GMS Categories ──
     var cats = ['telemetry', 'background', 'location', 'connectivity', 'cloud', 'payments', 'wearables', 'games'];
@@ -2070,13 +2431,15 @@
   // ── Init ──
 
   async function init() {
+    initTheme();
+    showPage('home');
     showLoading(t('io_loading'));
     await initLang();
 
     if (!API.available()) {
       $('app').innerHTML =
         '<div class="card" style="margin-top:60px;text-align:center;padding:30px">' +
-        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+        '<div style="margin-bottom:12px;display:flex;justify-content:center"><svg viewBox="0 0 24 24" width="40" height="40" fill="var(--orange,#ff9800)"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>' +
         '<h2 style="font-size:1rem;margin-bottom:6px">' + t('ksu_unavailable_title') + '</h2>' +
         '<p style="color:var(--text-dim);font-size:.82rem">' + t('ksu_unavailable_desc') + '</p></div>';
       hideLoading();
@@ -2102,6 +2465,12 @@
       updateCadCount();
     } catch (e) {}
 
+    try {
+      var ramwl = await API.getRamWhitelist();
+      ramwlPkgs = ramwl.packages || [];
+      updateRamWlCount();
+    } catch (e) {}
+
     hideLoading();
   }
 
@@ -2118,7 +2487,7 @@
     var appEl = null;
 
     function isModalOpen() {
-      var ids = ['wl-modal', 'cad-modal', 'bss-modal', 'soo-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
+      var ids = ['wl-modal', 'ramwl-modal', 'cad-modal', 'bss-modal', 'soo-modal', 'about-modal', 'io-modal', 'lang-modal', 'lang-confirm-backdrop'];
       for (var i = 0; i < ids.length; i++) {
         var m = document.getElementById(ids[i]);
         if (m && m.classList.contains('open')) return true;

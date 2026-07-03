@@ -22,21 +22,25 @@
 
 </div>
 
+<div align="center">
+<img src="images/pl.png" width="600">
+</div>
+
 ## Przegląd
 
-Frosty optymalizuje czas pracy baterii poprzez zamrażanie usług GMS, stosowanie ulepszeń trybu doze w całym systemie i automatyzację zachowania po wyłączeniu ekranu. Skonfiguruj wszystko przez WebUI.
+Frosty optymalizuje czas pracy baterii poprzez zamrażanie usług GMS, stosowanie ulepszeń trybu Doze w całym systemie i automatyzację zachowania po wyłączeniu ekranu. Skonfiguruj wszystko przez WebUI.
 
 ## Funkcje
 
 - **Zamrażanie GMS**: Wyłącz usługi GMS w 8 kategoriach.
-- **Usypianie aplikacji (App Doze)**: Usuń dowolną aplikację z listy wykluczeń z oszczędzania energii Android Doze. GMS można tu również wybrać, zastępując stary dedykowany przełącznik GMS Doze.
-- **Głębokie Usypianie (Deep Doze)**: Agresywne restrykcje w tle dla wszystkich aplikacji (Umiarkowane / Maksymalne).
-- **Optymalizacja Wyłączonego Ekranu**: Automatycznie wyłącza wybrane połączenia (Wi-Fi, Bluetooth, dane, lokalizacja) i czyści aplikacje w pamięci podręcznej po konfigurowalnym opóźnieniu po wyłączeniu ekranu, a następnie przywraca wszystko po odblokowaniu.
-- **Zablokuj śledzenie Google**: Wyłącza analitykę GMS, telemetrię Clearcut, odpytywanie Phenotype i śledzenie reklam.
+- **App Doze**: Usuń dowolną aplikację z listy wykluczeń z oszczędzania energii Android Doze. GMS można tu również wybrać, zastępując stary dedykowany przełącznik GMS Doze.
+- **Deep Doze**: Agresywne restrykcje w tle dla wszystkich aplikacji (Umiarkowane / Maksymalne).
+- **Optymalizacja Wyłączonego Ekranu**: Wyłącza wybrane połączenia (Wi-Fi, Bluetooth, dane, lokalizacja) i opcjonalnie uruchamia czyszczenie RAM po konfigurowalnym opóźnieniu wyłączenia ekranu, przywraca wszystko po odblokowaniu.
+- **Wyłącz śledzenie Google**: Wyłącza analitykę GMS, telemetrię Clearcut, odpytywanie Phenotype i śledzenie reklam.
 - **Modyfikacje Jądra (Kernel Tweaks)**: Optymalizacje harmonogramu (scheduler), maszyny wirtualnej (VM), sieci i debugowania.
-- **Optymalizator RAM**: Dostraja limity procesów, kompresję pamięci i zachowanie zram.
-- **Właściwości Systemu (System Props)**: Wyłącz właściwości debugowania, aby oszczędzać RAM i baterię.
-- **Zabijanie Logów**: Zatrzymaj procesy logowania i debugowania, które zużywają baterię.
+- **Optymalizator RAM**: Automatyczne strojenie ZRAM, progi LMK/LMKD/PSI, wyłączanie reclaim OEM, parametry pamięci VM (Umiarkowane / Maksymalne), konfigurowalne czyszczenie RAM.
+- **System Props**: Wyłącz właściwości debugowania, aby oszczędzać RAM i baterię.
+- **Kasowanie Logów**: Zatrzymaj procesy logowania i debugowania, które zużywają baterię.
 - **Dostrajanie Oszczędzania Baterii**: Dostosuj, co robi wbudowane oszczędzanie baterii Androida, gdy jest aktywne.
 
 ## Instalacja
@@ -55,8 +59,8 @@ Frosty optymalizuje czas pracy baterii poprzez zamrażanie usług GMS, stosowani
 
 Otwórz WebUI ze swojego menedżera root:
 
-- **Modyfikacje Systemu**: Modyfikacje jądra, właściwości systemu, wyłączenie rozmycia, zabijanie logów, blokada śledzenia.
-- **Doze**: Usypianie aplikacji z wyborem apek, Głębokie Usypianie z wyborem poziomu i edytorem białej listy.
+- **Modyfikacje Systemu**: Modyfikacje jądra, system props, wyłączenie rozmycia, kasowanie logów, wyłączenie śledzenia, optymalizator i czyszczenie RAM.
+- **Doze**: App Doze z wyborem apek, Deep Doze z wyborem poziomu i edytorem białej listy.
 - **Optymalizacja Wyłączonego Ekranu**: Przełączniki dla poszczególnych połączeń, opóźnienia, przywracanie po odblokowaniu.
 - **Kategorie GMS**: Zamrażaj poszczególne grupy usług GMS.
 - **Dostrajanie Oszczędzania Baterii**: Precyzyjne dostrajanie zachowania trybu oszczędzania baterii.
@@ -70,8 +74,8 @@ Otwórz WebUI ze swojego menedżera root:
 | 📊 **Telemetria** | Brak. Zatrzymuje reklamy, analitykę, śledzenie. |
 | 🔄 **Działanie w tle** | Automatyczne aktualizacje mogą być opóźnione. |
 
-#### Może zepsuć funkcje
-| Kategoria | Co się psuje |
+#### Może zakłócić funkcje
+| Kategoria | Zakłócone funkcje |
 |----------|-------------|
 | 📍 **Lokalizacja** | Mapy, nawigacja, Znajdź moje urządzenie, udostępnianie lokalizacji |
 | 📡 **Łączność** | Chromecast, Quick Share, Szybkie parowanie |
@@ -82,23 +86,21 @@ Otwórz WebUI ze swojego menedżera root:
 
 ## Poziomy Deep Doze
 
-| Funkcja | Umiarkowane | Maksymalne |
-|---------|:--------:|:-------:|
-| Agresywne stałe Doze | ✅ | ✅ |
-| Koszyki gotowości aplikacji (rzadko) | ✅ | ✅ |
-| Zabijanie Wakelocków (ekran wył.) | ✅ | ✅ |
-| Odmowa WAKE_LOCK | ❌ | ✅ |
+Oba poziomy przepisują stałe Doze, wymuszają IDLE po wyłączeniu ekranu, uruchamiają zabójcę wakelocków po 5 minutach wyłączonego ekranu i włączają politykę flex-idle JobScheduler na Androidzie 13+. **Maksymalne** dodatkowo używa bucketu standby `restricted` (Umiarkowane używa `rare`), odmawia `WAKE_LOCK`, wyłącza czujnik ruchu po wyłączeniu ekranu i zabija wakelocki natychmiast przy zastosowaniu.
 
+## Optymalizator RAM
+
+Automatycznie stroi kompresję ZRAM, progi LMK / LMKD / PSI, węzły reclaim OEM i parametry pamięci VM. **Maksymalne** skaluje wagi LMK o ~60-70% w górę i używa bardziej proaktywnych progów LMKD/PSI.
 ## FAQ
 
 **P: Dlaczego moje powiadomienia są opóźnione?**  
-O: Usypianie Aplikacji i Deep Doze ograniczają aktywność w tle. Dodaj swoje komunikatory do białej listy Deep Doze w WebUI.
+O: App Doze i Deep Doze ograniczają aktywność w tle. Dodaj swoje komunikatory do białej listy Deep Doze w WebUI.
 
 **P: Gdzie podziało się GMS Doze?**  
-O: Jest to teraz część Usypiania Aplikacji (App Doze). Otwórz okno wyboru App Doze i wybierz GMS – ten sam efekt, ujednolicony interfejs.
+O: Jest to teraz część App Doze. Otwórz okno wyboru App Doze i wybierz GMS – ten sam efekt, ujednolicony interfejs.
 
 **P: Czy to działa bez Usług Google Play?**  
-O: Modyfikacje jądra, Właściwości Systemu, Wyłączenie Rozmycia, Zabijanie Logów, Optymalizator RAM i Deep Doze działają bez GMS. Funkcje GMS wymagają GMS.
+O: Modyfikacje jądra, System Props, Wyłączenie Rozmycia, Kasowanie Logów, Optymalizator i Czyszczenie RAM, oraz Deep Doze działają bez GMS. Funkcje GMS wymagają GMS.
 
 **P: Czy po instalacji cokolwiek jest włączone?**  
 O: Nie. Domyślnie wszystko jest wyłączone. Włącz tylko to, czego potrzebujesz.

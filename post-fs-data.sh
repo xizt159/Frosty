@@ -45,8 +45,10 @@ if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ] && [ -f "$_CAD_PATCHES" ] && [ -f "$_DIXM
     cp -af "$_DIXML" "$_tmp" 2>/dev/null
 
     for _pkg in $_cad_pkgs; do
-      sed -i "/<wl n=\"$_pkg\"/d" "$_tmp" 2>/dev/null
+      _esc=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
+      sed -i "/<wl n=\"$_esc\"/d" "$_tmp" 2>/dev/null
     done
+    unset _esc
     sed -i '/<\/config>/d' "$_tmp"
 
     {
@@ -57,7 +59,7 @@ if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ] && [ -f "$_CAD_PATCHES" ] && [ -f "$_DIXM
     } >> "$_tmp"
 
     if grep -q '</config>' "$_tmp" 2>/dev/null; then
-      cat "$_tmp" > "$_DIXML"
+      mv -f "$_tmp" "$_DIXML"
       restorecon "$_DIXML" 2>/dev/null
     fi
     rm -f "$_tmp" 2>/dev/null
@@ -66,26 +68,34 @@ fi
 
 unset _DIXML _CAD_PATCHES _cad_pkgs _pkg _tmp
 
+_set_prop() {
+  if command -v resetprop >/dev/null 2>&1; then
+    resetprop -n "$1" "$2"
+  else
+    setprop "$1" "$2" 2>/dev/null
+  fi
+}
+
 if [ "$ENABLE_BLUR_DISABLE" = "1" ]; then
-  resetprop -n disableBlurs true
-  resetprop -n enable_blurs_on_windows 0
-  resetprop -n ro.launcher.blur.appLaunch 0
-  resetprop -n ro.sf.blurs_are_expensive 0
-  resetprop -n ro.surface_flinger.supports_background_blur 0
+  _set_prop disableBlurs true
+  _set_prop enable_blurs_on_windows 0
+  _set_prop ro.launcher.blur.appLaunch 0
+  _set_prop ro.sf.blurs_are_expensive 0
+  _set_prop ro.surface_flinger.supports_background_blur 0
 fi
 
 INITDIR="$MODDIR/system/etc/init"
 BINDIR="$MODDIR/system/bin"
 
 if [ "$ENABLE_LOG_KILLING" = "1" ]; then
-  resetprop -n tombstoned.max_tombstone_count 0
-  resetprop -n tombstoned.max_anr_count 0
-  resetprop -n ro.lmk.debug false
-  resetprop -n ro.lmk.log_stats false
-  resetprop -n dalvik.vm.dex2oat-minidebuginfo false
-  resetprop -n dalvik.vm.minidebuginfo false
-  resetprop -n sys.wifitracing.started 0
-  resetprop -n persist.vendor.wifienhancelog 0
+  _set_prop tombstoned.max_tombstone_count 0
+  _set_prop tombstoned.max_anr_count 0
+  _set_prop ro.lmk.debug false
+  _set_prop ro.lmk.log_stats false
+  _set_prop dalvik.vm.dex2oat-minidebuginfo false
+  _set_prop dalvik.vm.minidebuginfo false
+  _set_prop sys.wifitracing.started 0
+  _set_prop persist.vendor.wifienhancelog 0
 
   mkdir -p "$INITDIR" "$BINDIR"
 
@@ -109,3 +119,4 @@ else
   rmdir "$MODDIR/system/etc" 2>/dev/null
   rmdir "$MODDIR/system" 2>/dev/null
 fi
+unset INITDIR BINDIR ENABLE_BLUR_DISABLE ENABLE_LOG_KILLING ENABLE_CUSTOM_APP_DOZE

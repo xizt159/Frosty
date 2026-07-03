@@ -22,21 +22,25 @@
 
 </div>
 
+<div align="center">
+<img src="images/es.png" width="600">
+</div>
+
 ## Resumen
 
-Frosty optimiza la duración de la batería congelando los servicios de GMS, aplicando mejoras de *doze* en todo el sistema y automatizando el comportamiento al apagar la pantalla. Configura todo a través de la WebUI.
+Frosty optimiza la duración de la batería congelando los servicios de GMS, aplicando mejoras de Doze en todo el sistema y automatizando el comportamiento al apagar la pantalla. Configura todo a través de la WebUI.
 
 ## Características
 
 - **Congelación de GMS**: Desactiva los servicios de GMS en 8 categorías.
 - **App Doze**: Elimina cualquier aplicación de la lista de exenciones de ahorro de energía de Doze de Android. GMS también se puede seleccionar aquí, reemplazando el antiguo interruptor dedicado de GMS Doze.
 - **Deep Doze**: Restricciones agresivas en segundo plano para todas las aplicaciones (Moderado / Máximo).
-- **Optimización con Pantalla Apagada**: Desactiva automáticamente las conexiones seleccionadas (Wi-Fi, Bluetooth, datos, ubicación) y limpia las aplicaciones en caché después de un retraso configurable de pantalla apagada, luego restaura todo al desbloquear.
-- **Bloquear Rastreo de Google**: Deshabilita los análisis de GMS, la telemetría Clearcut, los sondeos Phenotype y el rastreo de anuncios.
+- **Optimización con Pantalla Apagada**: Desactiva las conexiones seleccionadas (Wi-Fi, Bluetooth, datos, ubicación) y ejecuta opcionalmente el limpiador de RAM tras un retraso configurable de pantalla apagada, restaura todo al desbloquear.
+- **Deshabilitar Rastreo de Google**: Deshabilita los análisis de GMS, la telemetría Clearcut, los sondeos Phenotype y el rastreo de anuncios.
 - **Ajustes del Kernel**: Optimizaciones del programador (scheduler), la máquina virtual (VM), red y depuración.
-- **Optimizador de RAM**: Ajusta los límites de los procesos, la compactación de la memoria y el comportamiento de zram.
+- **Optimizador de RAM**: Autoajuste de ZRAM, umbrales LMK/LMKD/PSI, desactivación de reclaim OEM, parámetros de memoria VM (Moderado / Máximo), limpiador de RAM configurable.
 - **Props del Sistema**: Deshabilita las propiedades de depuración para ahorrar RAM y batería.
-- **Matar Registros (Logs)**: Detiene los procesos de depuración y registro que consumen batería.
+- **Terminación de Registros**: Detiene los procesos de depuración y registro que consumen batería.
 - **Afinador de Ahorro de Batería**: Personaliza lo que hace el ahorro de batería incorporado en Android cuando está activo.
 
 ## Instalación
@@ -55,7 +59,7 @@ Frosty optimiza la duración de la batería congelando los servicios de GMS, apl
 
 Abre la WebUI desde tu administrador root:
 
-- **Ajustes del Sistema**: Ajustes del kernel, props del sistema, desactivación de desenfoque, matar registros, bloqueo de rastreo.
+- **Ajustes del Sistema**: Ajustes del kernel, props del sistema, desactivación de desenfoque, terminación de registros, deshabilitación de rastreo, optimizador y limpiador de RAM.
 - **Doze**: App Doze con selector de aplicaciones, Deep Doze con selector de nivel y editor de lista blanca.
 - **Optimización con Pantalla Apagada**: Interruptores por conexión, temporizadores de retraso, restaurar al desbloquear.
 - **Categorías de GMS**: Congela grupos individuales de servicios de GMS.
@@ -70,8 +74,8 @@ Abre la WebUI desde tu administrador root:
 | 📊 **Telemetría** | Ninguno. Detiene anuncios, analíticas y rastreo. |
 | 🔄 **Segundo Plano** | Las actualizaciones automáticas pueden retrasarse. |
 
-#### Puede romper funciones
-| Categoría | Qué rompe |
+#### Puede afectar funcionalidades
+| Categoría | Funcionalidades afectadas |
 |----------|-------------|
 | 📍 **Ubicación** | Maps, navegación, Encontrar mi dispositivo, ubicación compartida |
 | 📡 **Conectividad** | Chromecast, Quick Share, Fast Pair |
@@ -82,13 +86,11 @@ Abre la WebUI desde tu administrador root:
 
 ## Niveles de Deep Doze
 
-| Característica | Moderado | Máximo |
-|---------|:--------:|:-------:|
-| Constantes de Doze Agresivas | ✅ | ✅ |
-| App Standby Buckets (raro) | ✅ | ✅ |
-| Asesino de Wakelock (pantalla apagada) | ✅ | ✅ |
-| Denegar WAKE_LOCK | ❌ | ✅ |
+Ambos niveles reescriben las constantes de Doze, fuerzan IDLE al apagar la pantalla, ejecutan un terminador de wakelocks tras 5 minutos de pantalla apagada y activan la política flex-idle de JobScheduler en Android 13+. **Máximo** adicionalmente usa el bucket de standby `restricted` (Moderado usa `rare`), deniega `WAKE_LOCK`, desactiva el sensor de movimiento al apagar la pantalla y termina wakelocks inmediatamente al aplicar.
 
+## Optimizador de RAM
+
+Autoajusta la compresión ZRAM, los umbrales LMK / LMKD / PSI, los nodos de reclaim OEM y los parámetros de memoria VM. **Máximo** escala los pesos LMK ~60-70% hacia arriba y usa umbrales LMKD/PSI más proactivos.
 ## Preguntas Frecuentes
 
 **P: ¿Por qué se retrasan mis notificaciones?**  
@@ -98,7 +100,7 @@ R: App Doze y Deep Doze restringen la actividad en segundo plano. Agrega tus apl
 R: Ahora es parte de App Doze. Abre el selector de App Doze y elige GMS; tiene el mismo efecto, pero con una interfaz unificada.
 
 **P: ¿Funciona esto sin los Servicios de Google Play?**  
-R: Los Ajustes del Kernel, los Props del Sistema, la Desactivación de Desenfoque, Matar Registros, Optimizador de RAM y Deep Doze funcionan perfectamente. Las características de GMS requieren tener GMS instalado.
+R: Los Ajustes del Kernel, los Props del Sistema, la Desactivación de Desenfoque, la Terminación de Registros, el Optimizador y Limpiador de RAM, y Deep Doze funcionan perfectamente. Las características de GMS requieren tener GMS instalado.
 
 **P: ¿Se habilita algo después de la instalación?**  
 R: No. Todo está apagado de forma predeterminada. Habilita solo lo que necesites.
@@ -114,4 +116,4 @@ R: No. Todo está apagado de forma predeterminada. Habilita solo lo que necesite
 ## Licencia
 
 Licenciado bajo **GPL v3**, consulta [LICENSE](LICENSE).  
-El nombre **Frosty** está reservado exclusivamente para versiones oficiales. Los *forks* deben utilizar un nombre diferente y declarar claramente que no son oficiales. El autor original no asume ninguna responsabilidad por los daños causados por versiones no oficiales o modificadas.
+El nombre **Frosty** está reservado exclusivamente para versiones oficiales. Los forks deben utilizar un nombre diferente y declarar claramente que no son oficiales. El autor original no asume ninguna responsabilidad por los daños causados por versiones no oficiales o modificadas.

@@ -1,8 +1,11 @@
 #!/system/bin/sh
 # Frosty - Deep Doze
 
-MODDIR="${0%/*}"
+_d="${0%/*}"
+[ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
+MODDIR="${_d%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
+unset _d
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
 LOGDIR="$MODDIR/logs"
@@ -69,22 +72,27 @@ restrict_apps() {
     [ -z "$pkg" ] && continue
     is_whitelisted "$pkg" && continue
 
-    # Skip apps currently in the foreground
     local cur
     cur=$(am get-standby-bucket "$pkg" 2>/dev/null | tail -1 | tr -d '[:space:]')
     case "$cur" in
-      5|active|ACTIVE) skip=$((skip + 1)); continue ;;
+      active|ACTIVE|working_set|WORKING_SET) skip=$((skip + 1)); continue ;;
     esac
 
-    # rare bucket: Android significantly throttles background jobs, alarms, and network access.
-    am set-standby-bucket "$pkg" rare 2>/dev/null
+    if [ "$level" = "maximum" ]; then
+      am set-standby-bucket "$pkg" restricted 2>/dev/null
+    else
+      am set-standby-bucket "$pkg" rare 2>/dev/null
+    fi
 
-    # maximum only: also deny wakelocks so apps cannot prevent deep sleep
     [ "$level" = "maximum" ] && appops set "$pkg" WAKE_LOCK deny 2>/dev/null
 
     count=$((count + 1))
   done
-  log_deep "[OK] Restricted $count apps to rare bucket (skipped $skip active)"
+  if [ "$level" = "maximum" ]; then
+    log_deep "[OK] Restricted $count apps to restricted bucket (skipped $skip active/recent)"
+  else
+    log_deep "[OK] Restricted $count apps to rare bucket (skipped $skip active/recent)"
+  fi
 }
 
 unrestrict_apps() {
@@ -103,18 +111,18 @@ kill_wakelocks() {
   local killed=0
   local tmpfile="$MODDIR/tmp/wakelocks.txt"
   local procfile="$MODDIR/tmp/processes.txt"
-  trap 'rm -f "$tmpfile" "$procfile"' EXIT TERM
   dumpsys power 2>/dev/null | grep -E "PARTIAL_WAKE_LOCK|FULL_WAKE_LOCK" > "$tmpfile"
   dumpsys activity processes 2>/dev/null > "$procfile"
 
   while IFS= read -r line; do
     local pkg
-    pkg=$(echo "$line" | grep -oE "packageName=[^ ]+" | cut -d= -f2 | tr -d ',')
+    pkg=$(echo "$line" | grep -o "ws=WorkSource{[^}]*}" | \
+          grep -oE "[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+" | head -1)
     [ -z "$pkg" ] && continue
     is_whitelisted "$pkg" && continue
 
     local proc_state
-    proc_state=$(grep -A2 "packageList=.*$pkg" "$procfile" | grep -oE "procState=[A-Z_]+" | head -1 | cut -d= -f2)
+    proc_state=$(grep -A5 "packageList=.*$pkg" "$procfile" | grep -oE "procState=[A-Z_]+" | head -1 | cut -d= -f2)
     case "$proc_state" in
       TOP|BOUND_TOP|BOUND_FG_SERVICE|FG_SERVICE) continue ;;
     esac
@@ -125,17 +133,8 @@ kill_wakelocks() {
   log_deep "[OK] Killed $killed wakelock holders"
 }
 
-unrestrict_alarms() {
-  for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-    [ -z "$pkg" ] && continue
-    appops set "$pkg" SCHEDULE_EXACT_ALARM allow 2>/dev/null
-    appops set "$pkg" USE_EXACT_ALARM allow 2>/dev/null
-  done
-  log_deep "[OK] Alarms unrestricted"
-}
 
 get_screen_state() {
-  # Try dumpsys display first (more reliable on most ROMs)
   local state
   state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
   [ -n "$state" ] && { echo "$state"; return; }
@@ -143,7 +142,6 @@ get_screen_state() {
   state=$(dumpsys display 2>/dev/null | grep -m1 "Display Power: state=" | sed 's/.*state=//;s/ .*//')
   [ -n "$state" ] && { echo "$state"; return; }
 
-  # Fallback: power wakefulness
   local wake
   wake=$(dumpsys power 2>/dev/null | grep -m1 "mWakefulness=" | cut -d= -f2 | tr -d ' ')
   case "$wake" in
@@ -154,6 +152,7 @@ get_screen_state() {
 
 start_screen_monitor() {
   stop_screen_monitor
+  local _mon_level="$DEEP_DOZE_LEVEL"
   (
     trap 'exit 0' TERM INT
     while true; do
@@ -165,19 +164,27 @@ start_screen_monitor() {
         continue
       fi
 
-      # Screen is off - wait 5 minutes then kill background wakelock holders
       log_deep "Screen off - wakelock killer armed (5min)"
+      if [ "$_mon_level" = "maximum" ]; then
+        dumpsys sensorservice disable 2>/dev/null
+        log_deep "[OK] Sensor service disabled"
+      fi
       sleep 300
 
       if [ "$(get_screen_state)" != "ON" ]; then
         log_deep "Running wakelock killer..."
         kill_wakelocks
+        _stepdeep
       fi
 
-      # Wait until screen turns back on before re-arming
       while [ "$(get_screen_state)" != "ON" ]; do
-        sleep 180
+        sleep 5
       done
+
+      if [ "$_mon_level" = "maximum" ]; then
+        dumpsys sensorservice enable 2>/dev/null
+        log_deep "[OK] Sensor service re-enabled"
+      fi
       log_deep "Screen on - monitor re-armed"
     done
   ) &
@@ -196,6 +203,22 @@ stop_screen_monitor() {
   fi
 }
 
+_stepdeep() {
+  if ! dumpsys deviceidle force-idle deep 2>/dev/null; then
+    for _i in 1 2 3 4; do cmd deviceidle step deep 2>/dev/null; done
+  fi
+}
+
+_jobsched_flex() {
+  local _sdk
+  _sdk=$(getprop ro.build.version.sdk 2>/dev/null); _sdk="${_sdk%%[!0-9]*}"
+  [ -n "$_sdk" ] && [ "$_sdk" -ge 33 ] 2>/dev/null || return
+  case "$1" in
+    freeze) cmd jobscheduler enable-flex-policy --option idle 2>/dev/null ;;
+    stock)  cmd jobscheduler reset-flex-policy 2>/dev/null ;;
+  esac
+}
+
 freeze_deep_doze() {
   echo "Frosty v${MODVER:-?} - Deep Doze (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
   [ "$ENABLE_DEEP_DOZE" != "1" ] && return 0
@@ -204,20 +227,22 @@ freeze_deep_doze() {
   apply_doze_constants
   restrict_apps "$DEEP_DOZE_LEVEL"
 
-  # Screen monitor runs on BOTH levels: after 5 minutes screen-off it kills background wakelock holders.
   if [ "$DEEP_DOZE_LEVEL" = "maximum" ]; then
     kill_wakelocks
   fi
   start_screen_monitor
+  [ "$(get_screen_state)" != "ON" ] && _stepdeep
+  _jobsched_flex freeze
 }
 
 stock_deep_doze() {
   echo "Frosty v${MODVER:-?} - Deep Doze (STOCK) - $(date '+%Y-%m-%d %H:%M:%S')" > "$DEEP_DOZE_LOG"
   revert_doze_constants
   unrestrict_apps
-  unrestrict_alarms
   stop_screen_monitor
+  dumpsys sensorservice enable 2>/dev/null
   dumpsys deviceidle unforce 2>/dev/null
+  _jobsched_flex stock
 }
 
 case "$1" in

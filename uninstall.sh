@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - Delayed Uninstallation Handler
+# Frosty - Uninstallation Handler
 
 MODDIR="${0%/*}"
 [ -z "$MODDIR" ] && MODDIR="/data/adb/modules/Frosty"
@@ -10,6 +10,11 @@ mkdir -p "$TEMP_DIR"
 [ -f "$MODDIR/config/gms_services.txt" ] && cp -f "$MODDIR/config/gms_services.txt" "$TEMP_DIR/"
 [ -f "$MODDIR/config/user_prefs" ]       && cp -f "$MODDIR/config/user_prefs"       "$TEMP_DIR/"
 [ -f "$MODDIR/config/doze_patches.txt" ] && cp -f "$MODDIR/config/doze_patches.txt" "$TEMP_DIR/"
+[ -f "$MODDIR/tmp/frozen_services.txt" ] && cp -f "$MODDIR/tmp/frozen_services.txt" "$TEMP_DIR/"
+[ -f "$MODDIR/backup/logs_values.txt" ]  && cp -f "$MODDIR/backup/logs_values.txt"  "$TEMP_DIR/"
+[ -f "$MODDIR/backup/lmkd_values.txt" ]  && cp -f "$MODDIR/backup/lmkd_values.txt"  "$TEMP_DIR/"
+[ -f "$MODDIR/backup/bss_values.txt" ]   && cp -f "$MODDIR/backup/bss_values.txt"   "$TEMP_DIR/"
+[ -f "$MODDIR/config/dropbox_tags.txt" ] && cp -f "$MODDIR/config/dropbox_tags.txt" "$TEMP_DIR/"
 
 # Kill Deep Doze screen monitor
 if [ -f "$MODDIR/tmp/screen_monitor.pid" ]; then
@@ -32,6 +37,14 @@ GMS_LIST="$TEMP_DIR/gms_services.txt"
 USER_PREFS="$TEMP_DIR/user_prefs"
 GMS_PKG="com.google.android.gms"
 DEVICEIDLE_XML="/data/system/deviceidle.xml"
+MODDIR="/data/adb/modules/Frosty"
+
+_set_prop() {
+  command -v resetprop >/dev/null 2>&1 && resetprop "$1" "$2" || setprop "$1" "$2" 2>/dev/null
+}
+_del_prop() {
+  command -v resetprop >/dev/null 2>&1 && resetprop --delete "$1" 2>/dev/null || true
+}
 
 log() { echo "[$(date '+%H:%M:%S')] $1" >> "$LOGFILE"; }
 echo "Frosty uninstall - $(date)" > "$LOGFILE"
@@ -48,8 +61,15 @@ for prop in tombstoned.max_tombstone_count tombstoned.max_anr_count ro.lmk.debug
             disableBlurs enable_blurs_on_windows ro.launcher.blur.appLaunch \
             ro.sf.blurs_are_expensive ro.surface_flinger.supports_background_blur \
             persist.traced.enable; do
-  resetprop --delete "$prop" 2>/dev/null
+  _del_prop "$prop"
 done
+
+LOGS_BACKUP="$TEMP_DIR/logs_values.txt"
+if [ -f /sys/kernel/tracing/tracing_on ]; then
+  _trv=$(grep '^tracing_on=' "$LOGS_BACKUP" 2>/dev/null | cut -d= -f2)
+  echo "${_trv:-1}" > /sys/kernel/tracing/tracing_on 2>/dev/null
+fi
+rm -f "$LOGS_BACKUP"
 
 # Revert RAM optimizer
 log "Reverting RAM optimizer..."
@@ -58,6 +78,22 @@ content call --uri content://settings/config --method DELETE_value \
 device_config delete activity_manager use_compaction 2>/dev/null
 device_config delete activity_manager_native_boot use_freezer 2>/dev/null
 device_config delete alarm_manager save_battery_on_idle 2>/dev/null
+
+LMKD_BACKUP="$TEMP_DIR/lmkd_values.txt"
+if [ -f "$LMKD_BACKUP" ]; then
+  while IFS= read -r _line; do
+    case "$_line" in ''|'#'*) continue ;; esac
+    _pname=$(printf '%s' "$_line" | cut -d= -f1)
+    _pval=$(printf '%s' "$_line" | cut -d= -f2-)
+    if [ -n "$_pval" ]; then
+      _set_prop "$_pname" "$_pval"
+    else
+      _del_prop "$_pname"
+    fi
+  done < "$LMKD_BACKUP"
+  rm -f "$LMKD_BACKUP"
+  _set_prop lmkd.reinit 1 2>/dev/null || { _lp=$(pidof lmkd 2>/dev/null); [ -n "$_lp" ] && kill -HUP "$_lp" 2>/dev/null; }
+fi
 
 # Revert Kill Logs device_config
 log "Reverting Kill Logs device_config..."
@@ -87,6 +123,8 @@ if [ -f "$PATCHES_FILE" ]; then
     pkg=$(echo "$pkg" | tr -d ' ')
     [ -z "$pkg" ] && continue
     dumpsys deviceidle whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle sys-whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle except-idle-whitelist +"$pkg" >/dev/null 2>&1
     cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS default 2>/dev/null
   done < "$PATCHES_FILE"
 fi
@@ -111,6 +149,8 @@ if [ -f "$SOO_STATE" ]; then
       bt)         svc bluetooth enable 2>/dev/null ;;
       data)       svc data enable 2>/dev/null ;;
       location:*) settings put secure location_mode "${line#location:}" 2>/dev/null ;;
+      sensors)    settings put global sensors_off 0 2>/dev/null ;;
+      panel_lpm)  settings put global display_panel_lpm 0 2>/dev/null ;;
     esac
   done < "$SOO_STATE"
   rm -f "$SOO_STATE"
@@ -119,9 +159,20 @@ fi
 # Revert Battery Saver
 log "Reverting Battery Saver..."
 settings delete global battery_saver_constants 2>/dev/null
-settings put global low_power_sticky 0 2>/dev/null
-settings put global low_power_sticky_auto_disable_enabled 1 2>/dev/null
-settings put global low_power 0 2>/dev/null
+BSS_BACKUP="$TEMP_DIR/bss_values.txt"
+if [ -f "$BSS_BACKUP" ]; then
+  _lp=$(grep '^low_power=' "$BSS_BACKUP" | cut -d= -f2)
+  _lps=$(grep '^low_power_sticky=' "$BSS_BACKUP" | cut -d= -f2)
+  _lpa=$(grep '^low_power_sticky_auto_disable_enabled=' "$BSS_BACKUP" | cut -d= -f2)
+  if [ -n "$_lps" ] && [ "$_lps" != "null" ]; then settings put global low_power_sticky "$_lps" 2>/dev/null; else settings put global low_power_sticky 0 2>/dev/null; fi
+  if [ -n "$_lpa" ] && [ "$_lpa" != "null" ]; then settings put global low_power_sticky_auto_disable_enabled "$_lpa" 2>/dev/null; else settings put global low_power_sticky_auto_disable_enabled 1 2>/dev/null; fi
+  if [ -n "$_lp" ] && [ "$_lp" != "null" ]; then settings put global low_power "$_lp" 2>/dev/null; else settings put global low_power 0 2>/dev/null; fi
+  rm -f "$BSS_BACKUP"
+else
+  settings put global low_power_sticky 0 2>/dev/null
+  settings put global low_power_sticky_auto_disable_enabled 1 2>/dev/null
+  settings put global low_power 0 2>/dev/null
+fi
 
 # Revert Deep Doze
 log "Reverting Deep Doze..."
@@ -134,19 +185,13 @@ for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
   am set-standby-bucket "$pkg" active 2>/dev/null
   am set-inactive "$pkg" false 2>/dev/null
 done
+dumpsys sensorservice enable 2>/dev/null
 dumpsys deviceidle unforce 2>/dev/null
 
 # Revert DropBox
 log "Reverting DropBox..."
-for tag in dumpsys:procstats dumpsys:usagestats procstats usagestats \
-           data_app_wtf keymaster system_server_wtf system_app_strictmode \
-           system_app_wtf system_server_strictmode data_app_strictmode \
-           netstats data_app_anr data_app_crash system_server_anr \
-           system_server_watchdog system_server_crash system_server_native_crash \
-           system_server_lowmem system_app_crash system_app_anr storage_trim \
-           SYSTEM_AUDIT SYSTEM_BOOT SYSTEM_LAST_KMSG system_app_native_crash \
-           SYSTEM_TOMBSTONE SYSTEM_TOMBSTONE_PROTO data_app_native_crash \
-           SYSTEM_RESTART; do
+DROPBOX_TAGS="$TEMP_DIR/dropbox_tags.txt"
+for tag in $(cat "$DROPBOX_TAGS" 2>/dev/null); do
   content call --uri content://settings/global --method DELETE_value \
     --arg "dropbox:$tag" 2>/dev/null >/dev/null
 done
@@ -157,32 +202,48 @@ log "Reverting NetworkStats..."
 settings delete global netstats_poll_interval 2>/dev/null
 settings delete global netstats_persist_threshold 2>/dev/null
 settings delete global netstats_global_alert_bytes 2>/dev/null
-settings put global wifi_scan_throttle_enabled 1 2>/dev/null
-settings put global wifi_scan_always_enabled 1 2>/dev/null
+settings delete global wifi_scan_throttle_enabled 2>/dev/null
+settings delete global wifi_scan_always_enabled 2>/dev/null
+
+# Revert Kill Tracking netpolicy for GMS
+_gms_uid=$(dumpsys package com.google.android.gms 2>/dev/null | grep -m1 "userId=" | grep -o 'userId=[0-9]*' | cut -d= -f2)
+[ -n "$_gms_uid" ] && cmd netpolicy remove restrict-background-blacklist "$_gms_uid" 2>/dev/null
 
 # Revert Google tracking
 log "Reverting Google tracking..."
-settings put global gmscorestat_enabled 1 >/dev/null 2>&1
-settings put global play_store_panel_logging_enabled 1 >/dev/null 2>&1
-settings put global clearcut_enabled 1 >/dev/null 2>&1
-settings put global clearcut_events 1 >/dev/null 2>&1
-settings put global clearcut_gcm 1 >/dev/null 2>&1
+settings delete global gmscorestat_enabled >/dev/null 2>&1
+settings delete global play_store_panel_logging_enabled >/dev/null 2>&1
+settings delete global clearcut_enabled >/dev/null 2>&1
+settings delete global clearcut_events >/dev/null 2>&1
+settings delete global clearcut_gcm >/dev/null 2>&1
 settings delete global phenotype__debug_bypass_phenotype >/dev/null 2>&1
 settings delete global phenotype_boot_count >/dev/null 2>&1
 settings delete global phenotype_flags >/dev/null 2>&1
-settings put global ga_collection_enabled 1 >/dev/null 2>&1
-settings put global analytics_enabled 1 >/dev/null 2>&1
-settings put global uploading_enabled 1 >/dev/null 2>&1
-settings put global bug_report_in_power_menu 1 >/dev/null 2>&1
-settings put global usage_stats_enabled 1 >/dev/null 2>&1
-settings put global usagestats_collection_enabled 1 >/dev/null 2>&1
-settings put global network_watchlist_enabled 1 >/dev/null 2>&1
-settings put global limit_ad_tracking 0 >/dev/null 2>&1
-settings put global tron_enabled 1 >/dev/null 2>&1
+settings delete global ga_collection_enabled >/dev/null 2>&1
+settings delete global analytics_enabled >/dev/null 2>&1
+settings delete global uploading_enabled >/dev/null 2>&1
+settings delete global bug_report_in_power_menu >/dev/null 2>&1
+settings delete global usage_stats_enabled >/dev/null 2>&1
+settings delete global usagestats_collection_enabled >/dev/null 2>&1
+settings delete global network_watchlist_enabled >/dev/null 2>&1
+settings delete global limit_ad_tracking >/dev/null 2>&1
+settings delete global tron_enabled >/dev/null 2>&1
+settings delete global gms_checkin_timeout_min 2>/dev/null
+settings delete global binder_calls_stats 2>/dev/null
 
 # Re-enable GMS services
-if [ -f "$GMS_LIST" ]; then
-  log "Re-enabling GMS services..."
+_frozen_file="$TEMP_DIR/frozen_services.txt"
+if [ -f "$_frozen_file" ]; then
+  log "Re-enabling GMS services from tracking file..."
+  count=0
+  while IFS= read -r service; do
+    case "$service" in '#'*|'') continue ;; esac
+    pm enable "$service" >/dev/null 2>&1 && count=$((count + 1))
+  done < "$_frozen_file"
+  rm -f "$_frozen_file"
+  log "Re-enabled $count services"
+elif [ -f "$GMS_LIST" ]; then
+  log "Re-enabling GMS services from full list..."
   count=0
   while IFS='|' read -r service category || [ -n "$service" ]; do
     case "$service" in '#'*|'') continue ;; esac
@@ -192,6 +253,7 @@ if [ -f "$GMS_LIST" ]; then
   log "Re-enabled $count services"
 fi
 
+rm -f "$MODDIR/tmp/ram_clean.log" "$MODDIR/tmp/ram_clean.pid" "$MODDIR/tmp/ram_clean_status.json"
 log "UNINSTALL COMPLETE - reboot recommended"
 rm -rf "$TEMP_DIR"
 sleep 5
