@@ -104,9 +104,9 @@ _apply_xml_overlays() {
       local _e
       _e=$(echo "$_pkg" | sed 's/\./\\./g')
       if [ "$_pkg" = "$GMS_PKG" ]; then
-        sed_pat="${sed_pat}s#<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*/>##g;"
+        sed_pat="${sed_pat}/<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*\/>/d;"
       fi
-      sed_pat="${sed_pat}s#<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>##g;"
+      sed_pat="${sed_pat}/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
       any=1
     done
   fi
