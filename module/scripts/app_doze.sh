@@ -82,7 +82,6 @@ _xml_has_any_pkg() {
   while IFS= read -r _pkg; do
     case "$_pkg" in '#'*|'') continue ;; esac
     _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
-
     if [ "$_pkg" = "$GMS_PKG" ]; then
       grep -qE "allow-in-power-save[^>]*${_e}|allow-in-data-usage-save[^>]*${_e}|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
         "$_xml" 2>/dev/null && return 0
