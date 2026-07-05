@@ -83,11 +83,10 @@ _xml_has_any_pkg() {
     case "$_pkg" in '#'*|'') continue ;; esac
     _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
     if [ "$_pkg" = "$GMS_PKG" ]; then
-      grep -qzE "<allow-in-power-save[^>]*${_e}[^>]*/>|<allow-in-data-usage-save[^>]*${_e}[^>]*/>|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
+      grep -qE "<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*/>|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
         "$_xml" 2>/dev/null && return 0
     else
-      grep -qzE "<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
-        "$_xml" 2>/dev/null && return 0
+      grep -qE "<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" "$_xml" 2>/dev/null && return 0
     fi
   done < "$PATCHES_FILE"
   return 1
@@ -105,7 +104,7 @@ _apply_xml_overlays() {
       local _e
       _e=$(echo "$_pkg" | sed 's/\./\\./g')
       if [ "$_pkg" = "$GMS_PKG" ]; then
-        sed_pat="${sed_pat}s#<allow-in-power-save[^>]*${_e}[^>]*/>##g;s#<allow-in-data-usage-save[^>]*${_e}[^>]*/>##g;"
+        sed_pat="${sed_pat}s#<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*/>##g;"
       fi
       sed_pat="${sed_pat}s#<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>##g;"
       any=1
