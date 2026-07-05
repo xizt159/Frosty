@@ -158,7 +158,7 @@ _apply_xml_overlays() {
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
         if cp -af "$_real" "$_tmp" 2>/dev/null; then
-          sed -zi "$sed_pat" "$_tmp"
+          sed -i "$sed_pat" "$_tmp"
           if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
             mv -f "$_tmp" "$_dest"
             echo "$_dest" >> "$OVERLAYS_FILE"
