@@ -77,45 +77,74 @@ _remove_overlays() {
   done
 }
 
-_xml_has_any_pkg() {
-  local _xml="$1" _pkg _e
+_unit_matches() {
+  local _text="$1" _pkg _e
   while IFS= read -r _pkg; do
     case "$_pkg" in '#'*|'') continue ;; esac
     _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
     if [ "$_pkg" = "$GMS_PKG" ]; then
-      grep -qE "<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*/>|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
-        "$_xml" 2>/dev/null && return 0
+      printf '%s' "$_text" \
+        | grep -qE "<(allow-in-power-save|allow-in-data-usage-save)[^>]*\"${_e}\"[^>]*/>|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
+        && return 0
     else
-      grep -qE "<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" "$_xml" 2>/dev/null && return 0
+      printf '%s' "$_text" | grep -qE "<wl[^>]*>[^<]*${_e}[^<]*</wl>" && return 0
     fi
   done < "$PATCHES_FILE"
   return 1
 }
 
+_xml_has_any_pkg() {
+  local _xml="$1" _line _buf=""
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<'; then
+      if [ -n "$_buf" ] && _unit_matches "$_buf"; then return 0; fi
+      _buf="$_line"
+    else
+      _buf="$_buf $_line"
+    fi
+  done < "$_xml"
+  [ -n "$_buf" ] && _unit_matches "$_buf" && return 0
+  return 1
+}
+
+_build_strip_ranges() {
+  local _src="$1" _line _buf="" _start=0 _lineno=0
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    _lineno=$((_lineno + 1))
+    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<'; then
+      if [ -n "$_buf" ] && _unit_matches "$_buf"; then
+        if [ "$_start" -eq $((_lineno - 1)) ]; then
+          echo "${_start}d"
+        else
+          echo "${_start},$((_lineno - 1))d"
+        fi
+      fi
+      _buf="$_line"
+      _start=$_lineno
+    else
+      _buf="$_buf $_line"
+    fi
+  done < "$_src"
+  if [ -n "$_buf" ] && _unit_matches "$_buf"; then
+    if [ "$_start" -eq "$_lineno" ]; then
+      echo "${_start}d"
+    else
+      echo "${_start},${_lineno}d"
+    fi
+  fi
+}
+
 _apply_xml_overlays() {
   _migrate_stale_lists
 
-  local pkgs sed_pat="" any=0
+  local pkgs any=0
   pkgs=$(_load_packages)
-
-  if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ] && [ -n "$pkgs" ]; then
-    for _pkg in $pkgs; do
-      [ -z "$_pkg" ] && continue
-      local _e
-      _e=$(echo "$_pkg" | sed 's/\./\\./g')
-      if [ "$_pkg" = "$GMS_PKG" ]; then
-        sed_pat="${sed_pat}/<(allow-in-power-save|allow-in-data-usage-save)[^>]*${_e}[^>]*\/>/d;"
-      fi
-      sed_pat="${sed_pat}/<wl[^>]*>[[:space:]]*${_e}[[:space:]]*<\/wl>/d;"
-      any=1
-    done
-  fi
 
   _reboot_file="$MODDIR/tmp/cad_needs_reboot"
 
   rm -f "$_reboot_file" 2>/dev/null
 
-  if [ "$any" -eq 0 ]; then
+  if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$pkgs" ]; then
     _remove_overlays
     return 0
   fi
@@ -157,16 +186,19 @@ _apply_xml_overlays() {
         local _dest="$MODDIR/$_rel"
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
-        if cp -af "$_real" "$_tmp" 2>/dev/null; then
-          sed -i "$sed_pat" "$_tmp"
-          if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
-            mv -f "$_tmp" "$_dest"
-            echo "$_dest" >> "$OVERLAYS_FILE"
-            count=$((count + 1))
-          else
-            rm -f "$_tmp"
-            log_app "[WARN] Skipped overlay - failed XML validation: $(basename "$_dest")"
-          fi
+        local _ranges=$(_build_strip_ranges "$_real")
+        if [ -n "$_ranges" ]; then
+          sed "$(printf '%s' "$_ranges" | tr '\n' ';')" "$_real" > "$_tmp" 2>/dev/null
+        else
+          cp -af "$_real" "$_tmp" 2>/dev/null
+        fi
+        if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
+          mv -f "$_tmp" "$_dest"
+          echo "$_dest" >> "$OVERLAYS_FILE"
+          count=$((count + 1))
+        else
+          rm -f "$_tmp"
+          log_app "[WARN] Skipped overlay - failed XML validation: $(basename "$_dest")"
         fi
       done
     done
