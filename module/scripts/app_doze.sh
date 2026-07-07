@@ -83,11 +83,9 @@ _unit_matches() {
     case "$_pkg" in '#'*|'') continue ;; esac
     _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
     if [ "$_pkg" = "$GMS_PKG" ]; then
-      printf '%s' "$_text" \
-        | grep -qE "<(allow-in-power-save|allow-in-data-usage-save)[^>]*\"${_e}\"[^>]*/>|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" \
-        && return 0
+      printf '%s' "$_text" | grep -qE "(allow-in-power-save|allow-in-data-usage-save)[^>]*\"${_e}\"|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" && return 0
     else
-      printf '%s' "$_text" | grep -qE "<wl[^>]*>[^<]*${_e}[^<]*</wl>" && return 0
+      printf '%s' "$_text" | grep -qE "<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" && return 0
     fi
   done < "$PATCHES_FILE"
   return 1
@@ -96,7 +94,7 @@ _unit_matches() {
 _xml_has_any_pkg() {
   local _xml="$1" _line _buf=""
   while IFS= read -r _line || [ -n "$_line" ]; do
-    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<'; then
+    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<[^/]'; then
       if [ -n "$_buf" ] && _unit_matches "$_buf"; then return 0; fi
       _buf="$_line"
     else
@@ -111,7 +109,7 @@ _build_strip_ranges() {
   local _src="$1" _line _buf="" _start=0 _lineno=0
   while IFS= read -r _line || [ -n "$_line" ]; do
     _lineno=$((_lineno + 1))
-    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<'; then
+    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<[^/]'; then
       if [ -n "$_buf" ] && _unit_matches "$_buf"; then
         if [ "$_start" -eq $((_lineno - 1)) ]; then
           echo "${_start}d"
@@ -137,7 +135,7 @@ _build_strip_ranges() {
 _apply_xml_overlays() {
   _migrate_stale_lists
 
-  local pkgs any=0
+  local pkgs
   pkgs=$(_load_packages)
 
   _reboot_file="$MODDIR/tmp/cad_needs_reboot"
@@ -186,7 +184,8 @@ _apply_xml_overlays() {
         local _dest="$MODDIR/$_rel"
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
-        local _ranges=$(_build_strip_ranges "$_real")
+        local _ranges
+        _ranges=$(_build_strip_ranges "$_real")
         if [ -n "$_ranges" ]; then
           sed "$(printf '%s' "$_ranges" | tr '\n' ';')" "$_real" > "$_tmp" 2>/dev/null
         else
