@@ -45,6 +45,20 @@ _load_packages() {
   sed 's/###.*//;s/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$' | sort
 }
 
+_load_grep() {
+  local pkgs=$(_load_packages) _grep
+  for pkg in $pkgs; do
+    local pat
+    esc_pkg=$(printf '%s' "$pkg" | sed 's/\./\\./g')
+    if [ "$pkg" = "$GMS_PKG" ]; then
+      pat="<(allow-in-power-save|allow-in-data-usage-save)[^>]*\"$esc_pkg\"[^>]*/>"
+    fi
+    pat="${pat:+$pat|}<wl[^>]*>[[:space:]]*$esc_pkg[[:space:]]*</wl>"
+    _grep="${_grep:+$_grep|}$pat"
+  done
+  echo "$_grep"
+}
+
 _get_user_ids() {
   pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
 }
@@ -64,7 +78,7 @@ _remove_overlays() {
   if [ -f "$OVERLAYS_FILE" ]; then
     while IFS= read -r _f; do
       case "$_f" in '#'*|'') continue ;; esac
-      [ -f "$_f" ] && rm -f "$_f"
+      [ -f "$_f" ] && rm -f "$_f" 2>/dev/null
       rm -f "${_f}.tmp" 2>/dev/null
     done < "$OVERLAYS_FILE"
     rm -f "$OVERLAYS_FILE"
@@ -78,39 +92,25 @@ _remove_overlays() {
 }
 
 _unit_matches() {
-  local _text="$1" _pkg _e
-  while IFS= read -r _pkg; do
-    case "$_pkg" in '#'*|'') continue ;; esac
-    _e=$(printf '%s' "$_pkg" | sed 's/\./\\./g')
-    if [ "$_pkg" = "$GMS_PKG" ]; then
-      printf '%s' "$_text" | grep -qE "(allow-in-power-save|allow-in-data-usage-save)[^>]*\"${_e}\"|<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" && return 0
-    else
-      printf '%s' "$_text" | grep -qE "<wl[^>]*>[[:space:]]*${_e}[[:space:]]*</wl>" && return 0
-    fi
-  done < "$PATCHES_FILE"
+  local _text="$1" _grep="$2"
+  [ -n "$_text" ] && [ -n "$_grep" ] || return 1
+  printf '%s' "$_text" | grep -qE "$_grep" && return 0
   return 1
 }
 
 _xml_has_any_pkg() {
-  local _xml="$1" _line _buf=""
-  while IFS= read -r _line || [ -n "$_line" ]; do
-    if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<[^/]'; then
-      if [ -n "$_buf" ] && _unit_matches "$_buf"; then return 0; fi
-      _buf="$_line"
-    else
-      _buf="$_buf $_line"
-    fi
-  done < "$_xml"
-  [ -n "$_buf" ] && _unit_matches "$_buf" && return 0
+  local _xml="$1" _grep="$2"
+  [ -n "$_xml" ] && [ -n "$_grep" ] || return 1
+  tr '\n' ' ' < "$_xml" | grep -qE "$_grep" && return 0
   return 1
 }
 
 _build_strip_ranges() {
-  local _src="$1" _line _buf="" _start=0 _lineno=0
+  local _src="$1" _grep="$2" _line _buf="" _start=0 _lineno=0
   while IFS= read -r _line || [ -n "$_line" ]; do
     _lineno=$((_lineno + 1))
     if printf '%s\n' "$_line" | grep -q '^[[:space:]]*<[^/]'; then
-      if [ -n "$_buf" ] && _unit_matches "$_buf"; then
+      if [ -n "$_buf" ] && _unit_matches "$_buf" "$_grep"; then
         if [ "$_start" -eq $((_lineno - 1)) ]; then
           echo "${_start}d"
         else
@@ -123,7 +123,7 @@ _build_strip_ranges() {
       _buf="$_buf $_line"
     fi
   done < "$_src"
-  if [ -n "$_buf" ] && _unit_matches "$_buf"; then
+  if [ -n "$_buf" ] && _unit_matches "$_buf" "$_grep"; then
     if [ "$_start" -eq "$_lineno" ]; then
       echo "${_start}d"
     else
@@ -135,14 +135,14 @@ _build_strip_ranges() {
 _apply_xml_overlays() {
   _migrate_stale_lists
 
-  local pkgs
-  pkgs=$(_load_packages)
+  local grep_pat
+  grep_pat=$(_load_grep)
 
   _reboot_file="$MODDIR/tmp/cad_needs_reboot"
 
   rm -f "$_reboot_file" 2>/dev/null
 
-  if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$pkgs" ]; then
+  if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$grep_pat" ]; then
     _remove_overlays
     return 0
   fi
@@ -158,7 +158,7 @@ _apply_xml_overlays() {
         case "$_seen" in *"|$_real|"*) continue ;; esac
         _seen="${_seen}|$_real|"
         scanned=$((scanned + 1))
-        _xml_has_any_pkg "$_real" || continue
+        _xml_has_any_pkg "$_real" "$grep_pat" || continue
 
         local _rel="${_real#/}"
         case "$_rel" in
@@ -175,17 +175,25 @@ _apply_xml_overlays() {
           *) _rel="system/$_rel" ;;
         esac
 
+        local _dest="$MODDIR/$_rel"
+        if [ -f "$_dest" ]; then
+          _xml_has_any_pkg "$_dest" "$grep_pat" || {
+            count=$((count + 1))
+            log_app "[SKIP] XML already patched"
+            continue
+          }
+        fi
+
         if [ "$_cleared" != "true" ]; then
           [ -f "$OVERLAYS_FILE" ] && log_app "[INFO] Found unpatched XML(s) - removing existing overlays"
           _remove_overlays
           _cleared=true
         fi
 
-        local _dest="$MODDIR/$_rel"
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
         local _ranges
-        _ranges=$(_build_strip_ranges "$_real")
+        _ranges=$(_build_strip_ranges "$_real" "$grep_pat")
         if [ -n "$_ranges" ]; then
           sed "$(printf '%s' "$_ranges" | tr '\n' ';')" "$_real" > "$_tmp" 2>/dev/null
         else
