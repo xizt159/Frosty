@@ -131,6 +131,15 @@ _build_strip_ranges() {
   fi
 }
 
+_add_to_overlay_file() {
+  local _dest="$1"
+  [ ! -f "$OVERLAYS_FILE" ] && {
+    mkdir -p "$(dirname "$OVERLAYS_FILE")"
+    touch "$OVERLAYS_FILE" 2>/dev/null
+  }
+  grep -qxF "$_dest" "$OVERLAYS_FILE" || echo "$_dest" >> "$OVERLAYS_FILE"
+}
+
 _apply_xml_overlays() {
   _migrate_stale_lists
 
@@ -179,6 +188,7 @@ _apply_xml_overlays() {
           _xml_has_any_pkg "$_dest" "$grep_pat" || {
             count=$((count + 1))
             log_app "[SKIP] XML already patched"
+            _add_to_overlay_file "$_dest"
             continue
           }
         fi
@@ -200,7 +210,7 @@ _apply_xml_overlays() {
         fi
         if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
           mv -f "$_tmp" "$_dest"
-          echo "$_dest" >> "$OVERLAYS_FILE"
+          _add_to_overlay_file "$_dest"
           count=$((count + 1))
         else
           rm -f "$_tmp"
