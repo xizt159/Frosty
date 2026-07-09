@@ -86,7 +86,7 @@ _remove_overlays() {
                my_product my_heytap my_region my_bigball my_carrier \
                my_company my_engineering my_manifest my_preload \
                my_reserve my_stock india; do
-    [ -d "$MODDIR/$_root" ] && find "$MODDIR/$_root" -type d -empty -delete 2>/dev/null
+    [ -d "$MODDIR/$_root" ] && find "$MODDIR/$_root" -type d -empty -delete >/dev/null 2>&1
   done
 }
 
@@ -148,7 +148,7 @@ _apply_xml_overlays() {
 
   _reboot_file="$MODDIR/tmp/cad_needs_reboot"
 
-  rm -f "$_reboot_file" 2>/dev/null
+  rm -f "$_reboot_file"
 
   if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$grep_pat" ]; then
     _remove_overlays
