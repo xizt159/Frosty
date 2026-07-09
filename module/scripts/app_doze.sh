@@ -48,7 +48,7 @@ _load_packages() {
 _load_grep() {
   local pkgs=$(_load_packages) _grep
   for pkg in $pkgs; do
-    local pat
+    pat=""
     esc_pkg=$(printf '%s' "$pkg" | sed 's/\./\\./g')
     if [ "$pkg" = "$GMS_PKG" ]; then
       pat="<(allow-in-power-save|allow-in-data-usage-save)[^>]*\"$esc_pkg\"[^>]*/>"
@@ -66,9 +66,9 @@ _get_user_ids() {
 _migrate_stale_lists() {
   for _stale in "$MODDIR/config/gms_overlays.txt" "$MODDIR/config/cad_overlays.txt"; do
     [ -f "$_stale" ] || continue
-    while IFS= read -r _f; do
+    while IFS= read -r _f || [ -n "$_f" ]; do
       case "$_f" in '#'*|'') continue ;; esac
-      [ -f "$_f" ] && rm -f "$_f"
+      rm -f "$_f"
     done < "$_stale"
     rm -f "$_stale"
   done
@@ -76,10 +76,9 @@ _migrate_stale_lists() {
 
 _remove_overlays() {
   if [ -f "$OVERLAYS_FILE" ]; then
-    while IFS= read -r _f; do
+    while IFS= read -r _f || [ -n "$_f" ]; do
       case "$_f" in '#'*|'') continue ;; esac
-      [ -f "$_f" ] && rm -f "$_f" 2>/dev/null
-      rm -f "${_f}.tmp" 2>/dev/null
+      rm -f "$_f" "${_f}.tmp"
     done < "$OVERLAYS_FILE"
     rm -f "$OVERLAYS_FILE"
   fi
@@ -101,7 +100,7 @@ _unit_matches() {
 _xml_has_any_pkg() {
   local _xml="$1" _grep="$2"
   [ -n "$_xml" ] && [ -n "$_grep" ] || return 1
-  tr '\n' ' ' < "$_xml" | grep -qE "$_grep" && return 0
+  sed 's/\r//g; s/\t/ /g; s/\n/ /g; s/  */ /g' "$_xml" | grep -qE "$_grep" && return 0
   return 1
 }
 
@@ -369,7 +368,7 @@ list_pkgs() {
   [ -f "$PATCHES_FILE" ] || { echo '{"status":"ok","packages":[]}'; return; }
   local pkgs out="" first=1
   pkgs=$(sed 's/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$')
-  while IFS= read -r p; do
+  while IFS= read -r p || [ -n "$p" ]; do
     [ -z "$p" ] && continue
     [ "$first" = "1" ] && first=0 || out="${out},"
     out="${out}\"${p}\""
