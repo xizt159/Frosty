@@ -133,7 +133,6 @@ kill_wakelocks() {
   log_deep "[OK] Killed $killed wakelock holders"
 }
 
-
 get_screen_state() {
   local state
   state=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)
@@ -155,14 +154,27 @@ start_screen_monitor() {
   local _mon_level="$DEEP_DOZE_LEVEL"
   (
     trap 'exit 0' TERM INT
+    local _backoff=0 _backoff_max=5
+    local _consecutive_on=0 _consecutive_off=0
     while true; do
       local state
       state=$(get_screen_state)
 
       if [ "$state" = "ON" ] || [ -z "$state" ]; then
-        sleep 90
+        _consecutive_off=0
+        _consecutive_on=$((_consecutive_on + 1))
+        # Adaptive backoff: sleep longer if screen has been on for a while
+        if [ "$_consecutive_on" -ge 4 ]; then
+          sleep 180
+        else
+          sleep 90
+        fi
+        _backoff=0
         continue
       fi
+
+      _consecutive_on=0
+      _consecutive_off=$((_consecutive_off + 1))
 
       log_deep "Screen off - wakelock killer armed (5min)"
       if [ "$_mon_level" = "maximum" ]; then
@@ -177,15 +189,26 @@ start_screen_monitor() {
         _stepdeep
       fi
 
+      local _s=0
       while [ "$(get_screen_state)" != "ON" ]; do
-        sleep 5
+        # Adaptive backoff: longer sleep each consecutive off-cycle
+        if [ "$_s" -ge 12 ] && [ "$_backoff" -lt "$_backoff_max" ]; then
+          _backoff=$((_backoff + 1))
+          sleep 30
+        elif [ "$_s" -ge 24 ]; then
+          sleep 60
+        else
+          sleep 5
+        fi
+        _s=$((_s + 1))
       done
 
       if [ "$_mon_level" = "maximum" ]; then
         dumpsys sensorservice enable 2>/dev/null
         log_deep "[OK] Sensor service re-enabled"
       fi
-      log_deep "Screen on - monitor re-armed"
+      log_deep "Screen on - monitor re-armed (backoff=$_backoff)"
+      _backoff=0
     done
   ) &
   echo $! > "$MONITOR_PID_FILE"

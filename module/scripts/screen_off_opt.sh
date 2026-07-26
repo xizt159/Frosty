@@ -199,12 +199,15 @@ _monitor_loop() {
 
   local screen_was_off=0 off_since=0
   local conn_done=0 cache_done=0
+  local _backoff=0 _backoff_max=5
+  local _consecutive_on=0
 
   while true; do
     local screen
     screen=$(_get_screen_state)
 
     if [ "$screen" = "ON" ] || [ -z "$screen" ]; then
+      _consecutive_on=$((_consecutive_on + 1))
       if [ "$screen_was_off" = "1" ]; then
         if [ -f "$DISABLED_FILE" ]; then
           if grep -q "^sensors$" "$DISABLED_FILE" 2>/dev/null; then
@@ -224,19 +227,25 @@ _monitor_loop() {
           if ! _is_locked; then
             log_soo "Unlocked - restoring"
             _restore_connections
-            screen_was_off=0; conn_done=0; cache_done=0; off_since=0
+            screen_was_off=0; conn_done=0; cache_done=0; off_since=0; _backoff=0
             sleep 15; continue
           fi
           sleep 1; continue
         else
           rm -f "$DISABLED_FILE"
-          screen_was_off=0; conn_done=0; cache_done=0; off_since=0
+          screen_was_off=0; conn_done=0; cache_done=0; off_since=0; _backoff=0
         fi
       fi
-      sleep 15
+      # Adaptive backoff: sleep longer if screen has been on for a while
+      if [ "$_consecutive_on" -ge 6 ]; then
+        sleep 60
+      else
+        sleep 15
+      fi
       continue
     fi
 
+    _consecutive_on=0
     local now
     now=$(date +%s)
 
@@ -268,9 +277,16 @@ _monitor_loop() {
     if [ "$(( SOO_KILL_WIFI + SOO_KILL_BT + SOO_KILL_DATA + SOO_KILL_LOCATION + SOO_KILL_SENSORS + SOO_KILL_PANEL_LPM ))" -gt 0 ] && [ "$conn_done" = "0" ]; then all_done=0; fi
     if [ "$SOO_RAM_CLEAN_MODE" != "off" ] && [ -n "$SOO_RAM_CLEAN_MODE" ] && [ "$cache_done" = "0" ]; then all_done=0; fi
 
+    # Adaptive backoff while waiting for remaining actions
     if [ "$all_done" = "1" ]; then
-      sleep 5
+      if [ "$_backoff" -lt "$_backoff_max" ]; then
+        _backoff=$((_backoff + 1))
+        sleep 10
+      else
+        sleep 30
+      fi
     else
+      _backoff=0
       sleep 3
     fi
   done
