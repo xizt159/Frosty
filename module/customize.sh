@@ -349,20 +349,20 @@ s() {
     ar:done_reboot)   echo "  🔄 أعد تشغيل جهازك" ;;
      *:done_reboot)   echo "  🔄 Reboot your device" ;;
 
-    fr:done_webui)    echo "  ⚙️  Ouvrez la WebUI pour activer les fonctionnalités" ;;
-    de:done_webui)    echo "  ⚙️  Öffne die WebUI, um Funktionen zu aktivieren" ;;
-    pl:done_webui)    echo "  ⚙️  Otwórz WebUI, aby aktywować funkcje" ;;
-    it:done_webui)    echo "  ⚙️  Apri la WebUI per abilitare le funzionalità" ;;
-    es:done_webui)    echo "  ⚙️  Abre la WebUI para activar las funciones" ;;
-    pt:done_webui)    echo "  ⚙️  Abra a WebUI para ativar os recursos" ;;
-    tr:done_webui)    echo "  ⚙️  Özellikleri açmak için WebUI'yi kullanın" ;;
-    id:done_webui)    echo "  ⚙️  Buka WebUI untuk mengaktifkan fitur" ;;
-    ru:done_webui)    echo "  ⚙️  Откройте WebUI для включения функций модуля" ;;
-    uk:done_webui)    echo "  ⚙️  Відкрийте WebUI для увімкнення функцій модуля" ;;
-    zh:done_webui)    echo "  ⚙️  请打开 WebUI 启用所需的模块功能" ;;
-    ja:done_webui)    echo "  ⚙️  WebUI を開いて機能を有効化してください" ;;
-    ar:done_webui)    echo "  ⚙️  افتح واجهة WebUI لتفعيل الميزات" ;;
-     *:done_webui)    echo "  ⚙️  Open WebUI in your root manager to enable" ;;
+    fr:done_webui)    echo "  ⚙️ Ouvrez la WebUI pour activer les fonctionnalités" ;;
+    de:done_webui)    echo "  ⚙️ Öffne die WebUI, um Funktionen zu aktivieren" ;;
+    pl:done_webui)    echo "  ⚙️ Otwórz WebUI, aby aktywować funkcje" ;;
+    it:done_webui)    echo "  ⚙️ Apri la WebUI per abilitare le funzionalità" ;;
+    es:done_webui)    echo "  ⚙️ Abre la WebUI para activar las funciones" ;;
+    pt:done_webui)    echo "  ⚙️ Abra a WebUI para ativar os recursos" ;;
+    tr:done_webui)    echo "  ⚙️ Özellikleri açmak için WebUI'yi kullanın" ;;
+    id:done_webui)    echo "  ⚙️ Buka WebUI untuk mengaktifkan fitur" ;;
+    ru:done_webui)    echo "  ⚙️ Откройте WebUI для включения функций модуля" ;;
+    uk:done_webui)    echo "  ⚙️ Відкрийте WebUI для увімкнення функцій модуля" ;;
+    zh:done_webui)    echo "  ⚙️ 请打开 WebUI 启用所需的模块功能" ;;
+    ja:done_webui)    echo "  ⚙️ WebUI を開いて機能を有効化してください" ;;
+    ar:done_webui)    echo "  ⚙️ افتح واجهة WebUI لتفعيل الميزات" ;;
+     *:done_webui)    echo "  ⚙️ Open WebUI in your root manager to enable" ;;
 
     fr:done_off)      echo "     (tout commence DÉSACTIVÉ par défaut)" ;;
     de:done_off)      echo "     (alles startet DEAKTIVIERT standardmäßig)" ;;
@@ -409,20 +409,35 @@ s() {
     ar:stay_frosty)   echo "❆  Stay Frosty!  ❆" ;;
      *:stay_frosty)   echo "❆  Stay Frosty!  ❆" ;;
 
-    fr:dirty_flash_hint)  echo "  ℹ️  En cas de problème après la mise à jour : Désinstaller → Redémarrer → Réinstaller" ;;
-    de:dirty_flash_hint)  echo "  ℹ️  Bei Problemen nach dem Update: Deinstallieren → Neustart → Neu installieren" ;;
-    pl:dirty_flash_hint)  echo "  ℹ️  W razie problemów po aktualizacji: Odinstaluj → Uruchom ponownie → Zainstaluj ponownie" ;;
-    it:dirty_flash_hint)  echo "  ℹ️  In caso di problemi dopo l'aggiornamento: Disinstalla → Riavvia → Reinstalla" ;;
-    es:dirty_flash_hint)  echo "  ℹ️  Si tienes problemas tras actualizar: Desinstalar → Reiniciar → Reinstalar" ;;
-    pt:dirty_flash_hint)  echo "  ℹ️  Em caso de problemas após atualizar: Desinstalar → Reiniciar → Reinstalar" ;;
-    tr:dirty_flash_hint)  echo "  ℹ️  Güncelleme sonrası sorun yaşarsanız: Kaldır → Yeniden başlat → Yeniden kur" ;;
-    id:dirty_flash_hint)  echo "  ℹ️  Jika mengalami masalah setelah pembaruan: Hapus → Mulai ulang → Pasang ulang" ;;
-    ru:dirty_flash_hint)  echo "  ℹ️  При проблемах после обновления: Удалить → Перезагрузить → Установить заново" ;;
-    uk:dirty_flash_hint)  echo "  ℹ️  При проблемах після оновлення: Видалити → Перезавантажити → Встановити заново" ;;
-    zh:dirty_flash_hint)  echo "  ℹ️  更新后如有问题：卸载 → 重启 → 重新安装" ;;
-    ja:dirty_flash_hint)  echo "  ℹ️  更新後に問題がある場合: アンインストール → 再起動 → 再インストール" ;;
-    ar:dirty_flash_hint)  echo "  ℹ️  في حال مواجهة مشاكل بعد التحديث: إلغاء التثبيت → إعادة التشغيل → إعادة التثبيت" ;;
-     *:dirty_flash_hint)  echo "  ℹ️  If facing any issues after updating: Uninstall → Reboot → Reinstall" ;;
+    fr:dirty_flash_hint)  echo "  ℹ️ En cas de problème après la mise à jour :" ;;
+    de:dirty_flash_hint)  echo "  ℹ️ Bei Problemen nach dem Update:" ;;
+    pl:dirty_flash_hint)  echo "  ℹ️ W razie problemów po aktualizacji:" ;;
+    it:dirty_flash_hint)  echo "  ℹ️ In caso di problemi dopo l'aggiornamento:" ;;
+    es:dirty_flash_hint)  echo "  ℹ️ Si tienes problemas tras actualizar:" ;;
+    pt:dirty_flash_hint)  echo "  ℹ️ Em caso de problemas após atualizar:" ;;
+    tr:dirty_flash_hint)  echo "  ℹ️ Güncelleme sonrası sorun yaşarsanız:" ;;
+    id:dirty_flash_hint)  echo "  ℹ️ Jika mengalami masalah setelah pembaruan:" ;;
+    ru:dirty_flash_hint)  echo "  ℹ️ При проблемах после обновления:" ;;
+    uk:dirty_flash_hint)  echo "  ℹ️ При проблемах після оновлення:" ;;
+    zh:dirty_flash_hint)  echo "  ℹ️ 更新后如有问题" ;;
+    ja:dirty_flash_hint)  echo "  ℹ️ 更新後に問題がある場合:" ;;
+    ar:dirty_flash_hint)  echo "  ℹ️ في حال مواجهة مشاكل بعد التحديث:" ;;
+     *:dirty_flash_hint)  echo "  ℹ️ If facing any issues after updating:" ;;
+     
+    fr:dirty_flash_hint2)  echo "     Désinstaller → Redémarrer → Réinstaller" ;;
+    de:dirty_flash_hint2)  echo "     Deinstallieren → Neustart → Neu installieren" ;;
+    pl:dirty_flash_hint2)  echo "     Odinstaluj → Uruchom ponownie → Zainstaluj ponownie" ;;
+    it:dirty_flash_hint2)  echo "     Disinstalla → Riavvia → Reinstalla" ;;
+    es:dirty_flash_hint2)  echo "     Desinstalar → Reiniciar → Reinstalar" ;;
+    pt:dirty_flash_hint2)  echo "     Desinstalar → Reiniciar → Reinstalar" ;;
+    tr:dirty_flash_hint2)  echo "     Kaldır → Yeniden başlat → Yeniden kur" ;;
+    id:dirty_flash_hint2)  echo "     Hapus → Mulai ulang → Pasang ulang" ;;
+    ru:dirty_flash_hint2)  echo "     Удалить → Перезагрузить → Установить заново" ;;
+    uk:dirty_flash_hint2)  echo "     Видалити → Перезавантажити → Встановити заново" ;;
+    zh:dirty_flash_hint2)  echo "     卸载 → 重启 → 重新安装" ;;
+    ja:dirty_flash_hint2)  echo "     アンインストール → 再起動 → 再インストール" ;;
+    ar:dirty_flash_hint2)  echo "     إلغاء التثبيت → إعادة التشغيل → إعادة التثبيت" ;;
+     *:dirty_flash_hint2)  echo "     Uninstall → Reboot → Reinstall" ;;
 
   esac
 }
@@ -509,6 +524,7 @@ INSTALLED_PROP="/data/adb/modules/$MODID/module.prop"
 if [ -f "$INSTALLED_PROP" ]; then
   ui_print ""
   ui_print "$(s dirty_flash_hint)"
+  ui_print "$(s dirty_flash_hint2)"
 fi
 ui_print ""
 print_section "$(s stay_frosty)"

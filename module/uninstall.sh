@@ -151,6 +151,7 @@ if [ -f "$XML_OVERLAYS" ]; then
   done < "$XML_OVERLAYS"
   rm -f "$XML_OVERLAYS"
 fi
+rm -rf "/data/adb/modules/Frosty/backup/overlays"
 
 # Revert Deep Doze
 log "Reverting Deep Doze..."
