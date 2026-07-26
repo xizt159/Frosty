@@ -16,6 +16,7 @@ mkdir -p "$TEMP_DIR"
 [ -f "$MODDIR/backup/bss_values.txt" ]   && cp -f "$MODDIR/backup/bss_values.txt"   "$TEMP_DIR/"
 [ -f "$MODDIR/config/dropbox_tags.txt" ] && cp -f "$MODDIR/config/dropbox_tags.txt" "$TEMP_DIR/"
 [ -f "$MODDIR/backup/devcfg_values.txt" ] && cp -f "$MODDIR/backup/devcfg_values.txt" "$TEMP_DIR/"
+[ -f "$MODDIR/config/wakelock_blocklist.txt" ] && cp -f "$MODDIR/config/wakelock_blocklist.txt" "$TEMP_DIR/"
 
 # Kill Deep Doze screen monitor
 if [ -f "$MODDIR/tmp/screen_monitor.pid" ]; then
@@ -152,21 +153,40 @@ if [ -f "$XML_OVERLAYS" ]; then
   rm -f "$XML_OVERLAYS"
 fi
 
-# Revert Screen Off Optimization connection state if left disabled
-SOO_STATE="/data/adb/modules/Frosty/tmp/soo_disabled"
-if [ -f "$SOO_STATE" ]; then
-  log "Restoring Screen Off Optimization connection state..."
-  while IFS= read -r line; do
-    case "$line" in
-      wifi)       svc wifi enable 2>/dev/null ;;
-      bt)         svc bluetooth enable 2>/dev/null ;;
-      data)       svc data enable 2>/dev/null ;;
-      location:*) settings put secure location_mode "${line#location:}" 2>/dev/null ;;
-      sensors)    settings put global sensors_off 0 2>/dev/null ;;
-      panel_lpm)  settings put global display_panel_lpm 0 2>/dev/null ;;
-    esac
-  done < "$SOO_STATE"
-  rm -f "$SOO_STATE"
+# Revert Deep Doze
+log "Reverting Deep Doze..."
+settings delete global device_idle_constants 2>/dev/null
+settings delete global app_standby_enabled 2>/dev/null
+settings delete global adaptive_battery_management_enabled 2>/dev/null
+
+for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
+  appops set "$pkg" WAKE_LOCK allow 2>/dev/null
+  am set-standby-bucket "$pkg" active 2>/dev/null
+  am set-inactive "$pkg" false 2>/dev/null
+done
+dumpsys sensorservice enable 2>/dev/null
+dumpsys deviceidle unforce 2>/dev/null
+
+# Revert Kernel WakeLock Blocker
+log "Reverting Kernel WakeLock Blocker..."
+WAKELOCK_BLOCKLIST="$TEMP_DIR/wakelock_blocklist.txt"
+if [ -f "$WAKELOCK_BLOCKLIST" ]; then
+  restored=0
+  while IFS= read -r wl_name; do
+    case "$wl_name" in ''|'#'*) continue ;; esac
+    wl_name=$(echo "$wl_name" | tr -d ' ')
+    [ -z "$wl_name" ] && continue
+    # Re-enable via device path
+    _devpath=$(find /sys/devices -name "$wl_name" -type d 2>/dev/null | head -1)
+    if [ -n "$_devpath" ] && [ -f "$_devpath/power/wakeup" ]; then
+      echo "enabled" > "$_devpath/power/wakeup" 2>/dev/null && restored=$((restored + 1))
+    fi
+    # Re-enable via wakeup_source class
+    if [ -d "/sys/class/misc/wakeup_source/$wl_name" ]; then
+      echo 1 > "/sys/class/misc/wakeup_source/$wl_name/enable" 2>/dev/null
+    fi
+  done < "$WAKELOCK_BLOCKLIST"
+  rm -f "$WAKELOCK_BLOCKLIST"
 fi
 
 # Revert Battery Saver
@@ -184,19 +204,22 @@ else
   settings put global low_power 0 2>/dev/null
 fi
 
-# Revert Deep Doze
-log "Reverting Deep Doze..."
-settings delete global device_idle_constants 2>/dev/null
-settings delete global app_standby_enabled 2>/dev/null
-settings delete global adaptive_battery_management_enabled 2>/dev/null
-
-for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-  appops set "$pkg" WAKE_LOCK allow 2>/dev/null
-  am set-standby-bucket "$pkg" active 2>/dev/null
-  am set-inactive "$pkg" false 2>/dev/null
-done
-dumpsys sensorservice enable 2>/dev/null
-dumpsys deviceidle unforce 2>/dev/null
+# Revert Screen Off Optimization connection state if left disabled
+SOO_STATE="/data/adb/modules/Frosty/tmp/soo_disabled"
+if [ -f "$SOO_STATE" ]; then
+  log "Restoring Screen Off Optimization connection state..."
+  while IFS= read -r line; do
+    case "$line" in
+      wifi)       svc wifi enable 2>/dev/null ;;
+      bt)         svc bluetooth enable 2>/dev/null ;;
+      data)       svc data enable 2>/dev/null ;;
+      location:*) settings put secure location_mode "${line#location:}" 2>/dev/null ;;
+      sensors)    settings put global sensors_off 0 2>/dev/null ;;
+      panel_lpm)  settings put global display_panel_lpm 0 2>/dev/null ;;
+    esac
+  done < "$SOO_STATE"
+  rm -f "$SOO_STATE"
+fi
 
 # Revert DropBox
 log "Reverting DropBox..."

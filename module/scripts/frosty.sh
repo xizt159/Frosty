@@ -54,6 +54,13 @@ case "$cmd" in
       revert_tracking) revert_kill_tracking ;;
     esac ;;
 
+  block_kwl|unblock_kwl)
+    . "$SCRIPTS/wakelock_blocker.sh"
+    case "$cmd" in
+      block_kwl)  block ;;
+      unblock_kwl) unblock ;;
+    esac ;;
+
   freeze|stock|freeze_category|unfreeze_category|list_frozen|list_gms)
     . "$SCRIPTS/gms_freeze.sh"
     case "$cmd" in

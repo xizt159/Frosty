@@ -1,0 +1,26 @@
+# Frosty - Kernel WakeLock Blocklist
+# Block kernel wakelocks to prevent unnecessary SoC wakeups.
+
+wlan_rx_wake
+wlan_ctrl_wake
+wlan_wake
+wlan_ipa_wake
+wlan_pno_wake
+wlan_epno_wake
+wlan_ext_scan_wake
+qcom_rx_wakelock
+qcom_tx_wakelock
+bluetooth_timer
+bluetooth_wake
+btusb_wake
+nfc_wake
+nfc_disable_wake
+sensor_ind
+sns_fsync_wakelock
+qcril
+netmgr_wakelock
+radio-interface
+cpr_wake
+mdss_dsi_wake
+mdss_hdmi_wake
+msm_vidc_wakelock

@@ -132,6 +132,17 @@ else
   log_boot "Deep Doze SKIPPED"
 fi
 
+if [ "$ENABLE_WAKELOCK_BLOCKER" = "1" ]; then
+  log_boot "Blocking Kernel WakeLocks..."
+  if sh "$MODDIR/scripts/wakelock_blocker.sh" block >/dev/null 2>&1; then
+    log_boot "Kernel WakeLocks blocked"
+  else
+    log_boot "[WARN] Kernel WakeLock Blocker failed"
+  fi
+else
+  log_boot "Kernel WakeLock Blocker SKIPPED"
+fi
+
 if [ "$ENABLE_BATTERY_SAVER" = "1" ]; then
   log_boot "Applying Battery Saver Tuner..."
   if sh "$MODDIR/scripts/frosty.sh" apply_bss >/dev/null 2>&1; then
