@@ -82,7 +82,6 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/scripts/frosty.sh" 0 0 0755
 set_perm "$MODPATH/scripts/app_doze.sh" 0 0 0755
 set_perm "$MODPATH/scripts/deep_doze.sh" 0 0 0755
-set_perm "$MODPATH/scripts/wakelock_blocker.sh" 0 0 0755
 set_perm "$MODPATH/scripts/battery_saver.sh" 0 0 0755
 set_perm "$MODPATH/scripts/screen_off_opt.sh" 0 0 0755
 set_perm "$MODPATH/uninstall.sh" 0 0 0755

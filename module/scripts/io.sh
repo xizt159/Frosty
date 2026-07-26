@@ -20,17 +20,16 @@ backup_settings() {
   "version": "${MODVER:-unknown}",
   "exported": "$ts",
   "prefs": {
+    "ENABLE_SYSTEM_PROPS": ${ENABLE_SYSTEM_PROPS:-0},
+    "ENABLE_BLUR_DISABLE": ${ENABLE_BLUR_DISABLE:-0},
     "ENABLE_KERNEL_TWEAKS": ${ENABLE_KERNEL_TWEAKS:-0},
     "ENABLE_RAM_OPTIMIZER": ${ENABLE_RAM_OPTIMIZER:-0},
     "RAM_OPT_LEVEL": "${RAM_OPT_LEVEL:-moderate}",
-    "ENABLE_SYSTEM_PROPS": ${ENABLE_SYSTEM_PROPS:-0},
-    "ENABLE_BLUR_DISABLE": ${ENABLE_BLUR_DISABLE:-0},
     "ENABLE_LOG_KILLING": ${ENABLE_LOG_KILLING:-0},
     "ENABLE_KILL_TRACKING": ${ENABLE_KILL_TRACKING:-0},
     "ENABLE_CUSTOM_APP_DOZE": ${ENABLE_CUSTOM_APP_DOZE:-0},
     "ENABLE_DEEP_DOZE": ${ENABLE_DEEP_DOZE:-0},
     "DEEP_DOZE_LEVEL": "${DEEP_DOZE_LEVEL:-moderate}",
-    "ENABLE_WAKELOCK_BLOCKER": ${ENABLE_WAKELOCK_BLOCKER:-0},
     "ENABLE_BATTERY_SAVER": ${ENABLE_BATTERY_SAVER:-0},
     "BSS_SOUNDTRIGGER_DISABLED": ${BSS_SOUNDTRIGGER_DISABLED:-0},
     "BSS_FULLBACKUP_DEFERRED": ${BSS_FULLBACKUP_DEFERRED:-0},
@@ -76,16 +75,23 @@ restore_settings() {
   ps_() { grep "\"$1\"" "$file" | sed 's/.*: *"//;s/".*//' | head -1; }
 
   local sys_pro=$(pi ENABLE_SYSTEM_PROPS);          [ -z "$sys_pro" ] && sys_pro=0
+  local blu_dis=$(pi ENABLE_BLUR_DISABLE);          [ -z "$blu_dis" ] && blu_dis=0
   local ker_twe=$(pi ENABLE_KERNEL_TWEAKS);         [ -z "$ker_twe" ] && ker_twe=0
   local ram_opt=$(pi ENABLE_RAM_OPTIMIZER);         [ -z "$ram_opt" ] && ram_opt=0
   local ram_lvl=$(ps_ RAM_OPT_LEVEL);               [ -z "$ram_lvl" ] && ram_lvl="moderate"
-  local blu_dis=$(pi ENABLE_BLUR_DISABLE);          [ -z "$blu_dis" ] && blu_dis=0
   local log_kil=$(pi ENABLE_LOG_KILLING);           [ -z "$log_kil" ] && log_kil=0
   local kil_tra=$(pi ENABLE_KILL_TRACKING);         [ -z "$kil_tra" ] && kil_tra=0
-  local cad_ena=$(pi ENABLE_CUSTOM_APP_DOZE);       [ -z "$cad_ena" ] && cad_ena=0
+  local dis_tel=$(pi DISABLE_TELEMETRY);            [ -z "$dis_tel" ] && dis_tel=0
+  local dis_bac=$(pi DISABLE_BACKGROUND);           [ -z "$dis_bac" ] && dis_bac=0
+  local dis_loc=$(pi DISABLE_LOCATION);             [ -z "$dis_loc" ] && dis_loc=0
+  local dis_con=$(pi DISABLE_CONNECTIVITY);         [ -z "$dis_con" ] && dis_con=0
+  local dis_clo=$(pi DISABLE_CLOUD);                [ -z "$dis_clo" ] && dis_clo=0
+  local dis_pay=$(pi DISABLE_PAYMENTS);             [ -z "$dis_pay" ] && dis_pay=0
+  local dis_wea=$(pi DISABLE_WEARABLES);            [ -z "$dis_wea" ] && dis_wea=0
+  local dis_gam=$(pi DISABLE_GAMES);                [ -z "$dis_gam" ] && dis_gam=0
+  local app_doz=$(pi ENABLE_CUSTOM_APP_DOZE);       [ -z "$app_doz" ] && app_doz=0
   local dep_doz=$(pi ENABLE_DEEP_DOZE);             [ -z "$dep_doz" ] && dep_doz=0
   local dep_lvl=$(ps_ DEEP_DOZE_LEVEL);             [ -z "$dep_lvl" ] && dep_lvl="moderate"
-  local kwl_blk=$(pi ENABLE_WAKELOCK_BLOCKER);      [ -z "$kwl_blk" ] && kwl_blk=0
   local bss_ena=$(pi ENABLE_BATTERY_SAVER);         [ -z "$bss_ena" ] && bss_ena=0
   local bss_snd=$(pi BSS_SOUNDTRIGGER_DISABLED);    [ -z "$bss_snd" ] && bss_snd=0
   local bss_fbu=$(pi BSS_FULLBACKUP_DEFERRED);      [ -z "$bss_fbu" ] && bss_fbu=0
@@ -103,14 +109,6 @@ restore_settings() {
   local soo_cdl=$(pi SOO_CONN_DELAY);               [ -z "$soo_cdl" ] && soo_cdl=5
   local soo_rst=$(pi SOO_RESTORE_ON_UNLOCK);        [ -z "$soo_rst" ] && soo_rst=1
   local soo_rcm=$(ps_ SOO_RAM_CLEAN_MODE)
-  local dis_tel=$(pi DISABLE_TELEMETRY);            [ -z "$dis_tel" ] && dis_tel=0
-  local dis_bac=$(pi DISABLE_BACKGROUND);           [ -z "$dis_bac" ] && dis_bac=0
-  local dis_loc=$(pi DISABLE_LOCATION);             [ -z "$dis_loc" ] && dis_loc=0
-  local dis_con=$(pi DISABLE_CONNECTIVITY);         [ -z "$dis_con" ] && dis_con=0
-  local dis_clo=$(pi DISABLE_CLOUD);                [ -z "$dis_clo" ] && dis_clo=0
-  local dis_pay=$(pi DISABLE_PAYMENTS);             [ -z "$dis_pay" ] && dis_pay=0
-  local dis_wea=$(pi DISABLE_WEARABLES);            [ -z "$dis_wea" ] && dis_wea=0
-  local dis_gam=$(pi DISABLE_GAMES);                [ -z "$dis_gam" ] && dis_gam=0
   if [ -z "$soo_rcm" ]; then
     [ "$(pi SOO_KILL_CACHE)" = "1" ] && soo_rcm="safe" || soo_rcm="off"
   fi
@@ -121,16 +119,23 @@ restore_settings() {
 
   cat > "$MODDIR/config/user_prefs.tmp" << ENDPREFS
 ENABLE_SYSTEM_PROPS=$sys_pro
+ENABLE_BLUR_DISABLE=$blu_dis
 ENABLE_KERNEL_TWEAKS=$ker_twe
 ENABLE_RAM_OPTIMIZER=$ram_opt
 RAM_OPT_LEVEL=$ram_lvl
-ENABLE_BLUR_DISABLE=$blu_dis
 ENABLE_LOG_KILLING=$log_kil
 ENABLE_KILL_TRACKING=$kil_tra
-ENABLE_CUSTOM_APP_DOZE=$cad_ena
+DISABLE_TELEMETRY=$dis_tel
+DISABLE_BACKGROUND=$dis_bac
+DISABLE_LOCATION=$dis_loc
+DISABLE_CONNECTIVITY=$dis_con
+DISABLE_CLOUD=$dis_clo
+DISABLE_PAYMENTS=$dis_pay
+DISABLE_WEARABLES=$dis_wea
+DISABLE_GAMES=$dis_gam
+ENABLE_CUSTOM_APP_DOZE=$app_doz
 ENABLE_DEEP_DOZE=$dep_doz
 DEEP_DOZE_LEVEL=$dep_lvl
-ENABLE_WAKELOCK_BLOCKER=$kwl_blk
 ENABLE_BATTERY_SAVER=$bss_ena
 BSS_SOUNDTRIGGER_DISABLED=$bss_snd
 BSS_FULLBACKUP_DEFERRED=$bss_fbu
@@ -151,14 +156,6 @@ SOO_RAM_CLEAN_MODE=$soo_rcm
 SOO_RAM_CLEAN_DELAY=$soo_rcd
 SOO_KILL_SENSORS=$soo_sensors
 SOO_KILL_PANEL_LPM=$soo_panel_lpm
-DISABLE_TELEMETRY=$dis_tel
-DISABLE_BACKGROUND=$dis_bac
-DISABLE_LOCATION=$dis_loc
-DISABLE_CONNECTIVITY=$dis_con
-DISABLE_CLOUD=$dis_clo
-DISABLE_PAYMENTS=$dis_pay
-DISABLE_WEARABLES=$dis_wea
-DISABLE_GAMES=$dis_gam
 ENDPREFS
   mv -f "$MODDIR/config/user_prefs.tmp" "$MODDIR/config/user_prefs"
 

@@ -96,7 +96,7 @@ else
 fi
 
 has_frozen_cats=0
-if [ "${DISABLE_TELEMETRY:-0}"    = "1" ] ||    [ "${DISABLE_BACKGROUND:-0}"   = "1" ] ||    [ "${DISABLE_LOCATION:-0}"     = "1" ] ||    [ "${DISABLE_CONNECTIVITY:-0}" = "1" ] ||    [ "${DISABLE_CLOUD:-0}"        = "1" ] ||    [ "${DISABLE_PAYMENTS:-0}"     = "1" ] ||    [ "${DISABLE_WEARABLES:-0}"    = "1" ] ||    [ "${DISABLE_GAMES:-0}"        = "1" ]; then
+if [ "${DISABLE_TELEMETRY:-0}" = "1" ] || [ "${DISABLE_BACKGROUND:-0}" = "1" ] || [ "${DISABLE_LOCATION:-0}" = "1" ] || [ "${DISABLE_CONNECTIVITY:-0}" = "1" ] || [ "${DISABLE_CLOUD:-0}" = "1" ] || [ "${DISABLE_PAYMENTS:-0}" = "1" ] || [ "${DISABLE_WEARABLES:-0}" = "1" ] || [ "${DISABLE_GAMES:-0}" = "1" ]; then
   has_frozen_cats=1
 fi
 if [ "$has_frozen_cats" = "1" ]; then
@@ -130,17 +130,6 @@ if [ "$ENABLE_DEEP_DOZE" = "1" ]; then
   fi
 else
   log_boot "Deep Doze SKIPPED"
-fi
-
-if [ "$ENABLE_WAKELOCK_BLOCKER" = "1" ]; then
-  log_boot "Blocking Kernel WakeLocks..."
-  if sh "$MODDIR/scripts/wakelock_blocker.sh" block >/dev/null 2>&1; then
-    log_boot "Kernel WakeLocks blocked"
-  else
-    log_boot "[WARN] Kernel WakeLock Blocker failed"
-  fi
-else
-  log_boot "Kernel WakeLock Blocker SKIPPED"
 fi
 
 if [ "$ENABLE_BATTERY_SAVER" = "1" ]; then

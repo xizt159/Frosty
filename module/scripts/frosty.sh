@@ -12,6 +12,13 @@ load_prefs
 cmd="$1"; shift
 
 case "$cmd" in
+  apply_sysprops|apply_blur)
+    . "$SCRIPTS/sys_tweaks.sh"
+    case "$cmd" in
+      apply_sysprops) apply_system_props ;;
+      apply_blur)     apply_blur ;;
+    esac ;;
+
   apply_kernel|revert_kernel)
     . "$SCRIPTS/kernel_tweaks.sh"
     case "$cmd" in
@@ -26,18 +33,12 @@ case "$cmd" in
       revert_ram) revert_ram_optimizer ;;
     esac ;;
 
-  apply_sysprops|apply_blur)
-    . "$SCRIPTS/sys_tweaks.sh"
+  ram_clean|ram_clean_poll|ram_clean_silent)
+    . "$SCRIPTS/ram_clean.sh"
     case "$cmd" in
-      apply_sysprops) apply_system_props ;;
-      apply_blur)     apply_blur ;;
-    esac ;;
-
-  apply_bss|revert_bss)
-    . "$SCRIPTS/battery_saver.sh"
-    case "$cmd" in
-      apply_bss)  apply_battery_saver ;;
-      revert_bss) revert_battery_saver ;;
+      ram_clean)        ram_clean "$1" "$2" ;;
+      ram_clean_poll)   ram_clean_poll ;;
+      ram_clean_silent) ram_clean_silent "$1" ;;
     esac ;;
 
   kill_logs|revert_logs)
@@ -54,13 +55,6 @@ case "$cmd" in
       revert_tracking) revert_kill_tracking ;;
     esac ;;
 
-  block_kwl|unblock_kwl)
-    . "$SCRIPTS/wakelock_blocker.sh"
-    case "$cmd" in
-      block_kwl)  block ;;
-      unblock_kwl) unblock ;;
-    esac ;;
-
   freeze|stock|freeze_category|unfreeze_category|list_frozen|list_gms)
     . "$SCRIPTS/gms_freeze.sh"
     case "$cmd" in
@@ -72,12 +66,11 @@ case "$cmd" in
       list_gms)           list_gms_services ;;
     esac ;;
 
-  ram_clean|ram_clean_poll|ram_clean_silent)
-    . "$SCRIPTS/ram_clean.sh"
+  apply_bss|revert_bss)
+    . "$SCRIPTS/battery_saver.sh"
     case "$cmd" in
-      ram_clean)        ram_clean "$1" "$2" ;;
-      ram_clean_poll)   ram_clean_poll ;;
-      ram_clean_silent) ram_clean_silent "$1" ;;
+      apply_bss)  apply_battery_saver ;;
+      revert_bss) revert_battery_saver ;;
     esac ;;
 
   get_fg_pkg)

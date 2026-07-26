@@ -16,7 +16,6 @@ mkdir -p "$TEMP_DIR"
 [ -f "$MODDIR/backup/bss_values.txt" ]   && cp -f "$MODDIR/backup/bss_values.txt"   "$TEMP_DIR/"
 [ -f "$MODDIR/config/dropbox_tags.txt" ] && cp -f "$MODDIR/config/dropbox_tags.txt" "$TEMP_DIR/"
 [ -f "$MODDIR/backup/devcfg_values.txt" ] && cp -f "$MODDIR/backup/devcfg_values.txt" "$TEMP_DIR/"
-[ -f "$MODDIR/config/wakelock_blocklist.txt" ] && cp -f "$MODDIR/config/wakelock_blocklist.txt" "$TEMP_DIR/"
 
 # Kill Deep Doze screen monitor
 if [ -f "$MODDIR/tmp/screen_monitor.pid" ]; then
@@ -166,28 +165,6 @@ for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
 done
 dumpsys sensorservice enable 2>/dev/null
 dumpsys deviceidle unforce 2>/dev/null
-
-# Revert Kernel WakeLock Blocker
-log "Reverting Kernel WakeLock Blocker..."
-WAKELOCK_BLOCKLIST="$TEMP_DIR/wakelock_blocklist.txt"
-if [ -f "$WAKELOCK_BLOCKLIST" ]; then
-  restored=0
-  while IFS= read -r wl_name; do
-    case "$wl_name" in ''|'#'*) continue ;; esac
-    wl_name=$(echo "$wl_name" | tr -d ' ')
-    [ -z "$wl_name" ] && continue
-    # Re-enable via device path
-    _devpath=$(find /sys/devices -name "$wl_name" -type d 2>/dev/null | head -1)
-    if [ -n "$_devpath" ] && [ -f "$_devpath/power/wakeup" ]; then
-      echo "enabled" > "$_devpath/power/wakeup" 2>/dev/null && restored=$((restored + 1))
-    fi
-    # Re-enable via wakeup_source class
-    if [ -d "/sys/class/misc/wakeup_source/$wl_name" ]; then
-      echo 1 > "/sys/class/misc/wakeup_source/$wl_name/enable" 2>/dev/null
-    fi
-  done < "$WAKELOCK_BLOCKLIST"
-  rm -f "$WAKELOCK_BLOCKLIST"
-fi
 
 # Revert Battery Saver
 log "Reverting Battery Saver..."
