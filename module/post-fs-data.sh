@@ -7,6 +7,7 @@ MODDIR="${0%/*}"
 [ -f "$MODDIR/config/user_prefs" ] && . "$MODDIR/config/user_prefs"
 
 _DIXML="/data/system/deviceidle.xml"
+BACKUP_DIR="$MODDIR/backup/overlays"
 
 _OVERLAYS="$MODDIR/config/doze_xml_overlays.txt"
 if [ -f "$_OVERLAYS" ]; then
@@ -24,12 +25,27 @@ if [ -f "$_OVERLAYS" ]; then
       *) [ ! -f "$_dst" ] && _dst="${_dst#/system}" ;;
     esac
     [ ! -f "$_dst" ] && continue
+
+    _backup_file="$BACKUP_DIR/${_dst#/}"
+    if [ ! -f "$_backup_file" ]; then
+      mkdir -p "$(dirname "$_backup_file")" 2>/dev/null
+      cp -af "$_dst" "$_backup_file" 2>/dev/null
+    fi
+
     _ctx=$(stat -c %C "$_dst" 2>/dev/null)
     [ -n "$_ctx" ] && chcon "$_ctx" "$_src" 2>/dev/null
     mount --bind "$_src" "$_dst" 2>/dev/null
   done < "$_OVERLAYS"
 fi
-unset _OVERLAYS _src _dst _ctx
+unset _OVERLAYS _src _dst _backup_file _ctx
+
+if [ -d "$BACKUP_DIR" ]; then
+  find "$BACKUP_DIR" -type f -name "*.xml" 2>/dev/null | while IFS= read -r _backup; do
+    _active_overlay="$MODDIR${_backup#$BACKUP_DIR}"
+    [ ! -f "$_active_overlay" ] && rm -f "$_backup"
+  done
+  find "$BACKUP_DIR" -type d -empty -delete >/dev/null 2>&1
+fi
 
 _CAD_PATCHES="$MODDIR/config/doze_patches.txt"
 

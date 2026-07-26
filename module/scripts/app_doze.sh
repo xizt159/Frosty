@@ -13,6 +13,7 @@ APP_DOZE_LOG="$LOGDIR/app_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
 PATCHES_FILE="$MODDIR/config/doze_patches.txt"
 OVERLAYS_FILE="$MODDIR/config/doze_xml_overlays.txt"
+BACKUP_DIR="$MODDIR/backup/overlays"
 
 GMS_PKG="com.google.android.gms"
 GMS_ADMIN1="$GMS_PKG/$GMS_PKG.auth.managed.admin.DeviceAdminReceiver"
@@ -42,11 +43,12 @@ _is_blocked() {
 
 _load_packages() {
   [ ! -f "$PATCHES_FILE" ] && return
-  sed 's/###.*//;s/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$' | sort
+  sed 's/###.*//;s/#.*//;s/[[:space:]]//g' "$PATCHES_FILE" | grep -v '^$' | sort -u
 }
 
 _load_grep() {
-  local pkgs=$(_load_packages) _grep
+  local pkgs _grep
+  pkgs=$(_load_packages)
   for pkg in $pkgs; do
     pat=""
     esc_pkg=$(printf '%s' "$pkg" | sed 's/\./\\./g')
@@ -72,6 +74,17 @@ _migrate_stale_lists() {
     done < "$_stale"
     rm -f "$_stale"
   done
+}
+
+_rebuild_overlays_file() {
+  [ -f "$OVERLAYS_FILE" ] && return 0
+  for _root in system product vendor odm system_ext \
+               my_product my_heytap my_region my_bigball my_carrier \
+               my_company my_engineering my_manifest my_preload \
+               my_reserve my_stock india; do
+    [ -d "$MODDIR/$_root" ] && find "$MODDIR/$_root" -type f -name "*.xml" 2>/dev/null
+  done | sort -u > "$OVERLAYS_FILE"
+  [ -s "$OVERLAYS_FILE" ] || rm -f "$OVERLAYS_FILE"
 }
 
 _remove_overlays() {
@@ -142,12 +155,12 @@ _add_to_overlay_file() {
 
 _apply_xml_overlays() {
   _migrate_stale_lists
+  _rebuild_overlays_file
 
   local grep_pat
   grep_pat=$(_load_grep)
 
   _reboot_file="$MODDIR/tmp/cad_needs_reboot"
-
   rm -f "$_reboot_file"
 
   if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$grep_pat" ]; then
@@ -157,6 +170,7 @@ _apply_xml_overlays() {
 
   local count=0 scanned=0 _seen="" _cleared=false
   for _base in $_PARTITION_ROOTS; do
+    _base="/sdcard/_remove_me$_base"
     [ -d "$_base" ] || continue
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
       [ -d "$_dir" ] || continue
@@ -166,7 +180,6 @@ _apply_xml_overlays() {
         case "$_seen" in *"|$_real|"*) continue ;; esac
         _seen="${_seen}|$_real|"
         scanned=$((scanned + 1))
-        _xml_has_any_pkg "$_real" "$grep_pat" || continue
 
         local _rel="${_real#/}"
         case "$_rel" in
@@ -174,21 +187,28 @@ _apply_xml_overlays() {
           system/system_ext/*) _rel="system_ext/${_rel#system/system_ext/}" ;;
           system/vendor/*)     _rel="vendor/${_rel#system/vendor/}" ;;
           system/odm/*)        _rel="odm/${_rel#system/odm/}" ;;
-        esac
-        case "$_rel" in
-          system/*|product/*|vendor/*|odm/*|system_ext/*) ;;
+          system/*|product/*|vendor/*|odm/*|system_ext/*|\
           my_product/*|my_heytap/*|my_region/*|my_bigball/*|my_carrier/*|\
           my_company/*|my_engineering/*|my_manifest/*|my_preload/*|\
           my_reserve/*|my_stock/*|india/*) ;;
           *) _rel="system/$_rel" ;;
         esac
 
+        local _src_file
+        if [ -f "$BACKUP_DIR/$_rel" ]; then
+          _src_file="$BACKUP_DIR/$_rel"
+        else
+          _src_file="$_real"
+        fi
+
+        _xml_has_any_pkg "$_src_file" "$grep_pat" || continue
+
         local _dest="$MODDIR/$_rel"
         if [ -f "$_dest" ]; then
           _xml_has_any_pkg "$_dest" "$grep_pat" || {
-            count=$((count + 1))
             log_app "[SKIP] XML already patched"
             _add_to_overlay_file "$_dest"
+            count=$((count + 1))
             continue
           }
         fi
@@ -202,11 +222,11 @@ _apply_xml_overlays() {
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
         local _ranges
-        _ranges=$(_build_strip_ranges "$_real" "$grep_pat")
+        _ranges=$(_build_strip_ranges "$_src_file" "$grep_pat")
         if [ -n "$_ranges" ]; then
-          sed "$(printf '%s' "$_ranges" | tr '\n' ';')" "$_real" > "$_tmp" 2>/dev/null
+          sed "$(printf '%s' "$_ranges" | tr '\n' ';')" "$_src_file" > "$_tmp" 2>/dev/null
         else
-          cp -af "$_real" "$_tmp" 2>/dev/null
+          cp -af "$_src_file" "$_tmp" 2>/dev/null
         fi
         if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
           mv -f "$_tmp" "$_dest"
