@@ -32,8 +32,6 @@ SOO_RAM_CLEAN_DELAY=5
 mkdir -p "$LOGDIR" "$MODDIR/tmp"
 log_soo() { echo "[$(date '+%H:%M:%S')] $1" >> "$SOO_LOG"; }
 
-
-
 _get_screen_state() {
   local s
   s=$(dumpsys display 2>/dev/null | grep -m1 "mScreenState=" | cut -d= -f2)

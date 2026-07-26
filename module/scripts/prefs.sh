@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - Pref Handler (SOO, Whitelists)
+
 apply_soo() {
   chmod +x "$MODDIR/scripts/screen_off_opt.sh" 2>/dev/null
   sh "$MODDIR/scripts/screen_off_opt.sh" start 2>/dev/null
