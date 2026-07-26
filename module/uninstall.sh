@@ -123,10 +123,10 @@ fi
 cmd deviceidle sys-whitelist +"$GMS_PKG" >/dev/null 2>&1
 dumpsys deviceidle whitelist +"$GMS_PKG" >/dev/null 2>&1
 
-user_ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null)
-for user_id in $user_ids; do
-  pm enable --user "$user_id" "$GMS_PKG/$GMS_PKG.auth.managed.admin.DeviceAdminReceiver" >/dev/null 2>&1
-  pm enable --user "$user_id" "$GMS_PKG/$GMS_PKG.mdm.receivers.MdmDeviceAdminReceiver"   >/dev/null 2>&1
+_user_ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null)
+for _uid in $_user_ids; do
+  pm enable --user "$_uid" "$GMS_PKG/$GMS_PKG.auth.managed.admin.DeviceAdminReceiver" >/dev/null 2>&1
+  pm enable --user "$_uid" "$GMS_PKG/$GMS_PKG.mdm.receivers.MdmDeviceAdminReceiver"   >/dev/null 2>&1
 done
 
 PATCHES_FILE="$TEMP_DIR/doze_patches.txt"
@@ -248,7 +248,9 @@ if [ -f "$_frozen_file" ]; then
   count=0
   while IFS= read -r service; do
     case "$service" in '#'*|'') continue ;; esac
-    pm enable "$service" >/dev/null 2>&1 && count=$((count + 1))
+    for _uid in $_user_ids; do
+      pm enable --user "$_uid" "$service" >/dev/null 2>&1 && count=$((count + 1))
+    done
   done < "$_frozen_file"
   rm -f "$_frozen_file"
   log "Re-enabled $count services"
@@ -258,7 +260,9 @@ elif [ -f "$GMS_LIST" ]; then
   while IFS='|' read -r service category || [ -n "$service" ]; do
     case "$service" in '#'*|'') continue ;; esac
     service=$(echo "$service" | tr -d ' ')
-    pm enable "$service" >/dev/null 2>&1 && count=$((count + 1))
+    for _uid in $_user_ids; do
+      pm enable --user "$_uid" "$service" >/dev/null 2>&1 && count=$((count + 1))
+    done
   done < "$GMS_LIST"
   log "Re-enabled $count services"
 fi
