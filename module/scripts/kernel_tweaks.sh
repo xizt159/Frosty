@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - Kernel Tweaks
+
 apply_kernel() {
   if [ ! -f "$KERNEL_TWEAKS" ]; then
     echo '{"status":"error","message":"kernel_tweaks.txt not found"}'

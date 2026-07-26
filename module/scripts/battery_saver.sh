@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - Battery Saver Tuner
+
 apply_battery_saver() {
   local sdk=$(getprop ro.build.version.sdk 2>/dev/null)
   local constants

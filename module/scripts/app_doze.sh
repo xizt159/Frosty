@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - App Doze 
+# Frosty - App Doze
 
 _d="${0%/*}"
 [ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"

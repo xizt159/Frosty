@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - Kill Logs
+
 kill_logs() {
   local k=0
   for svc in logcat logcatd tcpdump cnss_diag traced traced_perf traced_probes \

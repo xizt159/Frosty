@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - System Props & Disable Blur
+
 apply_system_props() {
   if [ "$ENABLE_SYSTEM_PROPS" = "1" ]; then
     if [ -f "$SYSPROP_OLD" ]; then

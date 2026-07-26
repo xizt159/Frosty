@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - Screen Off Optimization daemon
+# Frosty - Screen Off Optimization
 
 _d="${0%/*}"
 [ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"

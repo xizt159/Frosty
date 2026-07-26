@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - RAM Optimizer
+
 _lmk_kernel_type() {
   if [ -f /sys/module/lowmemorykiller/parameters/minfree ]; then
     echo classic_lmk

@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - Kill Google Tracking
+
 kill_tracking() {
   settings put global gmscorestat_enabled 0 >/dev/null 2>&1
   settings put global play_store_panel_logging_enabled 0 >/dev/null 2>&1
