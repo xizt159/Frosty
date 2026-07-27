@@ -166,9 +166,9 @@ _apply_xml_overlays() {
   if [ -f "$OVERLAYS_FILE" ]; then
     cp -f "$OVERLAYS_FILE" "$_old_overlays"
   else
-    touch "$_old_overlays"
+    touch "$_old_overlays" 2>/dev/null
   fi
-  touch > "$_new_overlays"
+  touch "$_new_overlays" 2>/dev/null
 
   local count=0 scanned=0 _seen=""
   for _base in $_PARTITION_ROOTS; do
@@ -201,13 +201,9 @@ _apply_xml_overlays() {
         else
           _src_file="$_real"
         fi
-        
+        _xml_has_any_pkg "$_src_file" "$grep_pat" || continue
+
         local _dest="$MODDIR/$_rel"
-
-        if ! _xml_has_any_pkg "$_src_file" "$grep_pat"; then
-          continue
-        fi
-
         mkdir -p "$(dirname "$_dest")"
         local _tmp="${_dest}.tmp"
         local _ranges
