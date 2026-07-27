@@ -146,11 +146,20 @@ _build_strip_ranges() {
 
 _add_to_overlay_file() {
   local _dest="$1"
-  [ ! -f "$OVERLAYS_FILE" ] && {
+  if [ ! -f "$OVERLAYS_FILE" ]; then
     mkdir -p "$(dirname "$OVERLAYS_FILE")"
     touch "$OVERLAYS_FILE" 2>/dev/null
-  }
+  fi
   grep -qxF "$_dest" "$OVERLAYS_FILE" || echo "$_dest" >> "$OVERLAYS_FILE"
+}
+
+_remove_from_overlay_file() {
+  local _dest="$1"
+  if [ -f "$OVERLAYS_FILE" ]; then
+    local _escaped
+    _escaped=$(printf '%s' "$_dest" | sed 's/\./\\./g; s/\//\\\//g')
+    sed -i "/^${_escaped}$/d" "$OVERLAYS_FILE" 2>/dev/null
+  fi
 }
 
 _apply_xml_overlays() {
@@ -168,7 +177,7 @@ _apply_xml_overlays() {
     return 0
   fi
 
-  local count=0 scanned=0 _seen="" _cleared=false
+  local count=0 scanned=0 _seen=""
   for _base in $_PARTITION_ROOTS; do
     [ -d "$_base" ] || continue
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
@@ -199,23 +208,16 @@ _apply_xml_overlays() {
         else
           _src_file="$_real"
         fi
-
-        _xml_has_any_pkg "$_src_file" "$grep_pat" || continue
-
+        
         local _dest="$MODDIR/$_rel"
-        if [ -f "$_dest" ]; then
-          _xml_has_any_pkg "$_dest" "$grep_pat" || {
-            log_app "[SKIP] XML already patched"
-            _add_to_overlay_file "$_dest"
-            count=$((count + 1))
-            continue
-          }
-        fi
 
-        if [ "$_cleared" != "true" ]; then
-          [ -f "$OVERLAYS_FILE" ] && log_app "[INFO] Found unpatched XML(s) - removing existing overlays"
-          _remove_overlays
-          _cleared=true
+        if ! _xml_has_any_pkg "$_src_file" "$grep_pat"; then
+          if [ -f "$_dest" ]; then
+            rm -f "$_dest" "${_dest}.tmp"
+            _remove_from_overlay_file "$_dest"
+            log_app "[CLEAN] Removed outdated overlay: $(basename "$_dest")"
+          fi
+          continue
         fi
 
         mkdir -p "$(dirname "$_dest")"
@@ -228,9 +230,13 @@ _apply_xml_overlays() {
           cp -af "$_src_file" "$_tmp" 2>/dev/null
         fi
         if [ -s "$_tmp" ] && grep -q '</' "$_tmp" 2>/dev/null; then
-          mv -f "$_tmp" "$_dest"
+          if [ ! -f "$_dest" ] || ! cmp -s "$_tmp" "$_dest"; then
+            mv -f "$_tmp" "$_dest"
+            count=$((count + 1))
+          else
+            rm -f "$_tmp"
+          fi
           _add_to_overlay_file "$_dest"
-          count=$((count + 1))
         else
           rm -f "$_tmp"
           log_app "[WARN] Skipped overlay - failed XML validation: $(basename "$_dest")"

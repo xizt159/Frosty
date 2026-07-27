@@ -303,6 +303,36 @@ s() {
     ar:save_wl)       echo "  ↩ تم الاحتفاظ بالقوائم البيضاء" ;;
      *:save_wl)       echo "  ↩ Whitelists preserved" ;;
 
+    fr:save_patches)  echo "  ↩ Patches préservés" ;;
+    de:save_patches)  echo "  ↩ Patches beibehalten" ;;
+    pl:save_patches)  echo "  ↩ Łatki zachowane" ;;
+    it:save_patches)  echo "  ↩ Patch preservate" ;;
+    es:save_patches)  echo "  ↩ Parches preservados" ;;
+    pt:save_patches)  echo "  ↩ Patches preservados" ;;
+    tr:save_patches)  echo "  ↩ Yamalar korundu" ;;
+    id:save_patches)  echo "  ↩ Patch dipertahankan" ;;
+    ru:save_patches)  echo "  ↩ Патчи сохранены" ;;
+    uk:save_patches)  echo "  ↩ Патчі збережено" ;;
+    zh:save_patches)  echo "  ↩ 补丁已保留" ;;
+    ja:save_patches)  echo "  ↩ パッチを保持" ;;
+    ar:save_patches)  echo "  ↩ تم الاحتفاظ بالتصحيحات" ;;
+     *:save_patches)  echo "  ↩ Patches preserved" ;;
+
+    fr:save_overlay)  echo "  ↩ Overlays préservés" ;;
+    de:save_overlay)  echo "  ↩ Overlays beibehalten" ;;
+    pl:save_overlay)  echo "  ↩ Nakładki zachowane" ;;
+    it:save_overlay)  echo "  ↩ Overlay preservati" ;;
+    es:save_overlay)  echo "  ↩ Capas (Overlays) preservadas" ;;
+    pt:save_overlay)  echo "  ↩ Overlays preservados" ;;
+    tr:save_overlay)  echo "  ↩ Katmanlar (Overlays) korundu" ;;
+    id:save_overlay)  echo "  ↩ Overlay dipertahankan" ;;
+    ru:save_overlay)  echo "  ↩ Оверлеи сохранены" ;;
+    uk:save_overlay)  echo "  ↩ Оверлеї збережено" ;;
+    zh:save_overlay)  echo "  ↩ 覆盖层已保留" ;;
+    ja:save_overlay)  echo "  ↩ オーバーレイを保持" ;;
+    ar:save_overlay)  echo "  ↩ تم الاحتفاظ بالطبقات" ;;
+     *:save_overlay)  echo "  ↩ Overlays preserved" ;;
+
     fr:save_default)  echo "  ✓ Config par défaut appliquée (tout désactivé)" ;;
     de:save_default)  echo "  ✓ Standardkonfiguration angewendet (alles aus)" ;;
     pl:save_default)  echo "  ✓ Konfiguracja domyślna (wszystko wyłączone)" ;;
@@ -444,9 +474,11 @@ s() {
 
 
 # Existing config detection
-EXISTING_PREFS="/data/adb/modules/$MODID/config/user_prefs"
-EXISTING_WHITELIST="/data/adb/modules/$MODID/config/doze_whitelist.txt"
-EXISTING_PATCHES="/data/adb/modules/$MODID/config/doze_patches.txt"
+MODDIR="/data/adb/modules/$MODID"
+EXISTING_PREFS="$MODDIR/config/user_prefs"
+EXISTING_WHITELIST="$MODDIR/config/doze_whitelist.txt"
+EXISTING_PATCHES="$MODDIR/config/doze_patches.txt"
+EXISTING_OVERLAYS="$MODDIR/config/doze_xml_overlays.txt"
 USE_EXISTING=0
 
 if [ -f "$EXISTING_PREFS" ]; then
@@ -488,17 +520,32 @@ print_section "$(s save_title)"
 mkdir -p "$MODPATH/config"
 
 if [ "$USE_EXISTING" -eq 1 ]; then
-  cp -f "$EXISTING_PREFS" "$MODPATH/config/user_prefs"
   ui_print ""
-  ui_print "$(s save_kept)"
+  if [ -f "$EXISTING_PREFS" ]; then
+    cp -f "$EXISTING_PREFS" "$MODPATH/config/user_prefs"
+    ui_print "$(s save_kept)"
+  fi
   if [ -f "$EXISTING_WHITELIST" ]; then
     cp -f "$EXISTING_WHITELIST" "$MODPATH/config/doze_whitelist.txt"
     ui_print "$(s save_wl)"
   fi
   if [ -f "$EXISTING_PATCHES" ]; then
     cp -f "$EXISTING_PATCHES" "$MODPATH/config/doze_patches.txt"
+    ui_print "$(s save_patches)"
   fi
   . "$MODPATH/config/user_prefs"
+  if [ "${ENABLE_CUSTOM_APP_DOZE:-0}" -eq 1 ] && [ -f "$EXISTING_OVERLAYS" ]; then
+    cp -f "$EXISTING_OVERLAYS" "$MODPATH/config/doze_xml_overlays.txt"
+    while IFS= read -r _f; do
+      case "$_f" in '#'*|'') continue ;; esac
+      _rel="${_f#$MODDIR/}"
+      [ -f "$_f" ] && {
+        mkdir -p "$(dirname "$MODPATH/$_rel")"
+        cp -f "$_f" "$MODPATH/$_rel"
+      }
+    done < "$EXISTING_OVERLAYS"
+    ui_print "$(s save_overlay)"
+  fi
   SYSPROP="$MODPATH/system.prop"
   SYSPROP_OLD="$MODPATH/system.prop.old"
   if [ "${ENABLE_SYSTEM_PROPS:-0}" -eq 1 ]; then
@@ -520,7 +567,7 @@ ui_print "$(s done_reboot)"
 ui_print "$(s done_webui)"
 ui_print "$(s done_off)"
 ui_print "$(s done_logs)"
-INSTALLED_PROP="/data/adb/modules/$MODID/module.prop"
+INSTALLED_PROP="$MODDIR/module.prop"
 if [ -f "$INSTALLED_PROP" ]; then
   ui_print ""
   ui_print "$(s dirty_flash_hint)"

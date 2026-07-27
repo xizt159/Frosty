@@ -96,8 +96,15 @@ else
 fi
 
 has_frozen_cats=0
-if [ "${DISABLE_TELEMETRY:-0}" = "1" ] || [ "${DISABLE_BACKGROUND:-0}" = "1" ] || [ "${DISABLE_LOCATION:-0}" = "1" ] || [ "${DISABLE_CONNECTIVITY:-0}" = "1" ] || [ "${DISABLE_CLOUD:-0}" = "1" ] || [ "${DISABLE_PAYMENTS:-0}" = "1" ] || [ "${DISABLE_WEARABLES:-0}" = "1" ] || [ "${DISABLE_GAMES:-0}" = "1" ]; then
-  has_frozen_cats=1
+if [ "${DISABLE_TELEMETRY:-0}"    = "1" ] || \
+   [ "${DISABLE_BACKGROUND:-0}"   = "1" ] || \
+   [ "${DISABLE_LOCATION:-0}"     = "1" ] || \
+   [ "${DISABLE_CONNECTIVITY:-0}" = "1" ] || \
+   [ "${DISABLE_CLOUD:-0}"        = "1" ] || \
+   [ "${DISABLE_PAYMENTS:-0}"     = "1" ] || \
+   [ "${DISABLE_WEARABLES:-0}"    = "1" ] || \
+   [ "${DISABLE_GAMES:-0}"        = "1" ]; then
+    has_frozen_cats=1
 fi
 if [ "$has_frozen_cats" = "1" ]; then
   log_boot "GMS categories enabled - applying freeze..."
