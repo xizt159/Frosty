@@ -8,6 +8,7 @@ MODDIR="${_d%/*}"
 unset _d
 MODVER=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
 
+TMPDIR="$MODDIR/tmp"
 LOGDIR="$MODDIR/logs"
 APP_DOZE_LOG="$LOGDIR/app_doze.log"
 USER_PREFS="$MODDIR/config/user_prefs"
@@ -32,6 +33,7 @@ _BLOCKED="android com.android.systemui com.android.phone com.android.settings \
 ENABLE_CUSTOM_APP_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
 
+mkdir -p "$TMPDIR"
 mkdir -p "$LOGDIR"
 log_app() { echo "[$(date '+%H:%M:%S')] $1" >> "$APP_DOZE_LOG"; }
 
@@ -144,24 +146,6 @@ _build_strip_ranges() {
   fi
 }
 
-_add_to_overlay_file() {
-  local _dest="$1"
-  if [ ! -f "$OVERLAYS_FILE" ]; then
-    mkdir -p "$(dirname "$OVERLAYS_FILE")"
-    touch "$OVERLAYS_FILE" 2>/dev/null
-  fi
-  grep -qxF "$_dest" "$OVERLAYS_FILE" || echo "$_dest" >> "$OVERLAYS_FILE"
-}
-
-_remove_from_overlay_file() {
-  local _dest="$1"
-  if [ -f "$OVERLAYS_FILE" ]; then
-    local _escaped
-    _escaped=$(printf '%s' "$_dest" | sed 's/\./\\./g; s/\//\\\//g')
-    sed -i "/^${_escaped}$/d" "$OVERLAYS_FILE" 2>/dev/null
-  fi
-}
-
 _apply_xml_overlays() {
   _migrate_stale_lists
   _rebuild_overlays_file
@@ -169,13 +153,22 @@ _apply_xml_overlays() {
   local grep_pat
   grep_pat=$(_load_grep)
 
-  _reboot_file="$MODDIR/tmp/cad_needs_reboot"
+  _reboot_file="$TMPDIR/cad_needs_reboot"
   rm -f "$_reboot_file"
 
   if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$grep_pat" ]; then
     _remove_overlays
     return 0
   fi
+
+  local _old_overlays="$TMPDIR/old_overlays.tmp"
+  local _new_overlays="$TMPDIR/new_overlays.tmp"
+  if [ -f "$OVERLAYS_FILE" ]; then
+    cp -f "$OVERLAYS_FILE" "$_old_overlays"
+  else
+    touch "$_old_overlays"
+  fi
+  touch > "$_new_overlays"
 
   local count=0 scanned=0 _seen=""
   for _base in $_PARTITION_ROOTS; do
@@ -212,11 +205,6 @@ _apply_xml_overlays() {
         local _dest="$MODDIR/$_rel"
 
         if ! _xml_has_any_pkg "$_src_file" "$grep_pat"; then
-          if [ -f "$_dest" ]; then
-            rm -f "$_dest" "${_dest}.tmp"
-            _remove_from_overlay_file "$_dest"
-            log_app "[CLEAN] Removed outdated overlay: $(basename "$_dest")"
-          fi
           continue
         fi
 
@@ -236,7 +224,7 @@ _apply_xml_overlays() {
           else
             rm -f "$_tmp"
           fi
-          _add_to_overlay_file "$_dest"
+          echo "$_dest" >> "$_new_overlays"
         else
           rm -f "$_tmp"
           log_app "[WARN] Skipped overlay - failed XML validation: $(basename "$_dest")"
@@ -245,6 +233,18 @@ _apply_xml_overlays() {
     done
   done
 
+  if [ -s "$_old_overlays" ]; then
+    grep -Fvxf "$_new_overlays" "$_old_overlays" | while IFS= read -r _stale || [ -n "$_stale" ]; do
+      case "$_stale" in '#'*|'') continue ;; esac
+      if [ -f "$_stale" ]; then
+        rm -f "$_stale" "${_stale}.tmp"
+        rmdir -p "$(dirname "$_stale")" 2>/dev/null
+      fi
+    done
+  fi
+  sort -u "$_new_overlays" > "$OVERLAYS_FILE"
+  rm -f "$_old_overlays" "$_new_overlays"
+
   if [ "$count" -gt 0 ]; then
     mkdir -p "$(dirname "$_reboot_file")"
     touch "$_reboot_file" 2>/dev/null
@@ -252,8 +252,8 @@ _apply_xml_overlays() {
 }
 
 scan() {
-  local _tmp_inst="$MODDIR/tmp/scan_inst.tmp"
-  local _tmp_cand="$MODDIR/tmp/scan_cand.tmp"
+  local _tmp_inst="$TMPDIR/scan_inst.tmp"
+  local _tmp_cand="$TMPDIR/scan_cand.tmp"
 
   pm list packages 2>/dev/null | cut -d: -f2 | sort > "$_tmp_inst"
   if [ ! -s "$_tmp_inst" ]; then
@@ -292,7 +292,6 @@ scan() {
 
 apply() {
   echo "Frosty v${MODVER:-?} - App Doze (APPLY) - $(date '+%Y-%m-%d %H:%M:%S')" > "$APP_DOZE_LOG"
-  mkdir -p "$MODDIR/tmp"
   [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] && { log_app "[SKIP] App Doze disabled"; return 0; }
 
   local pkgs
