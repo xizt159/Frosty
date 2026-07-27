@@ -170,7 +170,6 @@ _apply_xml_overlays() {
 
   local count=0 scanned=0 _seen="" _cleared=false
   for _base in $_PARTITION_ROOTS; do
-    _base="/sdcard/_remove_me$_base"
     [ -d "$_base" ] || continue
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
       [ -d "$_dir" ] || continue
@@ -191,7 +190,7 @@ _apply_xml_overlays() {
           my_product/*|my_heytap/*|my_region/*|my_bigball/*|my_carrier/*|\
           my_company/*|my_engineering/*|my_manifest/*|my_preload/*|\
           my_reserve/*|my_stock/*|india/*) ;;
-          *) _rel="system/$_rel" ;;
+          *) { [ -e "/system/$_rel" ] || [ -L "/system/$_rel" ]; } && _rel="system/$_rel" ;;
         esac
 
         local _src_file
