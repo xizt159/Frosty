@@ -230,9 +230,16 @@ _apply_xml_overlays() {
   done
 
   if [ -s "$_old_overlays" ]; then
-    grep -Fvxf "$_new_overlays" "$_old_overlays" | while IFS= read -r _stale || [ -n "$_stale" ]; do
+    if [ ! -s "$_new_overlays" ]; then
+      _stale_list=$(cat "$_old_overlays")
+    else
+      _stale_list=$(grep -Fvxf "$_new_overlays" "$_old_overlays")
+    fi
+    printf '%s\n' "$_stale_list" | while IFS= read -r _stale || [ -n "$_stale" ]; do
       case "$_stale" in '#'*|'') continue ;; esac
       if [ -f "$_stale" ]; then
+        _backup_file="$BACKUP_DIR/${_stale#$MODDIR/}"
+        [ -f "$_backup_file" ] && cp -af "$_backup_file" "$_stale" 2>/dev/null
         rm -f "$_stale" "${_stale}.tmp"
         rmdir -p "$(dirname "$_stale")" 2>/dev/null
       fi
