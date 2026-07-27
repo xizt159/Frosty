@@ -18,11 +18,15 @@ if [ -f "$_OVERLAYS" ]; then
     grep -q '</' "$_src" 2>/dev/null || continue
     _dst="${_src#$MODDIR}"
     case "$_dst" in
-      /product/*|/vendor/*|/odm/*|/system_ext/*|\
+      /system/product/*)    _dst="/product/${_dst#/system/product/}" ;;
+      /system/system_ext/*) _dst="/system_ext/${_dst#/system/system_ext/}" ;;
+      /system/vendor/*)     _dst="/vendor/${_dst#/system/vendor/}" ;;
+      /system/odm/*)        _dst="/odm/${_dst#/system/odm/}" ;;
+      /system/*|/product/*|/vendor/*|/odm/*|/system_ext/*|\
       /my_product/*|/my_heytap/*|/my_region/*|/my_bigball/*|/my_carrier/*|\
       /my_company/*|/my_engineering/*|/my_manifest/*|/my_preload/*|\
       /my_reserve/*|/my_stock/*|/india/*) ;;
-      *) [ ! -f "$_dst" ] && _dst="${_dst#/system}" ;;
+      *) { [ -e "/system$_dst" ] || [ -L "/system$_dst" ]; } && _dst="/system$_dst" ;;
     esac
     [ ! -f "$_dst" ] && continue
 
