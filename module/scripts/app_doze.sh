@@ -192,7 +192,7 @@ _apply_xml_overlays() {
           my_product/*|my_heytap/*|my_region/*|my_bigball/*|my_carrier/*|\
           my_company/*|my_engineering/*|my_manifest/*|my_preload/*|\
           my_reserve/*|my_stock/*|india/*) ;;
-          *) { [ -e "/system/$_rel" ] || [ -L "/system/$_rel" ]; } && _rel="system/$_rel" ;;
+          *) [ -f "/system/$_rel" ] && _rel="system/$_rel" ;;
         esac
 
         local _src_file

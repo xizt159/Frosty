@@ -26,7 +26,7 @@ if [ -f "$_OVERLAYS" ]; then
       /my_product/*|/my_heytap/*|/my_region/*|/my_bigball/*|/my_carrier/*|\
       /my_company/*|/my_engineering/*|/my_manifest/*|/my_preload/*|\
       /my_reserve/*|/my_stock/*|/india/*) ;;
-      *) { [ -e "/system$_dst" ] || [ -L "/system$_dst" ]; } && _dst="/system$_dst" ;;
+      *) [ -f "/system/${_dst#/}" ] && _dst="/system/${_dst#/}" ;;
     esac
     [ ! -f "$_dst" ] && continue
 
