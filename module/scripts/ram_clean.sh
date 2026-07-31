@@ -1,3 +1,6 @@
+#!/system/bin/sh
+# Frosty - RAM Cleaner
+
 _rc_log() {
   printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*" >> "$_RAM_CLEAN_LOG"
 }

@@ -342,18 +342,21 @@ apply() {
 
     cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS ignore 2>/dev/null && \
       tiers="${tiers} appops"
+    local admin_count=0
+    for _uid in $(_get_user_ids); do
+      cmd jobscheduler cancel --user "$_uid" "$pkg" >/dev/null 2>&1
+      am set-inactive --user "$_uid" "$pkg" true 2>/dev/null
 
-    if [ "$pkg" = "$GMS_PKG" ]; then
-      local admin_count=0
-      for _uid in $(_get_user_ids); do
+      if [ "$pkg" = "$GMS_PKG" ]; then
         for _admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
           pm disable --user "$_uid" "$_admin" >/dev/null 2>&1 && \
             admin_count=$((admin_count + 1))
         done
-      done
-      [ "$admin_count" -gt 0 ] && tiers="${tiers} gms-admin"
-      am start-service -n "$GMS_PKG/.checkin.CheckinService" >/dev/null 2>&1 || true
-    fi
+        am startservice --user "$_uid" -n "$GMS_PKG/$GMS_PKG.checkin.CheckinService" >/dev/null 2>&1 || true
+      fi
+    done
+    tiers="${tiers} jobs inactive"
+    [ "$admin_count" -gt 0 ] && tiers="${tiers} gms-admin"
 
     log_app "[OK] $pkg - applied to:$tiers"
     count=$((count + 1))
@@ -385,13 +388,15 @@ revert() {
     cmd deviceidle except-idle-whitelist +"$pkg" >/dev/null 2>&1
     cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS default 2>/dev/null
 
-    if [ "$pkg" = "$GMS_PKG" ]; then
-      for _uid in $(_get_user_ids); do
+    for _uid in $(_get_user_ids); do
+      am set-inactive --user "$_uid" "$pkg" false 2>/dev/null
+
+      if [ "$pkg" = "$GMS_PKG" ]; then
         for _admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
           pm enable --user "$_uid" "$_admin" >/dev/null 2>&1
         done
-      done
-    fi
+      fi
+    done
 
     log_app "[OK] Restored: $pkg"
     count=$((count + 1))
