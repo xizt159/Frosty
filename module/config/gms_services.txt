@@ -15,7 +15,6 @@ com.google.android.gms/com.google.android.gms.ads.cache.CacheBrokerService|telem
 com.google.android.gms/com.google.android.gms.ads.config.FlagsReceiver|telemetry
 com.google.android.gms/com.google.android.gms.ads.social.GcmSchedulerWakeupService|telemetry
 com.google.android.gms/com.google.android.gms.adsidentity.service.AdServicesExtDataStorageService|telemetry
-com.google.android.gms/com.google.android.gms.nearby.mediums.nearfieldcommunication.NfcAdvertisingService|telemetry
 com.google.android.gms/com.google.android.gms.analytics.AnalyticsService|telemetry
 com.google.android.gms/com.google.android.gms.analytics.AnalyticsTaskService|telemetry
 com.google.android.gms/com.google.android.gms.analytics.internal.PlayLogReportingService|telemetry
@@ -64,6 +63,11 @@ com.google.android.gms/com.google.android.gms.herrevad.service.HerrevadAndroidSe
 com.google.android.gms/com.google.android.gms.udc.service.UdcService|telemetry
 com.google.android.gms/com.google.android.gms.udc.service.UdcMddService|telemetry
 com.google.android.gms/com.google.android.gms.focus.FocusAndroidService|telemetry
+com.google.android.gms/com.google.android.gms.ads.LightweightAdService|telemetry
+com.google.android.gms/com.google.android.gms.measurement.AppMeasurementInstallReferrerReceiver|telemetry
+com.google.android.gms/com.google.android.gms.learning.trainer.TrainerService|telemetry
+com.google.android.gms/com.google.android.gms.feedback.FeedbackService|telemetry
+com.google.android.gms/com.google.android.gms.stats.CodecStatsService|telemetry
 com.google.mainline.telemetry/com.google.mainline.telemetry.TelemetryService|telemetry
 
 
@@ -81,6 +85,12 @@ com.google.android.gms/com.google.android.gms.mdm.services.MdmPhoneWearableListe
 com.google.android.gms/com.google.android.gms.mdm.receivers.MdmDeviceAdminReceiver|background
 com.google.android.gms/com.google.android.gms.gmscompliance.service.GmsComplianceService|background
 com.google.android.gms/com.google.android.gms.common.download.DownloadWorkService|background
+com.google.android.gms/com.google.android.gms.icing.service.IndexService|background
+com.google.android.gms/com.google.android.gms.icing.service.LightweightIndexService|background
+com.google.android.gms/com.google.android.gms.config.ConfigService|background
+com.google.firebase/com.google.firebase.components.ComponentDiscoveryService|background
+com.google.android.gms/com.google.firebase.components.ComponentDiscoveryService|background
+com.google.android.gms/com.google.mlkit.common.internal.MlKitComponentDiscoveryService|background
 com.android.vending/com.google.android.finsky.instantapps.InstantAppsLoggingService|background
 com.google.android.gms/com.google.android.finsky.instantapps.InstantAppsLoggingService|background
 
@@ -114,7 +124,8 @@ com.google.android.gms/com.google.android.gms.deviceconnection.service.DeviceCon
 com.google.android.gms/com.google.android.gms.persistent.offnetwork.service.OffNetworkService|location
 com.google.android.gms/com.google.android.location.wearable.WearableLocationService|location
 com.google.android.gms/com.google.android.location.fused.wearable.GmsWearableListenerService|location
-com.google.android.gms/com.google.android.gms.auth.be.appcert.AppCertService|location
+com.google.android.gms/com.google.android.gms.contextmanager.service.ContextManagerService|location
+com.google.android.gms/com.google.android.gms.awareness.service.AwarenessService|location
 
 # CONNECTIVITY - Nearby, Cast, Discovery, Quick Share
 
@@ -144,10 +155,10 @@ com.google.android.gms/com.google.android.gms.chimera.CastPersistentBoundBrokerS
 com.google.android.gms/com.google.android.gms.cast.service.CastService|connectivity
 com.google.android.gms/com.google.android.gms.cast.service.media.CastMediaService|connectivity
 com.google.android.gms/com.google.android.gms.cast.service.session.CastSessionService|connectivity
-com.google.android.gms/com.google.firebase.components.ComponentDiscoveryService|connectivity
-com.google.android.gms/com.google.mlkit.common.internal.MlKitComponentDiscoveryService|connectivity
+com.google.android.gms/com.google.android.gms.nearby.sharing.service.NearbyShareService|connectivity
+com.google.android.gms/com.google.android.gms.nearby.fastpair.service.FastPairService|connectivity
+com.google.android.gms/com.google.android.gms.nearby.mediums.nearfieldcommunication.NfcAdvertisingService|connectivity
 com.google.android.gms/com.google.android.gms.mobiledataplan.service.MobileDataPlanService|connectivity
-com.google.android.gms/com.google.android.gms.fido.fido2.pollux.CableAuthenticatorService|connectivity
 
 
 # CLOUD - Auth, Sync, Backup, Autofill, Security, Check-in
@@ -194,6 +205,8 @@ com.google.android.gms/com.google.android.gms.instantapps.service.InstantAppsSer
 com.google.android.gms/com.google.android.gms.instantapps.routing.DomainFilterUpdateService|cloud
 com.google.android.gms/com.google.android.gms.chimera.UiApiServiceNoInstantApps|cloud
 com.google.android.gms/com.google.android.gms.kids.chimera.KidsServiceProxy|cloud
+com.google.android.gms/com.google.android.gms.auth.be.appcert.AppCertService|cloud
+com.google.android.gms/com.google.android.gms.fido.fido2.pollux.CableAuthenticatorService|cloud
 com.google.android.gms/com.google.android.gms.personalsafety.service.PersonalSafetyService|cloud
 
 
