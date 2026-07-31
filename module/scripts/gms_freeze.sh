@@ -188,7 +188,10 @@ freeze_category() {
   done < "$GMS_LIST"
 
   sort -u "$_jobs_tmp" 2>/dev/null | while IFS= read -r _pkg; do
-    [ -n "$_pkg" ] && cmd jobscheduler cancel -u 0 "$_pkg" >/dev/null 2>&1
+    [ -n "$_pkg" ] || continue
+    for _uid in $_user_ids; do
+      cmd jobscheduler cancel --user "$_uid" "$_pkg" >/dev/null 2>&1
+    done
   done
   rm -f "$_jobs_tmp"
 
