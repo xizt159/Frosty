@@ -1949,7 +1949,7 @@
           { k: 'payments',     l: t('pill_payments')     },
           { k: 'wearables',    l: t('pill_wearables')    },
           { k: 'games',        l: t('pill_games')        },
-          { k: 'oem_freeze',   l: t('pill_oem'), src: p  }
+          { k: 'oem_freeze',   l: t('pill_oem')          }
       ]}
     ];
     var grand = 0;

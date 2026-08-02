@@ -135,10 +135,3 @@ stock_oem() {
   log_oem "Summary: $count enabled, $fail failed"
   echo "{\"status\":\"ok\",\"enabled\":$count,\"failed\":$fail}"
 }
-
-case "$1" in
-  freeze) freeze_oem ;;
-  stock)  stock_oem ;;
-  *) echo "Usage: $0 {freeze|stock}"; exit 1 ;;
-esac
-exit 0
