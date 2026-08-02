@@ -533,7 +533,7 @@ if [ "$USE_EXISTING" -eq 1 ]; then
   if [ -f "$EXISTING_PATCHES" ]; then
     cp -f "$EXISTING_PATCHES" "$MODPATH/config/doze_patches.txt"
     ui_print "$(s save_patches)"
-  fiP
+  fi
   . "$MODPATH/config/user_prefs"
   if [ "${ENABLE_CUSTOM_APP_DOZE:-0}" -eq 1 ] && [ -f "$EXISTING_OVERLAYS" ]; then
     cp -f "$EXISTING_OVERLAYS" "$MODPATH/config/doze_xml_overlays.txt"
