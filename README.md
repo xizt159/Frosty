@@ -64,7 +64,7 @@ Open the WebUI from your root manager:
 - **Doze**: App Doze with app picker, Deep Doze with level selector and whitelist editor
 - **Screen Off Optimization**: per-connection toggles, delay timers, restore on unlock
 - **GMS Categories**: freeze individual GMS service groups
-- **OEM Freezer** (OnePlus/OPPO only): freeze vendor bloat services from the GMS page; ignored on other devices
+- **OEM Freezer** (OnePlus/OPPO): freeze vendor bloat services from the GMS page; ignored on other devices
 - **Battery Saver Tuner**: fine-tune battery saver behavior
 - **Import / Export**: back up and restore your full configuration
 

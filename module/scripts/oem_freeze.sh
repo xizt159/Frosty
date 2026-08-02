@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - OnePlus/Oppo OEM Freezer (opt-in, device-gated)
+# Frosty - OEM Freezer (OnePlus/Oppo, device-gated)
 
 _d="${0%/*}"
 [ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
@@ -30,7 +30,7 @@ detect_oem() {
   [ -z "$_brand" ] && _brand=$(getprop ro.product.brand 2>/dev/null)
   [ -z "$_brand" ] && _brand=$(getprop ro.product.manufacturer 2>/dev/null)
   case "$_brand" in
-    *OnePlus*)        echo "oneplus" ;;
+    *OnePlus*|*oneplus*)        echo "oneplus" ;;
     *OPPO*|*Oppo*|*oppo*) echo "oppo" ;;
     *) echo "other" ;;
   esac

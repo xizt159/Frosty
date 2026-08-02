@@ -270,7 +270,7 @@ elif [ -f "$GMS_LIST" ]; then
   log "Re-enabled $count services"
 fi
 
-# Re-enable OnePlus/Oppo OEM packages frozen by the OEM freezer
+# Re-enable OEM (OnePlus/Oppo) packages frozen by the OEM freezer
 OEM_LIST="$TEMP_DIR/oem_services.txt"
 OEM_FROZEN="$TEMP_DIR/oem_frozen.txt"
 if [ -f "$OEM_LIST" ]; then

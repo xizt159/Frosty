@@ -81,8 +81,8 @@ set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/scripts/frosty.sh" 0 0 0755
 set_perm "$MODPATH/scripts/app_doze.sh" 0 0 0755
-set_perm "$MODPATH/scripts/deep_doze.sh" 0 0 0755
 set_perm "$MODPATH/scripts/battery_saver.sh" 0 0 0755
+set_perm "$MODPATH/scripts/deep_doze.sh" 0 0 0755
 set_perm "$MODPATH/scripts/oem_freeze.sh" 0 0 0755
 set_perm "$MODPATH/scripts/screen_off_opt.sh" 0 0 0755
 set_perm "$MODPATH/uninstall.sh" 0 0 0755
@@ -480,7 +480,6 @@ EXISTING_PREFS="$MODDIR/config/user_prefs"
 EXISTING_WHITELIST="$MODDIR/config/doze_whitelist.txt"
 EXISTING_PATCHES="$MODDIR/config/doze_patches.txt"
 EXISTING_OVERLAYS="$MODDIR/config/doze_xml_overlays.txt"
-EXISTING_OEM_SERVICES="$MODDIR/config/oem_services.txt"
 USE_EXISTING=0
 
 if [ -f "$EXISTING_PREFS" ]; then
@@ -534,11 +533,7 @@ if [ "$USE_EXISTING" -eq 1 ]; then
   if [ -f "$EXISTING_PATCHES" ]; then
     cp -f "$EXISTING_PATCHES" "$MODPATH/config/doze_patches.txt"
     ui_print "$(s save_patches)"
-  fi
-  if [ -f "$EXISTING_OEM_SERVICES" ]; then
-    cp -f "$EXISTING_OEM_SERVICES" "$MODPATH/config/oem_services.txt"
-    ui_print "  ℹ️ OEM freezer list kept"
-  fi
+  fiP
   . "$MODPATH/config/user_prefs"
   if [ "${ENABLE_CUSTOM_APP_DOZE:-0}" -eq 1 ] && [ -f "$EXISTING_OVERLAYS" ]; then
     cp -f "$EXISTING_OVERLAYS" "$MODPATH/config/doze_xml_overlays.txt"
