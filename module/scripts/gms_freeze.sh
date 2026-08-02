@@ -11,6 +11,7 @@ should_disable_category() {
     payments)     [ "$DISABLE_PAYMENTS" = "1" ] ;;
     wearables)    [ "$DISABLE_WEARABLES" = "1" ] ;;
     games)        [ "$DISABLE_GAMES" = "1" ] ;;
+    keep)         return 1 ;; # notification-critical - never frozen
     *) return 1 ;;
   esac
 }
@@ -79,6 +80,13 @@ freeze_services() {
         log_service "[FAIL] $service"
         count_fail=$((count_fail + 1))
       fi
+    elif [ "$category" = "keep" ]; then
+      # Notification-critical (Firebase/FCM). Never disable; auto-restore in
+      # case a previous version froze them as part of the background category.
+      for _uid in $_user_ids; do
+        pm enable --user "$_uid" "$service" >/dev/null 2>&1
+      done
+      log_service "[OK] $service (notification-critical, kept enabled)"
     fi
   done < "$GMS_LIST"
 
