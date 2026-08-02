@@ -93,14 +93,6 @@ com.android.vending/com.google.android.finsky.instantapps.InstantAppsLoggingServ
 com.google.android.gms/com.google.android.finsky.instantapps.InstantAppsLoggingService|background
 
 
-# NOTIFICATION-CRITICAL - NEVER FROZEN
-# Firebase component discovery inside GMS is part of FCM push delivery.
-# Disabling it makes notifications queue until the screen is unlocked.
-
-com.google.firebase/com.google.firebase.components.ComponentDiscoveryService|keep
-com.google.android.gms/com.google.firebase.components.ComponentDiscoveryService|keep
-
-
 # LOCATION - Location, Geofence, Places, Activity Recognition
 
 com.google.android.gms/com.google.android.gms.location.activity.ActivityRecognitionService|location
@@ -132,6 +124,7 @@ com.google.android.gms/com.google.android.location.wearable.WearableLocationServ
 com.google.android.gms/com.google.android.location.fused.wearable.GmsWearableListenerService|location
 com.google.android.gms/com.google.android.gms.contextmanager.service.ContextManagerService|location
 com.google.android.gms/com.google.android.gms.awareness.service.AwarenessService|location
+
 
 # CONNECTIVITY - Nearby, Cast, Discovery, Quick Share
 
