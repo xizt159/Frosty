@@ -42,6 +42,7 @@ Frosty optimiert die Akkulaufzeit, indem es GMS-Dienste einfriert, systemweite D
 - **System-Props**: Deaktiviere Debug-Eigenschaften, um RAM und Akku zu sparen.
 - **Logs beenden**: Stoppt akkubelastende Log- und Debugging-Prozesse.
 - **Energiespar-Tuner**: Passe an, was der integrierte Android-Energiesparmodus macht, wenn er aktiv ist.
+- **OEM-Freezer** (OnePlus/OPPO): Deaktiviert OnePlus/OPPO-Bloatdienste. Auf anderen Geräten automatisch ignoriert.
 
 ## Installation
 

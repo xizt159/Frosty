@@ -32,6 +32,7 @@
   <string name="pill_payments">Płatności</string>
   <string name="pill_wearables">Wearables</string>
   <string name="pill_games">Gry</string>
+  <string name="pill_oem">OEM Freezer</string>
   <string name="pill_batt_saver">Oszczędzanie baterii</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">Optymalizacje systemu</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Profil oszczędzania baterii zastosowano</string>
   <string name="log_bss_reverted">Oszczędzanie baterii przywrócono</string>
   <string name="log_bss_reapplied">Oszczędzanie baterii ponownie zastosowano</string>
+  <string name="tgl_oem">OEM Freezer</string>
+  <string name="tgl_oem_desc">Wyłącza wybrane usługi bloatware OnePlus/OPPO. Ignorowane na innych urządzeniach.</string>
+  <string name="loading_applying_oem">Stosowanie OEM Freezer...</string>
+  <string name="loading_reverting_oem">Przywracanie pakietów OEM...</string>
+  <string name="log_oem_applied">OEM Freezer zastosowano</string>
+  <string name="log_oem_reverted">Pakiety OEM przywrócone</string>
+  <string name="log_oem_failed">Działanie OEM Freezer nie powiodło się</string>
   <string name="tgl_ram_optimizer">Optymalizator RAM</string>
   <string name="tgl_ram_optimizer_desc">Ogranicza procesy w tle w pamięci podręcznej i puste, dostosowuje zachowanie swapu zram dla większej ilości wolnego RAM</string>
   <string name="loading_applying_ram">Stosowanie optymalizatora RAM...</string>

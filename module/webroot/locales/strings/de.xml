@@ -32,6 +32,7 @@
   <string name="pill_payments">Zahlungen</string>
   <string name="pill_wearables">Wearables</string>
   <string name="pill_games">Spiele</string>
+  <string name="pill_oem">OEM-Freezer</string>
   <string name="pill_batt_saver">Energiesparmodus</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">Systemoptimierungen</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Energiesparmodus-Profil angewendet</string>
   <string name="log_bss_reverted">Energiesparmodus zurückgesetzt</string>
   <string name="log_bss_reapplied">Energiesparmodus erneut angewendet</string>
+  <string name="tgl_oem">OEM-Freezer</string>
+  <string name="tgl_oem_desc">Deaktiviert ausgewählte OnePlus/OPPO-Bloatdienste. Wird auf anderen Geräten ignoriert.</string>
+  <string name="loading_applying_oem">OEM-Freezer wird angewendet...</string>
+  <string name="loading_reverting_oem">OEM-Pakete werden wiederhergestellt...</string>
+  <string name="log_oem_applied">OEM-Freezer angewendet</string>
+  <string name="log_oem_reverted">OEM-Pakete wiederhergestellt</string>
+  <string name="log_oem_failed">OEM-Freezer-Aktion fehlgeschlagen</string>
   <string name="tgl_ram_optimizer">RAM-Optimierer</string>
   <string name="tgl_ram_optimizer_desc">Begrenzt zwischengespeicherte und leere Hintergrundprozesse, optimiert zram-Swap-Verhalten für mehr freien RAM</string>
   <string name="loading_applying_ram">RAM-Optimierer wird angewendet...</string>

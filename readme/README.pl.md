@@ -42,6 +42,7 @@ Frosty optymalizuje czas pracy baterii poprzez zamrażanie usług GMS, stosowani
 - **System Props**: Wyłącz właściwości debugowania, aby oszczędzać RAM i baterię.
 - **Kasowanie Logów**: Zatrzymaj procesy logowania i debugowania, które zużywają baterię.
 - **Dostrajanie Oszczędzania Baterii**: Dostosuj, co robi wbudowane oszczędzanie baterii Androida, gdy jest aktywne.
+- **OEM Freezer** (OnePlus/OPPO): Wyłącza usługi bloatware OnePlus/OPPO. Automatycznie ignorowane na innych urządzeniach.
 
 ## Instalacja
 

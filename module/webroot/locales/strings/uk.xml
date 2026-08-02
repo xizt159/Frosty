@@ -32,6 +32,7 @@
   <string name="pill_payments">Платежі</string>
   <string name="pill_wearables">Носимі пристрої</string>
   <string name="pill_games">Ігри</string>
+  <string name="pill_oem">Заморозка OEM</string>
   <string name="pill_batt_saver">Енергозбереження</string>
   <string name="pill_ram">ОЗП</string>
   <string name="sec_tweaks">Системні твіки</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Профіль енергозбереження застосовано</string>
   <string name="log_bss_reverted">Енергозбереження скасовано</string>
   <string name="log_bss_reapplied">Енергозбереження застосовано повторно</string>
+  <string name="tgl_oem">Заморозка OEM</string>
+  <string name="tgl_oem_desc">Вимикає вибрані bloatware-сервіси OnePlus/OPPO. Ігнорується на інших пристроях.</string>
+  <string name="loading_applying_oem">Застосування заморозки OEM...</string>
+  <string name="loading_reverting_oem">Відновлення OEM-пакетів...</string>
+  <string name="log_oem_applied">Заморозку OEM застосовано</string>
+  <string name="log_oem_reverted">OEM-пакети відновлено</string>
+  <string name="log_oem_failed">Не вдалося виконати дію заморозки OEM</string>
   <string name="tgl_ram_optimizer">Оптимізатор ОЗП</string>
   <string name="tgl_ram_optimizer_desc">Обмежує кешовані та порожні фонові процеси, оптимізує файл підкачки zram для збільшення вільної пам'яті</string>
   <string name="loading_applying_ram">Застосування оптимізатора ОЗП...</string>

@@ -1,6 +1,21 @@
 # Changelog
 ## I am not responsible for any unofficial or tampered versions of my module distributed outside this repository.
 
+## [4.3c] - 2026-08-02
+### Notification Safety
+- **Wakelock killer uses `am kill` instead of `am force-stop`**: force-stopped apps silently missed FCM pushes and alarms until reopened. Killed background processes can still be woken by push.
+- **Messaging apps pre-whitelisted by default**: WhatsApp, Telegram, Signal, Discord, Slack, Teams, Outlook, Gmail, WeChat, LINE and more are excluded from Deep Doze bucket restrictions and the RAM cleaner by default.
+### Battery
+- **Fixed `netstats_poll_interval` being set to 60 s** (framework default is 30 min), which fired ~30x more network-stats wakeups. Now kept at the default.
+- **`netstats_global_alert_bytes` restored to the 5 MB framework default**.
+- **Screen-off monitor polling raised from 3-5 s to 10 s** in both Deep Doze and Screen Off Optimization, reducing `dumpsys` wakeups while the screen is off.
+### OEM Freezer (new, opt-in)
+- **New OnePlus/OPPO OEM Freezer**: disables selected vendor bloat services via `pm disable`. Gated to OnePlus/OPPO devices, ignored elsewhere. Edit `config/oem_services.txt` to customize.
+- **WebUI toggle** on the GMS page, integrated into Freeze All / Stock All / Re-apply, with translations in all 14 languages.
+- **Full uninstall revert** for frozen OEM packages.
+### Misc
+- `module.prop` version string updated to 4.3c (versionCode stays 43 so the 4.4 release still shows as an update).
+
 ## [4.3] - 2026-07-04
 ### App Doze
 - **Fixed App Doze re-patching on every boot due to wrong checks**. (thanks to @xizt159 for the report and fix)

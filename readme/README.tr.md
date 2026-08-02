@@ -42,6 +42,7 @@ Frosty, GMS hizmetlerini dondurarak, sistem genelinde Doze iyileştirmeleri uygu
 - **Sistem Props**: RAM ve pilden tasarruf etmek için hata ayıklama (debug) özelliklerini devre dışı bırakın.
 - **Günlükleri Sonlandırma**: Pili tüketen günlük (log) ve hata ayıklama işlemlerini zorla durdurun.
 - **Pil Tasarrufu Ayarlayıcı**: Etkinken Android'in yerleşik pil tasarrufunun ne yapacağını özelleştirin.
+- **OEM Freezer** (OnePlus/OPPO): OnePlus/OPPO bloat hizmetlerini devre dışı bırakır. Diğer cihazlarda otomatik olarak yok sayılır.
 
 ## Kurulum
 

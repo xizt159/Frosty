@@ -32,6 +32,7 @@
   <string name="pill_payments">المدفوعات</string>
   <string name="pill_wearables">الأجهزة القابلة للارتداء</string>
   <string name="pill_games">الألعاب</string>
+  <string name="pill_oem">تجميد OEM</string>
   <string name="pill_batt_saver">موفر البطارية</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">تحسينات النظام</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">تم تطبيق ملف توفير البطارية</string>
   <string name="log_bss_reverted">تم استعادة توفير البطارية</string>
   <string name="log_bss_reapplied">تم إعادة تطبيق توفير البطارية</string>
+  <string name="tgl_oem">تجميد OEM</string>
+  <string name="tgl_oem_desc">يعطّل خدمات bloatware المحددة لـ OnePlus/OPPO. يتم تجاهله على الأجهزة الأخرى.</string>
+  <string name="loading_applying_oem">جارٍ تطبيق تجميد OEM...</string>
+  <string name="loading_reverting_oem">جارٍ استعادة حزم OEM...</string>
+  <string name="log_oem_applied">تم تطبيق تجميد OEM</string>
+  <string name="log_oem_reverted">تمت استعادة حزم OEM</string>
+  <string name="log_oem_failed">فشل إجراء تجميد OEM</string>
   <string name="tgl_ram_optimizer">محسّن RAM</string>
   <string name="tgl_ram_optimizer_desc">تقييد العمليات المخزنة مؤقتاً والفارغة في الخلفية، ضبط سلوك تبديل zram لمزيد من RAM الحرة</string>
   <string name="loading_applying_ram">تطبيق محسّن RAM...</string>

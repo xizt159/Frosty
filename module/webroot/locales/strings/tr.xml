@@ -32,6 +32,7 @@
   <string name="pill_payments">Ödemeler</string>
   <string name="pill_wearables">Giyilebilir Cihazlar</string>
   <string name="pill_games">Oyunlar</string>
+  <string name="pill_oem">OEM Freezer</string>
   <string name="pill_batt_saver">Pil Tasarrufu</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">Sistem İnce Ayarları</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Pil Tasarrufu profili uygulandı</string>
   <string name="log_bss_reverted">Pil Tasarrufu geri alındı</string>
   <string name="log_bss_reapplied">Pil Tasarrufu yeniden uygulandı</string>
+  <string name="tgl_oem">OEM Freezer</string>
+  <string name="tgl_oem_desc">Seçili OnePlus/OPPO bloat hizmetlerini devre dışı bırakır. Diğer cihazlarda yok sayılır.</string>
+  <string name="loading_applying_oem">OEM Freezer uygulanıyor...</string>
+  <string name="loading_reverting_oem">OEM paketleri geri yükleniyor...</string>
+  <string name="log_oem_applied">OEM Freezer uygulandı</string>
+  <string name="log_oem_reverted">OEM paketleri geri yüklendi</string>
+  <string name="log_oem_failed">OEM Freezer işlemi başarısız oldu</string>
   <string name="tgl_ram_optimizer">RAM Optimize Edici</string>
   <string name="tgl_ram_optimizer_desc">Önbelleğe alınmış ve boş arka plan süreçlerini sınırlar, daha fazla boş RAM için zram takas davranışını ayarlar</string>
   <string name="loading_applying_ram">RAM optimize edici uygulanıyor...</string>

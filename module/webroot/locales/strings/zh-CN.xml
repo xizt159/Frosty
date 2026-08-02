@@ -32,6 +32,7 @@
   <string name="pill_payments">支付</string>
   <string name="pill_wearables">可穿戴设备</string>
   <string name="pill_games">游戏</string>
+  <string name="pill_oem">OEM 冻结</string>
   <string name="pill_batt_saver">省电</string>
   <string name="pill_ram">内存</string>
   <string name="sec_tweaks">系统微调</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">省电配置已应用</string>
   <string name="log_bss_reverted">省电模式已恢复</string>
   <string name="log_bss_reapplied">省电模式已重新应用</string>
+  <string name="tgl_oem">OEM 冻结</string>
+  <string name="tgl_oem_desc">禁用选定的 OnePlus/OPPO 预装臃肿服务。在其他设备上自动忽略。</string>
+  <string name="loading_applying_oem">正在应用 OEM 冻结...</string>
+  <string name="loading_reverting_oem">正在恢复 OEM 包...</string>
+  <string name="log_oem_applied">OEM 冻结已应用</string>
+  <string name="log_oem_reverted">OEM 包已恢复</string>
+  <string name="log_oem_failed">OEM 冻结操作失败</string>
   <string name="tgl_ram_optimizer">内存优化器</string>
   <string name="tgl_ram_optimizer_desc">限制缓存的和空闲的后台进程，调整 zram 交换行为以获取更多空闲内存</string>
   <string name="loading_applying_ram">正在应用内存优化器...</string>

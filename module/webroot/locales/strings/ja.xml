@@ -32,6 +32,7 @@
   <string name="pill_payments">決済</string>
   <string name="pill_wearables">ウェアラブル</string>
   <string name="pill_games">ゲーム</string>
+  <string name="pill_oem">OEM フリーザー</string>
   <string name="pill_batt_saver">バッテリーセーバー</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">システム調整</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">バッテリーセーバープロファイル 適用済み</string>
   <string name="log_bss_reverted">バッテリーセーバー 復元済み</string>
   <string name="log_bss_reapplied">バッテリーセーバー 再適用済み</string>
+  <string name="tgl_oem">OEM フリーザー</string>
+  <string name="tgl_oem_desc">選択した OnePlus/OPPO の bloatware サービスを無効化します。他の端末では無視されます。</string>
+  <string name="loading_applying_oem">OEM フリーザーを適用中...</string>
+  <string name="loading_reverting_oem">OEM パッケージを復元中...</string>
+  <string name="log_oem_applied">OEM フリーザーを適用しました</string>
+  <string name="log_oem_reverted">OEM パッケージを復元しました</string>
+  <string name="log_oem_failed">OEM フリーザーの操作に失敗しました</string>
   <string name="tgl_ram_optimizer">RAM 最適化</string>
   <string name="tgl_ram_optimizer_desc">キャッシュおよび空のバックグラウンドプロセスを制限し、zram スワップ動作を調整して空き RAM を増加</string>
   <string name="loading_applying_ram">RAM 最適化を適用中...</string>

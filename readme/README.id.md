@@ -42,6 +42,7 @@ Frosty mengoptimalkan masa pakai baterai dengan membekukan layanan GMS, menerapk
 - **System Props**: Menonaktifkan properti debug untuk menghemat RAM dan baterai.
 - **Penghentian Log**: Menghentikan proses log dan debug yang menguras baterai.
 - **Penyetel Penghemat Baterai**: Menyesuaikan apa yang dilakukan penghemat baterai bawaan Android saat aktif.
+- **OEM Freezer** (OnePlus/OPPO): Menonaktifkan layanan bloatware OnePlus/OPPO. Diabaikan otomatis di perangkat lain.
 
 ## Instalasi
 

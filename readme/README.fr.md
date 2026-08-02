@@ -42,6 +42,7 @@ Frosty optimise la durée de vie de la batterie en gelant les services GMS, en a
 - **Props Système** : Désactivez les propriétés de débogage pour économiser la RAM et la batterie.
 - **Arrêt des Logs** : Arrête les processus de journalisation (logs) et de débogage qui drainent la batterie.
 - **Tuner Économiseur de Batterie** : Personnalisez ce que fait l'économiseur de batterie intégré à Android lorsqu'il est actif.
+- **Gel OEM** (OnePlus/OPPO) : Désactive les services bloatware OnePlus/OPPO. Ignoré automatiquement sur les autres appareils.
 
 ## Installation
 

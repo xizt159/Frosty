@@ -42,6 +42,7 @@ Frosty optimizes battery life by freezing GMS services, applying system-wide doz
 - **System Props**: Disable debug properties to save RAM and battery
 - **Log Killing**: Stop battery-draining log and debug processes
 - **Battery Saver Tuner**: Customize what Android's built-in battery saver does when active
+- **OEM Freezer** (OnePlus/OPPO): Disable OnePlus/OPPO bloat services. Auto-ignored on other devices.
 
 ## Installation
 
@@ -63,6 +64,7 @@ Open the WebUI from your root manager:
 - **Doze**: App Doze with app picker, Deep Doze with level selector and whitelist editor
 - **Screen Off Optimization**: per-connection toggles, delay timers, restore on unlock
 - **GMS Categories**: freeze individual GMS service groups
+- **OEM Freezer** (OnePlus/OPPO only): freeze vendor bloat services from the GMS page; ignored on other devices
 - **Battery Saver Tuner**: fine-tune battery saver behavior
 - **Import / Export**: back up and restore your full configuration
 
@@ -95,7 +97,7 @@ Auto-tunes ZRAM compression, LMK / LMKD / PSI thresholds, OEM reclaim nodes, and
 ## FAQ
 
 **Q: Why are my notifications delayed?**  
-A: App Doze and Deep Doze restrict background activity. Add your messaging apps to the Deep Doze whitelist in the WebUI.
+A: App Doze and Deep Doze restrict background activity. Common messaging apps (WhatsApp, Telegram, Signal, Discord, etc.) are whitelisted by default; add any other apps you rely on to the Deep Doze whitelist in the WebUI.
 
 **Q: Where did GMS Doze go?**  
 A: It's now part of App Doze. Open the App Doze picker and select GMS, same effect, unified interface.

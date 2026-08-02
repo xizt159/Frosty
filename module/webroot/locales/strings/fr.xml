@@ -32,6 +32,7 @@
   <string name="pill_payments">Paiements</string>
   <string name="pill_wearables">Objets connectés</string>
   <string name="pill_games">Jeux</string>
+  <string name="pill_oem">Gel OEM</string>
   <string name="pill_batt_saver">Économie batterie</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">Optimisations système</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Profil d'économie de batterie appliqué</string>
   <string name="log_bss_reverted">Économie de batterie restaurée</string>
   <string name="log_bss_reapplied">Économie de batterie réappliquée</string>
+  <string name="tgl_oem">Gel OEM</string>
+  <string name="tgl_oem_desc">Désactive certains services bloatware OnePlus/OPPO. Ignoré sur les autres appareils.</string>
+  <string name="loading_applying_oem">Application du gel OEM...</string>
+  <string name="loading_reverting_oem">Restauration des paquets OEM...</string>
+  <string name="log_oem_applied">Gel OEM appliqué</string>
+  <string name="log_oem_reverted">Paquets OEM restaurés</string>
+  <string name="log_oem_failed">Échec de l'action du gel OEM</string>
   <string name="tgl_ram_optimizer">Optimiseur RAM</string>
   <string name="tgl_ram_optimizer_desc">Limite les processus en cache et vides en arrière-plan, optimise le comportement de swap zram pour plus de RAM libre</string>
   <string name="loading_applying_ram">Application de l'optimiseur RAM...</string>

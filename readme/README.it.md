@@ -42,6 +42,7 @@ Frosty ottimizza la durata della batteria congelando i servizi GMS, applicando m
 - **Proprietà di Sistema**: Disabilita le proprietà di debug per risparmiare RAM e batteria.
 - **Terminazione Log**: Arresta i processi di log e di debug che consumano batteria.
 - **Ottimizzatore Risparmio Energetico**: Personalizza il comportamento del risparmio energetico integrato di Android quando è attivo.
+- **OEM Freezer** (OnePlus/OPPO): Disabilita i servizi bloatware OnePlus/OPPO. Ignorato automaticamente su altri dispositivi.
 
 ## Installazione
 

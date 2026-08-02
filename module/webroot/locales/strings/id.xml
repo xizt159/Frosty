@@ -32,6 +32,7 @@
   <string name="pill_payments">Pembayaran</string>
   <string name="pill_wearables">Wearable</string>
   <string name="pill_games">Game</string>
+  <string name="pill_oem">OEM Freezer</string>
   <string name="pill_batt_saver">Penghemat Baterai</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">Tweak Sistem</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Profil Penghemat Baterai diterapkan</string>
   <string name="log_bss_reverted">Penghemat Baterai dikembalikan</string>
   <string name="log_bss_reapplied">Penghemat Baterai diterapkan ulang</string>
+  <string name="tgl_oem">OEM Freezer</string>
+  <string name="tgl_oem_desc">Menonaktifkan layanan bloatware OnePlus/OPPO yang dipilih. Diabaikan di perangkat lain.</string>
+  <string name="loading_applying_oem">Menerapkan OEM Freezer...</string>
+  <string name="loading_reverting_oem">Memulihkan paket OEM...</string>
+  <string name="log_oem_applied">OEM Freezer diterapkan</string>
+  <string name="log_oem_reverted">Paket OEM dipulihkan</string>
+  <string name="log_oem_failed">Tindakan OEM Freezer gagal</string>
   <string name="tgl_ram_optimizer">Pengoptimal RAM</string>
   <string name="tgl_ram_optimizer_desc">Membatasi proses latar belakang cache dan kosong, menyetel perilaku swap zram untuk RAM bebas lebih banyak</string>
   <string name="loading_applying_ram">Menerapkan pengoptimal RAM...</string>
