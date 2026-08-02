@@ -106,7 +106,7 @@ com.android.emergency
 com.google.android.apps.safetyhub
 com.android.biometrics.face
 
-# Notification delivery (FCM) - keep these or push messages will only arrive
+# Notification delivery (FCM)
 com.google.android.gms
 com.google.android.gsf
 com.google.firebase
