@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">Енергозбереження скасовано</string>
   <string name="log_bss_reapplied">Енергозбереження застосовано повторно</string>
   <string name="tgl_oem">Заморозка OEM</string>
-  <string name="tgl_oem_desc">Вимикає вибрані bloatware-сервіси OnePlus/OPPO. Ігнорується на інших пристроях.</string>
+  <string name="tgl_oem_desc">Вимикає вибрані bloatware-сервіси виробника вашого пристрою. Пропускається, якщо жоден не підходить.</string>
   <string name="loading_applying_oem">Застосування заморозки OEM...</string>
   <string name="loading_reverting_oem">Відновлення OEM-пакетів...</string>
   <string name="log_oem_applied">Заморозку OEM застосовано</string>

@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">Battery Saver reverted</string>
   <string name="log_bss_reapplied">Battery Saver re-applied</string>
   <string name="tgl_oem">OEM Freezer</string>
-  <string name="tgl_oem_desc">Disables selected OnePlus/OPPO bloat services. Ignored on other devices.</string>
+  <string name="tgl_oem_desc">Disables selected OEM bloat services for your device manufacturer. Skipped if none apply.</string>
   <string name="loading_applying_oem">Applying OEM freezer...</string>
   <string name="loading_reverting_oem">Restoring OEM packages...</string>
   <string name="log_oem_applied">OEM freezer applied</string>

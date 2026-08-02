@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">Economia de bateria revertida</string>
   <string name="log_bss_reapplied">Economia de bateria reaplicada</string>
   <string name="tgl_oem">OEM Freezer</string>
-  <string name="tgl_oem_desc">Desativa serviços bloatware selecionados da OnePlus/OPPO. Ignorado em outros dispositivos.</string>
+  <string name="tgl_oem_desc">Desativa serviços bloatware selecionados do fabricante do seu dispositivo. Ignorado se nenhum se aplicar.</string>
   <string name="loading_applying_oem">Aplicando OEM Freezer...</string>
   <string name="loading_reverting_oem">Restaurando pacotes OEM...</string>
   <string name="log_oem_applied">OEM Freezer aplicado</string>

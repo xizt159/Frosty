@@ -743,7 +743,7 @@
           res.failed > 0 ? 'warn' : 'ok');
       }
 
-      // Step 4: OEM freezer (device-gated to OnePlus/OPPO)
+      // Step 4: Freeze OEM services
       await yieldFrame(t('loading_applying_oem'));
       var ro = await API.applyOemFreeze();
       if (ro.status === 'ok') logAction(t('log_oem_applied'), 'ok');

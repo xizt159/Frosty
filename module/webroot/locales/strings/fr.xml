@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">Économie de batterie restaurée</string>
   <string name="log_bss_reapplied">Économie de batterie réappliquée</string>
   <string name="tgl_oem">Gel OEM</string>
-  <string name="tgl_oem_desc">Désactive certains services bloatware OnePlus/OPPO. Ignoré sur les autres appareils.</string>
+  <string name="tgl_oem_desc">Désactive certains services bloatware du fabricant de votre appareil. Ignoré si aucun ne s'applique.</string>
   <string name="loading_applying_oem">Application du gel OEM...</string>
   <string name="loading_reverting_oem">Restauration des paquets OEM...</string>
   <string name="log_oem_applied">Gel OEM appliqué</string>

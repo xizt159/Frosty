@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">Penghemat Baterai dikembalikan</string>
   <string name="log_bss_reapplied">Penghemat Baterai diterapkan ulang</string>
   <string name="tgl_oem">OEM Freezer</string>
-  <string name="tgl_oem_desc">Menonaktifkan layanan bloatware OnePlus/OPPO yang dipilih. Diabaikan di perangkat lain.</string>
+  <string name="tgl_oem_desc">Menonaktifkan layanan bloatware produsen yang dipilih untuk perangkat Anda. Dilewati jika tidak ada yang cocok.</string>
   <string name="loading_applying_oem">Menerapkan OEM Freezer...</string>
   <string name="loading_reverting_oem">Memulihkan paket OEM...</string>
   <string name="log_oem_applied">OEM Freezer diterapkan</string>

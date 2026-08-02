@@ -203,7 +203,7 @@
   <string name="log_bss_reverted">バッテリーセーバー 復元済み</string>
   <string name="log_bss_reapplied">バッテリーセーバー 再適用済み</string>
   <string name="tgl_oem">OEM フリーザー</string>
-  <string name="tgl_oem_desc">選択した OnePlus/OPPO の bloatware サービスを無効化します。他の端末では無視されます。</string>
+  <string name="tgl_oem_desc">お使いの端末メーカーの選択した bloatware サービスを無効化します。該当するものがない場合はスキップされます。</string>
   <string name="loading_applying_oem">OEM フリーザーを適用中...</string>
   <string name="loading_reverting_oem">OEM パッケージを復元中...</string>
   <string name="log_oem_applied">OEM フリーザーを適用しました</string>
