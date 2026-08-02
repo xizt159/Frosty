@@ -127,7 +127,7 @@ kill_wakelocks() {
       TOP|BOUND_TOP|BOUND_FG_SERVICE|FG_SERVICE) continue ;;
     esac
 
-    am force-stop "$pkg" 2>/dev/null && killed=$((killed + 1))
+    am kill "$pkg" 2>/dev/null && killed=$((killed + 1))
   done < "$tmpfile"
   rm -f "$tmpfile" "$procfile"
   log_deep "[OK] Killed $killed wakelock holders"
@@ -154,27 +154,29 @@ start_screen_monitor() {
   local _mon_level="$DEEP_DOZE_LEVEL"
   (
     trap 'exit 0' TERM INT
-    local _backoff=0 _backoff_max=5
-    local _consecutive_on=0 _consecutive_off=0
+    local _s_on=0 _s_off=0
+    local _backoff_on=0 _backoff_off=0
     while true; do
       local state
       state=$(get_screen_state)
 
       if [ "$state" = "ON" ] || [ -z "$state" ]; then
-        _consecutive_off=0
-        _consecutive_on=$((_consecutive_on + 1))
-        # Adaptive backoff: sleep longer if screen has been on for a while
-        if [ "$_consecutive_on" -ge 4 ]; then
-          sleep 180
+        # Adaptive backoff (3 ticks): 90 -> 120 -> 150 -> 180 (+ 4 x 30) -> 300
+        if   [ "$_s_on" -lt 3 ]; then sleep 90
+        elif [ "$_s_on" -lt 6 ]; then sleep 120
+        elif [ "$_s_on" -lt 9 ]; then sleep 150
         else
-          sleep 90
+          sleep $((180 + (_backoff_on * 30)))
+          [ "$_backoff_on" -lt 4 ] && _backoff_on=$((_backoff_on + 1))
         fi
-        _backoff=0
+        _s_on=$((_s_on + 1))
+        _s_off=0
+        _backoff_off=0
         continue
       fi
 
-      _consecutive_on=0
-      _consecutive_off=$((_consecutive_off + 1))
+      _s_on=0
+      _backoff_on=0
 
       log_deep "Screen off - wakelock killer armed (5min)"
       if [ "$_mon_level" = "maximum" ]; then
@@ -183,32 +185,33 @@ start_screen_monitor() {
       fi
       sleep 300
 
-      if [ "$(get_screen_state)" != "ON" ]; then
+      state=$(get_screen_state)
+
+      if [ "$state" != "ON" ]; then
         log_deep "Running wakelock killer..."
         kill_wakelocks
         _stepdeep
       fi
 
-      local _s=0
-      while [ "$(get_screen_state)" != "ON" ]; do
-        # Adaptive backoff: longer sleep each consecutive off-cycle
-        if [ "$_s" -ge 12 ] && [ "$_backoff" -lt "$_backoff_max" ]; then
-          _backoff=$((_backoff + 1))
-          sleep 30
-        elif [ "$_s" -ge 24 ]; then
-          sleep 60
+      while [ "$state" != "ON" ]; do
+        # Adaptive backoff (6 ticks): 5 -> 10 -> 20 -> 30 (+ 6 x 15) -> 120
+        if   [ "$_s_off" -lt 6 ];  then sleep 5
+        elif [ "$_s_off" -lt 12 ]; then sleep 10
+        elif [ "$_s_off" -lt 18 ]; then sleep 20
         else
-          sleep 5
+          sleep $((30 + (_backoff_off * 15)))
+          [ "$_backoff_off" -lt 6 ] && _backoff_off=$((_backoff_off + 1))
         fi
-        _s=$((_s + 1))
+        _s_off=$((_s_off + 1))
+        state=$(get_screen_state)
       done
 
       if [ "$_mon_level" = "maximum" ]; then
         dumpsys sensorservice enable 2>/dev/null
         log_deep "[OK] Sensor service re-enabled"
       fi
-      log_deep "Screen on - monitor re-armed (backoff=$_backoff)"
-      _backoff=0
+      log_deep "Screen on - monitor re-armed"
+      _backoff_off=0
     done
   ) &
   echo $! > "$MONITOR_PID_FILE"
