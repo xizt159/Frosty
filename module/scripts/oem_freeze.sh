@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - OEM Freezer (OnePlus/Oppo, device-gated)
+# Frosty - OEM Freezer
 
 _d="${0%/*}"
 [ -z "$_d" ] && _d="/data/adb/modules/Frosty/scripts"
