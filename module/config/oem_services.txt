@@ -1,52 +1,51 @@
 # Frosty - OnePlus/Oppo OEM Freezer list
 # Format: package.name|category
-# Categories: common (both OnePlus & OPPO), oneplus (OnePlus only), oppo (OPPO only)
-# Enabled only when ENABLE_OEM_FREEZER=1 in config/user_prefs AND the device
-# is a OnePlus/OPPO. Non-OPPO devices are always ignored.
-# Whole packages are disabled via pm disable - nothing here is force-stopped.
+# Categories: common, oneplus, oppo
 
-# COMMON - OPPO/ColorOS & OnePlus/OxygenOS base
-com.oplus.logkit|common
-com.oplus.crashbox|common
-com.oplus.sau|common
-com.coloros.sau|common
-com.oplus.exservice|common
+# OPPO & OnePlus
+
+com.oplus.logkit|oneplus,oppo
+com.oplus.crashbox|oneplus,oppo
+com.oplus.sau|oneplus,oppo
+com.coloros.sau|oneplus,oppo
+com.oplus.exservice|oneplus,oppo
 # OPPO push for stock apps - disabling saves battery but may stop OPPO cloud
 # pushes to built-in apps. Keep enabled if you rely on them.
-#com.oplus.postman|common
-com.oplus.synergy|common
-com.oplus.cloud|common
-com.oplus.speechassist|common
-com.oplus.ucservice|common
-com.oplus.appa|common
-com.heytap.market|common
-com.oplus.browser|common
-com.heytap.browser|common
-com.oplus.games|common
-com.nearme.gamecenter|common
-com.oplus.instant|common
-com.nearme.instant|common
-com.oplus.themestore|common
-com.heytap.themestore|common
-com.oplus.weather|common
-com.coloros.weather2|common
-com.oplus.video|common
-com.coloros.video|common
-com.heytap.video|common
-com.oplus.music|common
-com.coloros.music|common
-com.heytap.music|common
-com.oplus.smartengine|common
-com.oplus.smartsidebar|common
-com.coloros.smartsidebar|common
-com.coloros.assistantscreen|common
-com.coloros.backuprestore|common
-com.coloros.screenrecorder|common
-com.coloros.translate|common
+#com.oplus.postman|oneplus,oppo
+com.oplus.synergy|oneplus,oppo
+com.oplus.cloud|oneplus,oppo
+com.oplus.speechassist|oneplus,oppo
+com.oplus.ucservice|oneplus,oppo
+com.oplus.appa|oneplus,oppo
+com.heytap.market|oneplus,oppo
+com.oplus.browser|oneplus,oppo
+com.heytap.browser|oneplus,oppo
+com.oplus.games|oneplus,oppo
+com.nearme.gamecenter|oneplus,oppo
+com.oplus.instant|oneplus,oppo
+com.nearme.instant|oneplus,oppo
+com.oplus.themestore|oneplus,oppo
+com.heytap.themestore|oneplus,oppo
+com.oplus.weather|oneplus,oppo
+com.coloros.weather2|oneplus,oppo
+com.oplus.video|oneplus,oppo
+com.coloros.video|oneplus,oppo
+com.heytap.video|oneplus,oppo
+com.oplus.music|oneplus,oppo
+com.coloros.music|oneplus,oppo
+com.heytap.music|oneplus,oppo
+com.oplus.smartengine|oneplus,oppo
+com.oplus.smartsidebar|oneplus,oppo
+com.coloros.smartsidebar|oneplus,oppo
+com.coloros.assistantscreen|oneplus,oppo
+com.coloros.backuprestore|oneplus,oppo
+com.coloros.screenrecorder|oneplus,oppo
+com.coloros.translate|oneplus,oppo
 # Wearable sync service - keep enabled if you use an OPPO/OnePlus watch.
-#com.oplus.owearable|common
+#com.oplus.owearable|oneplus,oppo
 
-# ONEPLUS - OxygenOS specific
+# ONEPLUS
+
 com.oneplus.opbackup|oneplus
 com.oneplus.backuprestore|oneplus
 com.oneplus.tuner|oneplus
@@ -60,7 +59,8 @@ com.oneplus.compass|oneplus
 # freezing it saves battery but disables some security center features.
 #com.oneplus.security|oneplus
 
-# OPPO - ColorOS specific
+# OPPO
+
 com.oppo.quicksearchbox|oppo
 com.oppo.soundrecorder|oppo
 com.oppo.compass|oppo

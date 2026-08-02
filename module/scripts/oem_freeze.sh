@@ -30,14 +30,14 @@ detect_oem() {
   [ -z "$_brand" ] && _brand=$(getprop ro.product.brand 2>/dev/null)
   [ -z "$_brand" ] && _brand=$(getprop ro.product.manufacturer 2>/dev/null)
   case "$_brand" in
-    *OnePlus*|*oneplus*)        echo "oneplus" ;;
+    *OnePlus*|*oneplus*)  echo "oneplus" ;;
     *OPPO*|*Oppo*|*oppo*) echo "oppo" ;;
     *) echo "other" ;;
   esac
 }
 
 _cancel_jobs() {
-  local _pkg="$1" _uid
+  local _pkg="$1"
   for _uid in $(_get_user_ids); do
     cmd jobscheduler cancel --user "$_uid" "$_pkg" >/dev/null 2>&1
   done
@@ -67,10 +67,9 @@ freeze_oem() {
     svc=$(echo "$svc" | tr -d ' ')
     cat=$(echo "$cat" | tr -d ' ')
     [ -z "$cat" ] && continue
-    case "$cat" in
-      common)  ;;
-      oneplus) [ "$oem" = "oneplus" ] || continue ;;
-      oppo)    [ "$oem" = "oppo" ] || continue ;;
+    case ",$cat," in
+      *,common,*) ;;
+      *,"$oem",*) ;;
       *) continue ;;
     esac
 
@@ -82,7 +81,7 @@ freeze_oem() {
       continue
     }
 
-    local _disabled_any=false _uid
+    local _disabled_any=false
     for _uid in $_user_ids; do
       pm disable --user "$_uid" "$svc" >/dev/null 2>&1 && _disabled_any=true
     done
@@ -112,7 +111,7 @@ stock_oem() {
     log_oem "Restoring from tracking file..."
     while IFS= read -r svc || [ -n "$svc" ]; do
       case "$svc" in ''|'#'*) continue ;; esac
-      local _ok=false _uid
+      local _ok=false
       for _uid in $_user_ids; do
         pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && _ok=true
       done
@@ -124,7 +123,7 @@ stock_oem() {
     while IFS='|' read -r svc cat || [ -n "$svc" ]; do
       case "$svc" in ''|'#'*) continue ;; esac
       svc=$(echo "$svc" | tr -d ' ')
-      local _ok=false _uid
+      local _ok=false
       for _uid in $_user_ids; do
         pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && _ok=true
       done
