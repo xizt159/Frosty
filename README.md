@@ -97,7 +97,7 @@ Auto-tunes ZRAM compression, LMK / LMKD / PSI thresholds, OEM reclaim nodes, and
 ## FAQ
 
 **Q: Why are my notifications delayed?**  
-A: App Doze and Deep Doze restrict background activity. Common messaging apps (WhatsApp, Telegram, Signal, Discord, etc.) are whitelisted by default; add any other apps you rely on to the Deep Doze whitelist in the WebUI.
+A: App Doze and Deep Doze restrict background activity. Add your messaging apps to the Deep Doze whitelist in the WebUI.
 
 **Q: Where did GMS Doze go?**  
 A: It's now part of App Doze. Open the App Doze picker and select GMS, same effect, unified interface.
