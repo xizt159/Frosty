@@ -154,8 +154,7 @@ start_screen_monitor() {
   local _mon_level="$DEEP_DOZE_LEVEL"
   (
     trap 'exit 0' TERM INT
-    local _s_on=0 _s_off=0
-    local _backoff_on=0 _backoff_off=0
+    local _s_on=0 _s_off=0 _b_on=0 _b_off=0
     while true; do
       local state
       state=$(get_screen_state)
@@ -166,17 +165,17 @@ start_screen_monitor() {
         elif [ "$_s_on" -lt 6 ]; then sleep 120
         elif [ "$_s_on" -lt 9 ]; then sleep 150
         else
-          sleep $((180 + (_backoff_on * 30)))
-          [ "$_backoff_on" -lt 4 ] && _backoff_on=$((_backoff_on + 1))
+          sleep $((180 + (_b_on * 30)))
+          [ "$_b_on" -lt 4 ] && _b_on=$((_b_on + 1))
         fi
         _s_on=$((_s_on + 1))
         _s_off=0
-        _backoff_off=0
+        _b_off=0
         continue
       fi
 
       _s_on=0
-      _backoff_on=0
+      _b_on=0
 
       log_deep "Screen off - wakelock killer armed (5min)"
       if [ "$_mon_level" = "maximum" ]; then
@@ -199,8 +198,8 @@ start_screen_monitor() {
         elif [ "$_s_off" -lt 12 ]; then sleep 10
         elif [ "$_s_off" -lt 18 ]; then sleep 20
         else
-          sleep $((30 + (_backoff_off * 15)))
-          [ "$_backoff_off" -lt 6 ] && _backoff_off=$((_backoff_off + 1))
+          sleep $((30 + (_b_off * 15)))
+          [ "$_b_off" -lt 6 ] && _b_off=$((_b_off + 1))
         fi
         _s_off=$((_s_off + 1))
         state=$(get_screen_state)
@@ -211,7 +210,7 @@ start_screen_monitor() {
         log_deep "[OK] Sensor service re-enabled"
       fi
       log_deep "Screen on - monitor re-armed"
-      _backoff_off=0
+      _b_off=0
     done
   ) &
   echo $! > "$MONITOR_PID_FILE"
