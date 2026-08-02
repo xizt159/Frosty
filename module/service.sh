@@ -117,6 +117,17 @@ else
   log_boot "No GMS categories enabled, skipping GMS freeze"
 fi
 
+if [ "$ENABLE_OEM_FREEZER" = "1" ]; then
+  log_boot "Applying OEM freezer..."
+  if sh "$MODDIR/scripts/frosty.sh" oem_freeze >/dev/null 2>&1; then
+    log_boot "OEM freeze applied"
+  else
+    log_boot "[WARN] OEM freeze failed"
+  fi
+else
+  log_boot "OEM freezer SKIPPED"
+fi
+
 if [ "$ENABLE_CUSTOM_APP_DOZE" = "1" ]; then
   log_boot "Applying App Doze..."
   if sh "$MODDIR/scripts/app_doze.sh" apply >/dev/null 2>&1; then

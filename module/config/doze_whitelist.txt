@@ -106,4 +106,29 @@ com.android.emergency
 com.google.android.apps.safetyhub
 com.android.biometrics.face
 
+# Notification-critical messaging & communication apps
+# Kept out of Deep Doze so push notifications stay instant by default.
+com.whatsapp
+com.whatsapp.w4b
+org.telegram.messenger
+org.thoughtcrime.securesms
+com.discord
+com.slack
+com.microsoft.teams
+com.microsoft.office.outlook
+com.google.android.gm
+com.yahoo.mobile.client.android.mail
+com.viber.voip
+com.skype.raider
+com.tencent.mm
+com.tencent.mobileqq
+jp.naver.line.android
+com.kakao.talk
+com.snapchat.android
+com.facebook.orca
+com.instagram.android
+com.twitter.android
+com.imo.android.imoim
+com.zing.zalo
+
 # User added apps

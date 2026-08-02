@@ -66,6 +66,13 @@ case "$cmd" in
       list_gms)           list_gms_services ;;
     esac ;;
 
+  oem_freeze|oem_stock)
+    . "$SCRIPTS/oem_freeze.sh"
+    case "$cmd" in
+      oem_freeze) freeze_oem ;;
+      oem_stock)  stock_oem ;;
+    esac ;;
+
   apply_bss|revert_bss)
     . "$SCRIPTS/battery_saver.sh"
     case "$cmd" in

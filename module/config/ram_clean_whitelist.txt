@@ -1,3 +1,29 @@
 # Frosty - RAM Cleaner Whitelist
 # Apps listed here are never force-stopped by the safe/aggressive/extreme RAM cleaner.
 # Add package names one per line. Lines starting with # are comments.
+
+# Notification-critical messaging & communication apps
+# force-stop puts apps in the stopped state, which can block push delivery
+# until the app is reopened - these are excluded by default.
+com.whatsapp
+com.whatsapp.w4b
+org.telegram.messenger
+org.thoughtcrime.securesms
+com.discord
+com.slack
+com.microsoft.teams
+com.microsoft.office.outlook
+com.google.android.gm
+com.yahoo.mobile.client.android.mail
+com.viber.voip
+com.skype.raider
+com.tencent.mm
+com.tencent.mobileqq
+jp.naver.line.android
+com.kakao.talk
+com.snapchat.android
+com.facebook.orca
+com.instagram.android
+com.twitter.android
+com.imo.android.imoim
+com.zing.zalo

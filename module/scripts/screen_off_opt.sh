@@ -285,7 +285,7 @@ _monitor_loop() {
       fi
     else
       _backoff=0
-      sleep 3
+      sleep 10
     fi
   done
 }

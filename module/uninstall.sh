@@ -16,6 +16,8 @@ mkdir -p "$TEMP_DIR"
 [ -f "$MODDIR/backup/bss_values.txt" ]   && cp -f "$MODDIR/backup/bss_values.txt"   "$TEMP_DIR/"
 [ -f "$MODDIR/config/dropbox_tags.txt" ] && cp -f "$MODDIR/config/dropbox_tags.txt" "$TEMP_DIR/"
 [ -f "$MODDIR/backup/devcfg_values.txt" ] && cp -f "$MODDIR/backup/devcfg_values.txt" "$TEMP_DIR/"
+[ -f "$MODDIR/config/oem_services.txt" ] && cp -f "$MODDIR/config/oem_services.txt" "$TEMP_DIR/"
+[ -f "$MODDIR/tmp/oem_frozen.txt" ]      && cp -f "$MODDIR/tmp/oem_frozen.txt"      "$TEMP_DIR/"
 
 # Kill Deep Doze screen monitor
 if [ -f "$MODDIR/tmp/screen_monitor.pid" ]; then
@@ -266,6 +268,32 @@ elif [ -f "$GMS_LIST" ]; then
     done
   done < "$GMS_LIST"
   log "Re-enabled $count services"
+fi
+
+# Re-enable OnePlus/Oppo OEM packages frozen by the OEM freezer
+OEM_LIST="$TEMP_DIR/oem_services.txt"
+OEM_FROZEN="$TEMP_DIR/oem_frozen.txt"
+if [ -f "$OEM_LIST" ]; then
+  log "Re-enabling OEM packages..."
+  count=0
+  if [ -f "$OEM_FROZEN" ]; then
+    while IFS= read -r svc || [ -n "$svc" ]; do
+      case "$svc" in ''|'#'*) continue ;; esac
+      for _uid in $_user_ids; do
+        pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && count=$((count + 1))
+      done
+    done < "$OEM_FROZEN"
+    rm -f "$OEM_FROZEN"
+  else
+    while IFS='|' read -r svc cat || [ -n "$svc" ]; do
+      case "$svc" in ''|'#'*) continue ;; esac
+      svc=$(echo "$svc" | tr -d ' ')
+      for _uid in $_user_ids; do
+        pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && count=$((count + 1))
+      done
+    done < "$OEM_LIST"
+  fi
+  log "Re-enabled $count OEM packages"
 fi
 
 rm -f "$MODDIR/tmp/ram_clean.log" "$MODDIR/tmp/ram_clean.pid" "$MODDIR/tmp/ram_clean_status.json"

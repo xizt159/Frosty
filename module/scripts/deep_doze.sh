@@ -127,7 +127,7 @@ kill_wakelocks() {
       TOP|BOUND_TOP|BOUND_FG_SERVICE|FG_SERVICE) continue ;;
     esac
 
-    am force-stop "$pkg" 2>/dev/null && killed=$((killed + 1))
+    am kill "$pkg" 2>/dev/null && killed=$((killed + 1))
   done < "$tmpfile"
   rm -f "$tmpfile" "$procfile"
   log_deep "[OK] Killed $killed wakelock holders"
@@ -198,7 +198,7 @@ start_screen_monitor() {
         elif [ "$_s" -ge 24 ]; then
           sleep 60
         else
-          sleep 5
+          sleep 10
         fi
         _s=$((_s + 1))
       done

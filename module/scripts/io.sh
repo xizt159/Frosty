@@ -35,6 +35,7 @@ backup_settings() {
     "DISABLE_PAYMENTS": ${DISABLE_PAYMENTS:-0},
     "DISABLE_WEARABLES": ${DISABLE_WEARABLES:-0},
     "DISABLE_GAMES": ${DISABLE_GAMES:-0},
+    "ENABLE_OEM_FREEZER": ${ENABLE_OEM_FREEZER:-0},
     "ENABLE_CUSTOM_APP_DOZE": ${ENABLE_CUSTOM_APP_DOZE:-0},
     "ENABLE_DEEP_DOZE": ${ENABLE_DEEP_DOZE:-0},
     "DEEP_DOZE_LEVEL": "${DEEP_DOZE_LEVEL:-moderate}",
@@ -89,6 +90,7 @@ restore_settings() {
   local dis_pay=$(pi DISABLE_PAYMENTS);             [ -z "$dis_pay" ] && dis_pay=0
   local dis_wea=$(pi DISABLE_WEARABLES);            [ -z "$dis_wea" ] && dis_wea=0
   local dis_gam=$(pi DISABLE_GAMES);                [ -z "$dis_gam" ] && dis_gam=0
+  local oem_frz=$(pi ENABLE_OEM_FREEZER);           [ -z "$oem_frz" ] && oem_frz=0
   local app_doz=$(pi ENABLE_CUSTOM_APP_DOZE);       [ -z "$app_doz" ] && app_doz=0
   local dep_doz=$(pi ENABLE_DEEP_DOZE);             [ -z "$dep_doz" ] && dep_doz=0
   local dep_lvl=$(ps_ DEEP_DOZE_LEVEL);             [ -z "$dep_lvl" ] && dep_lvl="moderate"
@@ -133,6 +135,7 @@ DISABLE_CLOUD=$dis_clo
 DISABLE_PAYMENTS=$dis_pay
 DISABLE_WEARABLES=$dis_wea
 DISABLE_GAMES=$dis_gam
+ENABLE_OEM_FREEZER=$oem_frz
 ENABLE_CUSTOM_APP_DOZE=$app_doz
 ENABLE_DEEP_DOZE=$dep_doz
 DEEP_DOZE_LEVEL=$dep_lvl

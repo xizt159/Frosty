@@ -54,9 +54,9 @@ kill_logs() {
     wait
   ) &
 
-  settings put global netstats_poll_interval 60000 >/dev/null 2>&1
+  settings put global netstats_poll_interval 1800000 >/dev/null 2>&1
   settings put global netstats_persist_threshold 2097152 >/dev/null 2>&1
-  settings put global netstats_global_alert_bytes 2097152 >/dev/null 2>&1
+  settings put global netstats_global_alert_bytes 5242880 >/dev/null 2>&1
   settings put global wifi_scan_throttle_enabled 1 >/dev/null 2>&1
   settings put global wifi_scan_always_enabled 0 >/dev/null 2>&1
 
