@@ -21,7 +21,8 @@ mkdir -p "$LOGDIR" "$MODDIR/tmp"
 log_oem() { echo "[$(date '+%H:%M:%S')] $1" >> "$OEM_LOG"; }
 
 _get_user_ids() {
-  pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
+  pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' \
+    | grep -oE '[0-9]+' || ls /data/user 2>/dev/null
 }
 
 detect_oem() {
@@ -45,18 +46,26 @@ _cancel_jobs() {
 
 freeze_oem() {
   echo "Frosty v${MODVER:-?} - OEM (FREEZE) - $(date '+%Y-%m-%d %H:%M:%S')" > "$OEM_LOG"
-  [ "$ENABLE_OEM_FREEZER" != "1" ] && { log_oem "[SKIP] OEM freezer disabled in user_prefs"; echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"disabled"}'; return 0; }
+  [ "$ENABLE_OEM_FREEZER" != "1" ] && { 
+    log_oem "[SKIP] OEM freezer disabled in user_prefs"; 
+    echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"disabled"}'; 
+    return 0;
+  }
 
   local oem
   oem=$(detect_oem)
   if [ "$oem" = "other" ]; then
-    log_oem "[SKIP] Device is not OnePlus/Oppo - ignoring"
-    echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"not_oneplus_oppo"}'
-    return 0
+    log_oem "[SKIP] Device is not OnePlus/Oppo - ignoring";
+    echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"not_oneplus_oppo"}';
+    return 0;
   fi
   log_oem "Device detected: $oem"
 
-  [ ! -f "$OEM_LIST" ] && { log_oem "[SKIP] oem_services.txt not found"; echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"no_list"}'; return 0; }
+  [ ! -f "$OEM_LIST" ] && { 
+    log_oem "[SKIP] oem_services.txt not found";
+    echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"no_list"}';
+    return 0; 
+  }
 
   local count=0 fail=0 skip=0 _user_ids
   _user_ids=$(_get_user_ids)
