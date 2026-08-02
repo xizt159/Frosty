@@ -161,14 +161,9 @@ _apply_xml_overlays() {
     return 0
   fi
 
-  local _old_overlays="$TMPDIR/old_overlays.tmp"
-  local _new_overlays="$TMPDIR/new_overlays.tmp"
-  if [ -f "$OVERLAYS_FILE" ]; then
-    cp -f "$OVERLAYS_FILE" "$_old_overlays"
-  else
-    touch "$_old_overlays" 2>/dev/null
-  fi
-  touch "$_new_overlays" 2>/dev/null
+  local _old_overlays="$TMPDIR/old_overlays.tmp" _new_overlays="$TMPDIR/new_overlays.tmp"
+  cp -f "$OVERLAYS_FILE" "$_old_overlays" 2>/dev/null || : > "$_old_overlays" 2>/dev/null
+  : > "$_new_overlays" 2>/dev/null
 
   local count=0 scanned=0 _seen=""
   for _base in $_PARTITION_ROOTS; do
@@ -250,7 +245,7 @@ _apply_xml_overlays() {
 
   if [ "$count" -gt 0 ]; then
     mkdir -p "$(dirname "$_reboot_file")"
-    touch "$_reboot_file" 2>/dev/null
+    : > "$_reboot_file" 2>/dev/null
   fi
 }
 
