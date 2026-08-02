@@ -32,6 +32,7 @@
   <string name="pill_payments">Payments</string>
   <string name="pill_wearables">Wearables</string>
   <string name="pill_games">Games</string>
+  <string name="pill_oem">OEM Freezer</string>
   <string name="pill_batt_saver">Batt Saver</string>
   <string name="pill_ram">RAM</string>
   <string name="sec_tweaks">System Tweaks</string>
@@ -201,6 +202,13 @@
   <string name="log_bss_applied">Battery Saver profile applied</string>
   <string name="log_bss_reverted">Battery Saver reverted</string>
   <string name="log_bss_reapplied">Battery Saver re-applied</string>
+  <string name="tgl_oem">OEM Freezer</string>
+  <string name="tgl_oem_desc">Disables selected OnePlus/OPPO bloat services. Ignored on other devices.</string>
+  <string name="loading_applying_oem">Applying OEM freezer...</string>
+  <string name="loading_reverting_oem">Restoring OEM packages...</string>
+  <string name="log_oem_applied">OEM freezer applied</string>
+  <string name="log_oem_reverted">OEM packages restored</string>
+  <string name="log_oem_failed">OEM freezer action failed</string>
   <string name="tgl_ram_optimizer">RAM Optimizer</string>
   <string name="tgl_ram_optimizer_desc">Limits cached and empty background processes, tunes zram swap behavior for more free RAM</string>
   <string name="loading_applying_ram">Applying RAM optimizer...</string>

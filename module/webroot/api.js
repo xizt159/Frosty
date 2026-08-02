@@ -66,6 +66,7 @@ var API = (function () {
     deep_doze_level: 'DEEP_DOZE_LEVEL',
     ram_optimizer_level: 'RAM_OPT_LEVEL',
     battery_saver:              'ENABLE_BATTERY_SAVER',
+    oem_freeze:                 'ENABLE_OEM_FREEZER',
     bss_soundtrigger_disabled:  'BSS_SOUNDTRIGGER_DISABLED',
     bss_fullbackup_deferred:    'BSS_FULLBACKUP_DEFERRED',
     bss_keyvaluebackup_deferred:'BSS_KEYVALUEBACKUP_DEFERRED',
@@ -201,6 +202,14 @@ var API = (function () {
 
   async function revertBatterySaver() {
     return await runJSON('sh ' + MODDIR + '/scripts/frosty.sh revert_bss 2>/dev/null');
+  }
+
+  async function applyOemFreeze() {
+    return await runJSON('sh ' + MODDIR + '/scripts/frosty.sh oem_freeze 2>/dev/null');
+  }
+
+  async function revertOemFreeze() {
+    return await runJSON('sh ' + MODDIR + '/scripts/frosty.sh oem_stock 2>/dev/null');
   }
 
   async function applyBlur() {
@@ -388,6 +397,7 @@ var API = (function () {
     killLogs, revertKillLogs,
     applyKillTracking, revertKillTracking,
     applyBatterySaver, revertBatterySaver,
+    applyOemFreeze, revertOemFreeze,
     applyBlur, applyFreeze, applyStock, freezeCategory, unfreezeCategory,
     applyDeepDoze, revertDeepDoze,
     applyCustomAppDoze, revertCustomAppDoze, getCustomDozeList,

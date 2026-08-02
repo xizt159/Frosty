@@ -73,6 +73,7 @@
     ram_optimizer: 'tgl_ram_optimizer',
     deep_doze: 'tgl_deep_doze', battery_saver: 'tgl_bss',
     custom_app_doze: 'tgl_cad', screen_off_opt: 'tgl_soo',
+    oem_freeze: 'tgl_oem',
     telemetry: 'cat_telemetry', background: 'cat_background',
     location: 'cat_location', connectivity: 'cat_connectivity',
     cloud: 'cat_cloud', payments: 'cat_payments',
@@ -335,6 +336,7 @@
     }
 
     setChk('t-screen-off-opt', p.screen_off_opt);
+    setChk('t-oem', p.oem_freeze);
     var soox = $('soo-extras');
     if (soox) {
       if (p.screen_off_opt) soox.classList.add('on');
@@ -468,6 +470,18 @@
           updateLoading(t('loading_reverting_bss'));
           await API.revertBatterySaver();
           logAction(t('log_bss_reverted'), 'ok');
+        }
+      } else if (key === 'oem_freeze') {
+        if (nv) {
+          updateLoading(t('loading_applying_oem'));
+          var ro = await API.applyOemFreeze();
+          if (ro.status === 'ok') logAction(t('log_oem_applied'), 'ok');
+          else logAction(t('log_oem_failed'), 'err');
+        } else {
+          updateLoading(t('loading_reverting_oem'));
+          var ro2 = await API.revertOemFreeze();
+          if (ro2.status === 'ok') logAction(t('log_oem_reverted'), 'ok');
+          else logAction(t('log_oem_failed'), 'err');
         }
       }
 
@@ -707,7 +721,7 @@
     try {
       // Step 1: Turn ON all prefs
       await yieldFrame(t('loading_enabling_toggles'));
-      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'custom_app_doze', 'deep_doze', 'battery_saver', 'screen_off_opt'];
+      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'custom_app_doze', 'deep_doze', 'battery_saver', 'screen_off_opt', 'oem_freeze'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 1);
       }
@@ -729,53 +743,58 @@
           res.failed > 0 ? 'warn' : 'ok');
       }
 
-      // Step 4: Apply kernel tweaks
+      // Step 4: OEM freezer (device-gated to OnePlus/OPPO)
+      await yieldFrame(t('loading_applying_oem'));
+      var ro = await API.applyOemFreeze();
+      if (ro.status === 'ok') logAction(t('log_oem_applied'), 'ok');
+
+      // Step 5: Apply kernel tweaks
       await yieldFrame(t('loading_applying_kernel'));
       var rk = await API.applyKernelTweaks();
       if (rk.status === 'ok') logAction(tf('log_kernel_applied', rk.applied, rk.failed, rk.skipped || 0), rk.failed > 0 ? 'warn' : 'ok');
 
-      // Step 5: Enable system props (rename .old → system.prop if needed)
+      // Step 6: Enable system props (rename .old → system.prop if needed)
       await yieldFrame(t('loading_applying_sysprops'));
       var rsp = await API.toggleSystemProps();
       if (rsp.status === 'ok') logAction(t('log_sysprops_enabled'), 'ok');
       else logAction(tf('log_sysprops_failed', rsp.action || rsp.message || ''), 'err');
 
-      // Step 6: Disable blur
+      // Step 7: Disable blur
       await yieldFrame(t('loading_applying_blur'));
       var rb = await API.applyBlur();
       if (rb.status === 'ok') logAction(tf('log_blur_state', t(rb.blur === 'enabled' ? 'word_enabled' : 'word_disabled')), 'ok');
 
-      // Step 7: Kill logs (RC/bin changes take effect on next reboot via post-fs-data.sh)
+      // Step 8: Kill logs (RC/bin changes take effect on next reboot via post-fs-data.sh)
       await yieldFrame(t('loading_killing_logs'));
       var rl = await API.killLogs();
       if (rl.status === 'ok') logAction(tf('log_killed_logs', rl.killed), 'ok');
 
-      // Step 8: Block Google tracking
+      // Step 9: Block Google tracking
       await yieldFrame(t('loading_applying_tracking'));
       var rtr = await API.applyKillTracking();
       if (rtr.status === 'ok') logAction(t('log_tracking_applied'), 'ok');
 
-      // Step 9: Apply RAM optimizer
+      // Step 10: Apply RAM optimizer
       await yieldFrame(t('loading_applying_ram'));
       var rram = await API.applyRamOptimizer();
       if (rram.status === 'ok') logAction(t('log_ram_applied'), 'ok');
 
-      // Step 10: Apply App Doze
+      // Step 11: Apply App Doze
       await yieldFrame(t('loading_applying_cad'));
       await API.applyCustomAppDoze();
       logAction(t('log_cad_applied'), 'ok');
 
-      // Step 11: Apply Deep Doze
+      // Step 12: Apply Deep Doze
       await yieldFrame(t('loading_applying_deep_doze'));
       await API.applyDeepDoze();
       logAction(t('log_deep_doze_applied'), 'ok');
 
-      // Step 12: Apply Battery Saver profile
+      // Step 13: Apply Battery Saver profile
       await yieldFrame(t('loading_applying_bss'));
       await API.applyBatterySaver();
       logAction(t('log_bss_applied'), 'ok');
 
-      // Step 13: Start Screen-Off Opt
+      // Step 14: Start Screen-Off Opt
       await yieldFrame(t('loading_applying_soo'));
       await API.applyScreenOffOpt();
       logAction(t('log_soo_applied'), 'ok');
@@ -802,7 +821,7 @@
     try {
       // Step 1: Turn OFF all prefs
       await yieldFrame(t('loading_disabling_toggles'));
-      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'custom_app_doze', 'deep_doze', 'battery_saver', 'screen_off_opt'];
+      var allPrefs = ['kernel_tweaks', 'system_props', 'blur_disable', 'log_killing', 'kill_tracking', 'ram_optimizer', 'custom_app_doze', 'deep_doze', 'battery_saver', 'screen_off_opt', 'oem_freeze'];
       for (var i = 0; i < allPrefs.length; i++) {
         await API.setPref(allPrefs[i], 0);
       }
@@ -869,6 +888,11 @@
       await yieldFrame(t('loading_reverting_soo'));
       await API.revertScreenOffOpt();
       logAction(t('log_soo_reverted'), 'ok');
+
+      // Step 13: Revert OEM freezer
+      await yieldFrame(t('loading_reverting_oem'));
+      var ro2 = await API.revertOemFreeze();
+      if (ro2.status === 'ok') logAction(t('log_oem_reverted'), 'ok');
 
       toast(t('toast_stocked'), 'ok');
       log(t('log_reboot_effect'), 'warn');
@@ -1916,7 +1940,7 @@
           { k: 'battery_saver',   l: t('pill_batt_saver') },
           { k: 'screen_off_opt',  l: t('pill_screen_off') }
       ]},
-      { id: 'gms', total: 8, src: c, keys: [
+      { id: 'gms', total: 9, src: c, keys: [
           { k: 'telemetry',    l: t('pill_telemetry')    },
           { k: 'background',   l: t('pill_background')   },
           { k: 'location',     l: t('pill_location')     },
@@ -1924,7 +1948,8 @@
           { k: 'cloud',        l: t('pill_cloud')        },
           { k: 'payments',     l: t('pill_payments')     },
           { k: 'wearables',    l: t('pill_wearables')    },
-          { k: 'games',        l: t('pill_games')        }
+          { k: 'games',        l: t('pill_games')        },
+          { k: 'oem_freeze',   l: t('pill_oem'), src: p  }
       ]}
     ];
     var grand = 0;
@@ -1934,12 +1959,12 @@
       var ratioEl = document.getElementById('status-ratio-' + sec.id);
       var pillsEl = document.getElementById('status-pills-' + sec.id);
       if (!card) return;
-      var active = sec.keys.filter(function(item) { return sec.src[item.k]; }).length;
+      var active = sec.keys.filter(function(item) { return (item.src || sec.src)[item.k]; }).length;
       grand += active;
       if (countEl) countEl.textContent = t('status_count').replace('{0}', active).replace('{1}', sec.total);
       if (ratioEl) ratioEl.textContent = active + '/' + sec.total;
       if (pillsEl) pillsEl.innerHTML = sec.keys.map(function(item) {
-        return '<span class="status-pill' + (sec.src[item.k] ? ' active' : '') + '">' + item.l + '</span>';
+        return '<span class="status-pill' + ((item.src || sec.src)[item.k] ? ' active' : '') + '">' + item.l + '</span>';
       }).join('');
       card.classList.toggle('has-active', active > 0);
     });
@@ -1948,7 +1973,7 @@
     var _kpiFill = document.getElementById('kpi-fill');
     var _kpiNum  = document.getElementById('kpi-num');
     var _kpiWrap = document.getElementById('kpi-ring-wrap');
-    var _CIRC = 534.07, _TOTAL = 18;
+    var _CIRC = 534.07, _TOTAL = 19;
     if (_kpiFill) _kpiFill.style.strokeDashoffset = (_CIRC * (1 - grand / _TOTAL)).toFixed(2);
     if (_kpiNum)  _kpiNum.textContent = grand;
     if (_kpiWrap) _kpiWrap.classList.toggle('has-active', grand > 0);
@@ -2118,6 +2143,7 @@
     });
     $('cad-list').addEventListener('scroll', onCadScroll, { passive: true });
     $('t-custom-app-doze').addEventListener('change', function () { togglePref('custom_app_doze'); });
+    $('t-oem').addEventListener('change', function () { togglePref('oem_freeze'); });
 
     // ── Whitelist ──
     $('wl-open').addEventListener('click', function() { _pushModalHistory(); openWhitelist('deep_doze'); });
@@ -2299,6 +2325,7 @@
       if (rp.deep_doze)        _steps.push('loading_applying_deep_doze');
       if (rp.battery_saver)    _steps.push('loading_applying_bss');
       if (rp.screen_off_opt)   _steps.push('loading_applying_soo');
+      if (rp.oem_freeze)       _steps.push('loading_applying_oem');
       var _total = _steps.length, _cur = 0;
 
       function stepLoad(key) {
@@ -2356,6 +2383,12 @@
             logAction(tf('log_gms_frozen', res.disabled, res.enabled, res.failed),
               res.failed > 0 ? 'warn' : 'ok');
           }
+        }
+
+        if (rp.oem_freeze) {
+          await stepLoad('loading_applying_oem');
+          var ro = await API.applyOemFreeze();
+          if (ro.status === 'ok') logAction(t('log_oem_applied'), 'ok');
         }
 
         if (rp.custom_app_doze) {
