@@ -30,11 +30,8 @@ detect_oem() {
   _brand=$(getprop ro.product.vendor.brand 2>/dev/null)
   [ -z "$_brand" ] && _brand=$(getprop ro.product.brand 2>/dev/null)
   [ -z "$_brand" ] && _brand=$(getprop ro.product.manufacturer 2>/dev/null)
-  case "$_brand" in
-    *OnePlus*|*oneplus*)  echo "oneplus" ;;
-    *OPPO*|*Oppo*|*oppo*) echo "oppo" ;;
-    *) echo "other" ;;
-  esac
+  [ -z "$_brand" ] && _brand="unknown"
+  echo "$_brand" | tr '[:upper:]' '[:lower:]' | tr ' ' '_'
 }
 
 _cancel_jobs() {
@@ -54,11 +51,6 @@ freeze_oem() {
 
   local oem
   oem=$(detect_oem)
-  if [ "$oem" = "other" ]; then
-    log_oem "[SKIP] Device is not OnePlus/Oppo - ignoring";
-    echo '{"status":"ok","disabled":0,"failed":0,"skipped":0,"message":"not_oneplus_oppo"}';
-    return 0;
-  fi
   log_oem "Device detected: $oem"
 
   [ ! -f "$OEM_LIST" ] && { 
