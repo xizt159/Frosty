@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# Frosty - Main dispatcher. Sources the relevant subscript for each command.
+# Frosty - Main dispatcher
 
 SCRIPTS="${0%/*}"
 [ -z "$SCRIPTS" ] && SCRIPTS="/data/adb/modules/Frosty/scripts"
@@ -26,13 +26,11 @@ case "$cmd" in
       revert_kernel) revert_kernel ;;
     esac ;;
 
-  apply_ram|revert_ram|apply_multitask|revert_multitask)
+  apply_ram|revert_ram)
     . "$SCRIPTS/ram_optimizer.sh"
     case "$cmd" in
-      apply_ram)       apply_ram_optimizer ;;
-      revert_ram)      revert_ram_optimizer ;;
-      apply_multitask) apply_multitasking "$1" ;;
-      revert_multitask) revert_multitasking ;;
+      apply_ram)  apply_ram_optimizer ;;
+      revert_ram) revert_ram_optimizer ;;
     esac ;;
 
   ram_clean|ram_clean_poll|ram_clean_silent)
@@ -57,13 +55,15 @@ case "$cmd" in
       revert_tracking) revert_kill_tracking ;;
     esac ;;
 
-  freeze|stock|freeze_category|unfreeze_category)
+  freeze|stock|freeze_category|unfreeze_category|list_frozen|list_gms)
     . "$SCRIPTS/gms_freeze.sh"
     case "$cmd" in
       freeze)             freeze_services ;;
       stock)              unfreeze_services ;;
       freeze_category)    freeze_category "$1" ;;
       unfreeze_category)  unfreeze_category "$1" ;;
+      list_frozen)        list_frozen_services ;;
+      list_gms)           list_gms_services ;;
     esac ;;
 
   apply_bss|revert_bss)
@@ -96,13 +96,6 @@ case "$cmd" in
       import)       restore_settings "$1" ;;
       list_backups) list_backups ;;
       share_backup) share_backup "$1" ;;
-    esac ;;
-
-  bug_report|list_bug_reports)
-    . "$SCRIPTS/bug_report.sh"
-    case "$cmd" in
-      bug_report)        generate_bug_report ;;
-      list_bug_reports)  list_bug_reports ;;
     esac ;;
 
   *)

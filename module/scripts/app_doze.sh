@@ -33,7 +33,8 @@ _BLOCKED="android com.android.systemui com.android.phone com.android.settings \
 ENABLE_CUSTOM_APP_DOZE=0
 [ -f "$USER_PREFS" ] && . "$USER_PREFS"
 
-mkdir -p "$LOGDIR" "$MODDIR/tmp"
+mkdir -p "$TMPDIR"
+mkdir -p "$LOGDIR"
 log_app() { echo "[$(date '+%H:%M:%S')] $1" >> "$APP_DOZE_LOG"; }
 
 _is_blocked() {
@@ -48,16 +49,15 @@ _load_packages() {
 }
 
 _load_grep() {
-  local pkgs
+  local pkgs _grep
   pkgs=$(_load_packages)
-  local _grep pat esc_pkg
   for pkg in $pkgs; do
     pat=""
     esc_pkg=$(printf '%s' "$pkg" | sed 's/\./\\./g')
     if [ "$pkg" = "$GMS_PKG" ]; then
       pat="<(allow-in-power-save|allow-in-data-usage-save)[^>]*\"$esc_pkg\"[^>]*/>"
     fi
-    pat="${pat:+$pat|}<wl[^>]*>[[:space:]]*${esc_pkg}[[:space:]]*</wl>"
+    pat="${pat:+$pat|}<wl[^>]*>[[:space:]]*$esc_pkg[[:space:]]*</wl>"
     _grep="${_grep:+$_grep|}$pat"
   done
   echo "$_grep"
@@ -115,7 +115,7 @@ _unit_matches() {
 _xml_has_any_pkg() {
   local _xml="$1" _grep="$2"
   [ -n "$_xml" ] && [ -n "$_grep" ] || return 1
-  tr -d '\r' < "$_xml" | tr '\n' ' ' | grep -qE "$_grep" && return 0
+  sed 's/\r//g; s/\t/ /g; s/\n/ /g; s/  */ /g' "$_xml" | grep -qE "$_grep" && return 0
   return 1
 }
 
@@ -146,21 +146,14 @@ _build_strip_ranges() {
   fi
 }
 
-_backup_original() {
-  local _real="$1" _rel="$2"
-  local _backup_file="$BACKUP_DIR/$_rel"
-  [ -f "$_backup_file" ] && return 0
-  mkdir -p "$(dirname "$_backup_file")"
-  cp -af "$_real" "$_backup_file" 2>/dev/null
-}
-
 _apply_xml_overlays() {
   _migrate_stale_lists
+  _rebuild_overlays_file
 
   local grep_pat
   grep_pat=$(_load_grep)
 
-  local _reboot_file="$MODDIR/tmp/cad_needs_reboot"
+  _reboot_file="$TMPDIR/cad_needs_reboot"
   rm -f "$_reboot_file"
 
   if [ "$ENABLE_CUSTOM_APP_DOZE" != "1" ] || [ -z "$grep_pat" ]; then
@@ -168,11 +161,11 @@ _apply_xml_overlays() {
     return 0
   fi
 
-  local count=0 scanned=0 _seen=""
-  local _keep_tmp="$MODDIR/tmp/cad_keep_$$"
-  mkdir -p "$MODDIR/tmp"
-  : > "$_keep_tmp"
+  local _old_overlays="$TMPDIR/old_overlays.tmp" _new_overlays="$TMPDIR/new_overlays.tmp"
+  cp -f "$OVERLAYS_FILE" "$_old_overlays" 2>/dev/null || : > "$_old_overlays" 2>/dev/null
+  : > "$_new_overlays" 2>/dev/null
 
+  local count=0 scanned=0 _seen=""
   for _base in $_PARTITION_ROOTS; do
     [ -d "$_base" ] || continue
     for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
@@ -197,13 +190,13 @@ _apply_xml_overlays() {
           *) [ -f "/system/$_rel" ] && _rel="system/$_rel" ;;
         esac
 
-        local _src_file="$_real"
-        [ -f "$BACKUP_DIR/$_rel" ] && _src_file="$BACKUP_DIR/$_rel"
-
+        local _src_file
+        if [ -f "$BACKUP_DIR/$_rel" ]; then
+          _src_file="$BACKUP_DIR/$_rel"
+        else
+          _src_file="$_real"
+        fi
         _xml_has_any_pkg "$_src_file" "$grep_pat" || continue
-
-        _backup_original "$_real" "$_rel"
-        [ -f "$BACKUP_DIR/$_rel" ] && _src_file="$BACKUP_DIR/$_rel"
 
         local _dest="$MODDIR/$_rel"
         mkdir -p "$(dirname "$_dest")"
@@ -222,7 +215,7 @@ _apply_xml_overlays() {
           else
             rm -f "$_tmp"
           fi
-          printf '%s\n' "$_dest" >> "$_keep_tmp"
+          echo "$_dest" >> "$_new_overlays"
         else
           rm -f "$_tmp"
           log_app "[WARN] Skipped overlay - failed XML validation: $(basename "$_dest")"
@@ -231,19 +224,24 @@ _apply_xml_overlays() {
     done
   done
 
-  if [ -f "$OVERLAYS_FILE" ]; then
-    while IFS= read -r _old || [ -n "$_old" ]; do
-      case "$_old" in ''|'#'*) continue ;; esac
-      grep -qxF "$_old" "$_keep_tmp" || rm -f "$_old" "${_old}.tmp"
-    done < "$OVERLAYS_FILE"
+  if [ -s "$_old_overlays" ]; then
+    if [ ! -s "$_new_overlays" ]; then
+      _stale_list=$(cat "$_old_overlays")
+    else
+      _stale_list=$(grep -Fvxf "$_new_overlays" "$_old_overlays")
+    fi
+    printf '%s\n' "$_stale_list" | while IFS= read -r _stale || [ -n "$_stale" ]; do
+      case "$_stale" in '#'*|'') continue ;; esac
+      if [ -f "$_stale" ]; then
+        _backup_file="$BACKUP_DIR/${_stale#$MODDIR/}"
+        [ -f "$_backup_file" ] && cp -af "$_backup_file" "$_stale" 2>/dev/null
+        rm -f "$_stale" "${_stale}.tmp"
+        rmdir -p "$(dirname "$_stale")" 2>/dev/null
+      fi
+    done
   fi
-  mv -f "$_keep_tmp" "$OVERLAYS_FILE"
-  for _root in system product vendor odm system_ext \
-               my_product my_heytap my_region my_bigball my_carrier \
-               my_company my_engineering my_manifest my_preload \
-               my_reserve my_stock india; do
-    [ -d "$MODDIR/$_root" ] && find "$MODDIR/$_root" -type d -empty -delete >/dev/null 2>&1
-  done
+  sort -u "$_new_overlays" > "$OVERLAYS_FILE"
+  rm -f "$_old_overlays" "$_new_overlays"
 
   if [ "$count" -gt 0 ]; then
     mkdir -p "$(dirname "$_reboot_file")"
@@ -252,28 +250,14 @@ _apply_xml_overlays() {
 }
 
 scan() {
-  local _tmp_inst="$MODDIR/tmp/scan_inst.tmp"
-  local _tmp_cand="$MODDIR/tmp/scan_cand.tmp"
-  local _tmp_xmls="$MODDIR/tmp/scan_xmls.tmp"
-  local _tmp_hits="$MODDIR/tmp/scan_hits.tmp"
+  local _tmp_inst="$TMPDIR/scan_inst.tmp"
+  local _tmp_cand="$TMPDIR/scan_cand.tmp"
 
   pm list packages 2>/dev/null | cut -d: -f2 | sort > "$_tmp_inst"
   if [ ! -s "$_tmp_inst" ]; then
-    rm -f "$_tmp_inst" "$_tmp_cand" "$_tmp_xmls" "$_tmp_hits"
+    rm -f "$_tmp_inst" "$_tmp_cand"
     return
   fi
-
-  {
-    for _base in $_PARTITION_ROOTS; do
-      [ -d "$_base" ] || continue
-      for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
-        [ -d "$_dir" ] || continue
-        find "$_dir" -maxdepth 2 -type f -name "*.xml" 2>/dev/null
-      done
-    done
-    [ -d /apex ] && find /apex -maxdepth 5 -type f -name "*.xml" \
-      \( -path "*/etc/sysconfig/*" -o -path "*/etc/permissions/*" \) 2>/dev/null
-  } | xargs readlink -f 2>/dev/null | sort -u > "$_tmp_xmls"
 
   {
     dumpsys deviceidle 2>/dev/null \
@@ -283,17 +267,25 @@ scan() {
     cmd appops query-op IGNORE_BATTERY_OPTIMIZATIONS allow 2>/dev/null \
       | grep -oE '[a-z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+'
 
-    if [ -s "$_tmp_xmls" ]; then
-      xargs grep -lE 'allow-in-power-save|<wl[^/]' < "$_tmp_xmls" 2>/dev/null > "$_tmp_hits"
-      if [ -s "$_tmp_hits" ]; then
-        xargs grep -oE 'package="[^"]*"|>[[:space:]]*[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+[[:space:]]*<' < "$_tmp_hits" 2>/dev/null \
-          | grep -oE '[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+'
-      fi
-    fi
+    {
+      for _base in $_PARTITION_ROOTS; do
+        [ -d "$_base" ] || continue
+        for _dir in "$_base/etc" "$_base/oplus" "$_base/oppo"; do
+          [ -d "$_dir" ] || continue
+          find "$_dir" -maxdepth 2 -type f -name "*.xml" 2>/dev/null
+        done
+      done
+      [ -d /apex ] && find /apex -maxdepth 5 -type f -name "*.xml" \
+        \( -path "*/etc/sysconfig/*" -o -path "*/etc/permissions/*" \) 2>/dev/null
+    } | xargs readlink -f 2>/dev/null | sort -u \
+      | xargs grep -lE 'allow-in-power-save|<wl[^/]' 2>/dev/null \
+      | xargs grep -oE 'package="[^"]*"|>[[:space:]]*[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+[[:space:]]*<' 2>/dev/null \
+      | grep -oE '[a-z][a-zA-Z0-9_.]+\.[a-zA-Z0-9_.]+'
+
   } | sort -u > "$_tmp_cand"
 
-  grep -xFf "$_tmp_inst" "$_tmp_cand" 2>/dev/null
-  rm -f "$_tmp_inst" "$_tmp_cand" "$_tmp_xmls" "$_tmp_hits"
+  grep -xFf "$_tmp_inst" "$_tmp_cand"
+  rm -f "$_tmp_inst" "$_tmp_cand"
 }
 
 apply() {
@@ -337,17 +329,14 @@ apply() {
     tiers="${tiers} except-idle-wl"
 
     if [ -f /data/system/deviceidle.xml ] && \
-       grep -qF "<wl n=\"$pkg\"" /data/system/deviceidle.xml 2>/dev/null; then
-      local _esc_pkg
-      _esc_pkg=$(printf '%s' "$pkg" | sed 's/[][\.*^$\/]/\\&/g')
-      sed -i "/<wl n=\"$_esc_pkg\"/d" /data/system/deviceidle.xml
+       grep -q "<wl n=\"$pkg\"" /data/system/deviceidle.xml 2>/dev/null; then
+      sed -i "/<wl n=\"$pkg\"/d" /data/system/deviceidle.xml
       restorecon /data/system/deviceidle.xml 2>/dev/null
       tiers="${tiers} xml-wl"
     fi
 
     cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS ignore 2>/dev/null && \
       tiers="${tiers} appops"
-
     local admin_count=0
     for _uid in $(_get_user_ids); do
       cmd jobscheduler cancel --user "$_uid" "$pkg" >/dev/null 2>&1
@@ -358,11 +347,11 @@ apply() {
           pm disable --user "$_uid" "$_admin" >/dev/null 2>&1 && \
             admin_count=$((admin_count + 1))
         done
+        am startservice --user "$_uid" -n "$GMS_PKG/$GMS_PKG.checkin.CheckinService" >/dev/null 2>&1 || true
       fi
     done
     tiers="${tiers} jobs inactive"
     [ "$admin_count" -gt 0 ] && tiers="${tiers} gms-admin"
-    [ "$pkg" = "$GMS_PKG" ] && { am start-service -n "$GMS_PKG/.checkin.CheckinService" >/dev/null 2>&1 || true; }
 
     log_app "[OK] $pkg - applied to:$tiers"
     count=$((count + 1))
@@ -370,26 +359,6 @@ apply() {
 
   log_app ""
   log_app "Summary: $count optimized, $skip skipped"
-}
-
-_restore_pkg() {
-  local pkg="$1"
-  _is_blocked "$pkg" && return 0
-
-  dumpsys deviceidle whitelist +"$pkg" >/dev/null 2>&1
-  cmd deviceidle sys-whitelist +"$pkg" >/dev/null 2>&1
-  cmd deviceidle except-idle-whitelist +"$pkg" >/dev/null 2>&1
-  cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS default >/dev/null 2>&1
-
-  for _uid in $(_get_user_ids); do
-    am set-inactive --user "$_uid" "$pkg" false 2>/dev/null
-
-    if [ "$pkg" = "$GMS_PKG" ]; then
-      for _admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
-        pm enable --user "$_uid" "$_admin" >/dev/null 2>&1
-      done
-    fi
-  done
 }
 
 revert() {
@@ -409,7 +378,21 @@ revert() {
   local count=0
   for pkg in $pkgs; do
     _is_blocked "$pkg" && continue
-    _restore_pkg "$pkg"
+    dumpsys deviceidle whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle sys-whitelist +"$pkg" >/dev/null 2>&1
+    cmd deviceidle except-idle-whitelist +"$pkg" >/dev/null 2>&1
+    cmd appops set "$pkg" IGNORE_BATTERY_OPTIMIZATIONS default 2>/dev/null
+
+    for _uid in $(_get_user_ids); do
+      am set-inactive --user "$_uid" "$pkg" false 2>/dev/null
+
+      if [ "$pkg" = "$GMS_PKG" ]; then
+        for _admin in "$GMS_ADMIN1" "$GMS_ADMIN2"; do
+          pm enable --user "$_uid" "$_admin" >/dev/null 2>&1
+        done
+      fi
+    done
+
     log_app "[OK] Restored: $pkg"
     count=$((count + 1))
   done
@@ -451,12 +434,8 @@ remove_pkg() {
   local pkg="$1"
   [ -z "$pkg" ] && { echo '{"status":"error"}'; return; }
   [ -f "$PATCHES_FILE" ] || { echo '{"status":"ok"}'; return; }
-
-  _restore_pkg "$pkg"
-  log_app "[OK] Removed from list and restored: $pkg"
-
   local escaped
-  escaped=$(printf '%s' "$pkg" | sed 's/[][\.*^$\/]/\\&/g')
+  escaped=$(printf '%s' "$pkg" | sed 's/\./\\./g')
   sed -i "/^${escaped}$/d" "$PATCHES_FILE"
   echo '{"status":"ok"}'
 }
