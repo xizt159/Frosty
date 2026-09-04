@@ -1,8 +1,14 @@
-#!/system/bin/sh
-# Frosty - GMS Freezer
+_all_user_ids() {
+  local _ids
+  _ids=$(pm list users 2>/dev/null | grep -oE 'UserInfo\{[0-9]+' | grep -oE '[0-9]+')
+  [ -z "$_ids" ] && _ids=$(ls /data/user 2>/dev/null)
+  [ -z "$_ids" ] && _ids="0"
+  echo "$_ids"
+}
 
 should_disable_category() {
-  case "$1" in
+case "$1" in
+    keep)         return 1 ;;
     background)   [ "$DISABLE_BACKGROUND" = "1" ] ;;
     telemetry)    [ "$DISABLE_TELEMETRY" = "1" ] ;;
     location)     [ "$DISABLE_LOCATION" = "1" ] ;;
@@ -28,8 +34,9 @@ freeze_services() {
   [ -f "$_frozen_file" ] && _prev_frozen=$(cat "$_frozen_file" 2>/dev/null)
   > "$_frozen_file" 2>/dev/null || true
 
+  local _user_ids; _user_ids=$(_all_user_ids)
   local current_category="" count_ok=0 count_fail=0
-  local _user_ids=$(_get_user_ids)
+  local _cap_f _cap_r
 
   while IFS='|' read -r service category || [ -n "$service" ]; do
     case "$service" in ''|'#'*) continue ;; esac
@@ -65,13 +72,11 @@ freeze_services() {
         fi
         continue
       fi
-
-      local _disabled_any=false
+      local _any_ok=0
       for _uid in $_user_ids; do
-        pm disable --user "$_uid" "$service" >/dev/null 2>&1 && _disabled_any=true
+        pm disable --user "$_uid" "$service" >/dev/null 2>&1 && _any_ok=1
       done
-
-      if $_disabled_any; then
+      if [ "$_any_ok" = "1" ]; then
         printf '%s\n' "$service" >> "$_frozen_file"
         log_service "[OK] $service"
         count_ok=$((count_ok + 1))
@@ -79,6 +84,11 @@ freeze_services() {
         log_service "[FAIL] $service"
         count_fail=$((count_fail + 1))
       fi
+    elif [ "$category" = "keep" ]; then
+      for _uid in $_user_ids; do
+        pm enable --user "$_uid" "$service" >/dev/null 2>&1
+      done
+      log_service "[OK] $service (notification-critical, kept enabled)"
     fi
   done < "$GMS_LIST"
 
@@ -92,22 +102,25 @@ unfreeze_services() {
   [ ! -f "$GMS_LIST" ] && { echo "ERROR: Service list not found"; return 1; }
 
   local _frozen_file="$MODDIR/tmp/frozen_services.txt"
+  local _user_ids; _user_ids=$(_all_user_ids)
   local current_category="" count_ok=0 count_fail=0
-  local _user_ids=$(_get_user_ids)
+  local _cap_f _cap_r
 
   if [ -f "$_frozen_file" ]; then
     log_service "Restoring from tracking file..."
     while IFS= read -r service; do
       case "$service" in ''|'#'*) continue ;; esac
+      local _any_ok=0
       for _uid in $_user_ids; do
-        if pm enable --user "$_uid" "$service" >/dev/null 2>&1; then
-          log_service "[OK] $service ($_uid)"
-          count_ok=$((count_ok + 1))
-        else
-          log_service "[FAIL] $service ($_uid)"
-          count_fail=$((count_fail + 1))
-        fi
+        pm enable --user "$_uid" "$service" >/dev/null 2>&1 && _any_ok=1
       done
+      if [ "$_any_ok" = "1" ]; then
+        log_service "[OK] $service"
+        count_ok=$((count_ok + 1))
+      else
+        log_service "[FAIL] $service"
+        count_fail=$((count_fail + 1))
+      fi
     done < "$_frozen_file"
     rm -f "$_frozen_file"
   else
@@ -136,13 +149,17 @@ unfreeze_services() {
         log_service "[SKIP] $service (disabled by ROM, not re-enabling)"
         continue
       fi
+      local _any_ok=0
       for _uid in $_user_ids; do
-        if pm enable --user "$_uid" "$service" >/dev/null 2>&1; then
-          count_ok=$((count_ok + 1))
-        else
-          count_fail=$((count_fail + 1))
-        fi
+        pm enable --user "$_uid" "$service" >/dev/null 2>&1 && _any_ok=1
       done
+      if [ "$_any_ok" = "1" ]; then
+        log_service "[OK] $service"
+        count_ok=$((count_ok + 1))
+      else
+        log_service "[FAIL] $service"
+        count_fail=$((count_fail + 1))
+      fi
     done < "$GMS_LIST"
   fi
 
@@ -156,11 +173,10 @@ freeze_category() {
   [ ! -f "$GMS_LIST" ] && { echo '{"status":"error","message":"gms_services.txt not found"}'; return; }
 
   local _frozen_file="$MODDIR/tmp/frozen_services.txt"
-  local _jobs_tmp="/data/local/tmp/frosty_jobs_$$"
-  : > "$_jobs_tmp"
   mkdir -p "$MODDIR/tmp"
-
-  local _user_ids=$(_get_user_ids)
+  local _jobs_tmp="$MODDIR/tmp/frosty_jobs_$$"
+  : > "$_jobs_tmp"
+  local _user_ids; _user_ids=$(_all_user_ids)
 
   while IFS='|' read -r svc cat || [ -n "$svc" ]; do
     case "$svc" in ''|'#'*) continue ;; esac
@@ -168,17 +184,14 @@ freeze_category() {
     cat=$(echo "$cat" | tr -d " ")
     [ "$cat" = "$target" ] || continue
     local _svc_pkg; _svc_pkg=$(printf '%s' "$svc" | cut -d/ -f1)
-    local _is_disabled=false
+    if pm list packages --user 0 -d 2>/dev/null | grep -Fx "package:$_svc_pkg" >/dev/null 2>&1; then
+      continue
+    fi
+    local _any_ok=0
     for _uid in $_user_ids; do
-      pm list packages --user "$_uid" -d 2>/dev/null | grep -Fx "package:$_svc_pkg" >/dev/null 2>&1 && _is_disabled=true
+      pm disable --user "$_uid" "$svc" >/dev/null 2>&1 && _any_ok=1
     done
-    $_is_disabled && continue
-
-    local _disabled_any=false
-    for _uid in $_user_ids; do
-      pm disable --user "$_uid" "$svc" >/dev/null 2>&1 && _disabled_any=true
-    done
-    if $_disabled_any; then
+    if [ "$_any_ok" = "1" ]; then
       count=$((count + 1))
       printf '%s\n' "$svc" >> "$_frozen_file"
       printf '%s\n' "$_svc_pkg" >> "$_jobs_tmp"
@@ -188,7 +201,7 @@ freeze_category() {
   done < "$GMS_LIST"
 
   sort -u "$_jobs_tmp" 2>/dev/null | while IFS= read -r _pkg; do
-    [ -n "$_pkg" ] || continue
+    [ -z "$_pkg" ] && continue
     for _uid in $_user_ids; do
       cmd jobscheduler cancel --user "$_uid" "$_pkg" >/dev/null 2>&1
     done
@@ -205,6 +218,7 @@ unfreeze_category() {
   local _frozen_file="$MODDIR/tmp/frozen_services.txt"
   local _use_tracking=0
   [ -f "$_frozen_file" ] && _use_tracking=1
+  local _user_ids; _user_ids=$(_all_user_ids)
 
   while IFS='|' read -r svc cat || [ -n "$svc" ]; do
     case "$svc" in ''|'#'*) continue ;; esac
@@ -214,11 +228,17 @@ unfreeze_category() {
     if [ "$_use_tracking" = "1" ] && ! grep -qFx "$svc" "$_frozen_file" 2>/dev/null; then
       continue
     fi
-    local _enabled_any=false
-    for _uid in $(_get_user_ids); do
-      pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && _enabled_any=true
+    if [ "$_use_tracking" != "1" ]; then
+      local _svc_pkg; _svc_pkg=$(printf '%s' "$svc" | cut -d/ -f1)
+      if pm list packages --user 0 -d 2>/dev/null | grep -Fx "package:$_svc_pkg" >/dev/null 2>&1; then
+        continue
+      fi
+    fi
+    local _any_ok=0
+    for _uid in $_user_ids; do
+      pm enable --user "$_uid" "$svc" >/dev/null 2>&1 && _any_ok=1
     done
-    if $_enabled_any; then
+    if [ "$_any_ok" = "1" ]; then
       count=$((count + 1))
     else
       fail=$((fail + 1))
@@ -226,7 +246,8 @@ unfreeze_category() {
   done < "$GMS_LIST"
 
   if [ "$_use_tracking" = "1" ]; then
-    local _svcs_tmp="/data/local/tmp/frosty_svcs_$$"
+    mkdir -p "$MODDIR/tmp"
+    local _svcs_tmp="$MODDIR/tmp/frosty_svcs_$$"
     grep "|${target}$" "$GMS_LIST" 2>/dev/null | cut -d'|' -f1 | tr -d ' ' > "$_svcs_tmp"
     if [ -s "$_svcs_tmp" ]; then
       local _ftmp="${_frozen_file}.tmp"
